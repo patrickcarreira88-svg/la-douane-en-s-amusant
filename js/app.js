@@ -597,62 +597,130 @@ const App = {
     renderExerciceFlashcards(exercice) {
         let html = `
             <div style="background: var(--color-surface); padding: var(--spacing-md); border-radius: var(--radius-md);">
-                <h3>🎴 Flashcards</h3>
-                <p style="color: var(--color-text-light); margin-bottom: var(--spacing-md);">Cliquez sur les cartes pour voir la réponse</p>
-                <div id="flashcard-container">
+                <h3>🎴 Flashcards - Mémorisation</h3>
+                <p style="color: var(--color-text-light); margin-bottom: var(--spacing-md);">Cliquez sur une carte pour voir la réponse (${exercice.cartes.length} cartes)</p>
+                <div id="flashcard-container" style="perspective: 1000px;">
         `;
         
         exercice.cartes.forEach((carte, index) => {
             const safeId = `card-${index}`;
             html += `
-                <div id="${safeId}" class="flashcard" style="
-                    background: linear-gradient(135deg, #6366f1, #8b5cf6);
-                    color: white;
-                    padding: 30px;
-                    border-radius: 12px;
-                    margin: 15px 0;
-                    min-height: 200px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    text-align: center;
+                <div class="flashcard-wrapper" style="
+                    margin: 20px 0;
+                    height: 220px;
                     cursor: pointer;
-                    transition: transform 0.3s ease;
-                    font-size: 18px;
-                    font-weight: 500;
-                    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-                ">
-                    <div class="recto" style="display: flex; align-items: center; justify-content: center; width: 100%;">${carte.recto}</div>
-                    <div class="verso" style="display: none; align-items: center; justify-content: center; width: 100%;">${carte.verso}</div>
+                " data-index="${index}">
+                    <div class="flashcard-inner" style="
+                        position: relative;
+                        width: 100%;
+                        height: 100%;
+                        transition: transform 0.6s;
+                        transform-style: preserve-3d;
+                    ">
+                        <!-- RECTO (Face avant) -->
+                        <div class="flashcard-recto" style="
+                            position: absolute;
+                            width: 100%;
+                            height: 100%;
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                            color: white;
+                            padding: 30px;
+                            border-radius: 12px;
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            justify-content: center;
+                            text-align: center;
+                            font-size: 18px;
+                            font-weight: 600;
+                            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+                            backface-visibility: hidden;
+                            -webkit-backface-visibility: hidden;
+                        ">
+                            <span style="font-size: 14px; opacity: 0.8; margin-bottom: 10px;">❓ QUESTION</span>
+                            <span>${carte.recto}</span>
+                            <span style="font-size: 12px; opacity: 0.7; margin-top: 15px;">(Cliquer pour répondre)</span>
+                        </div>
+                        
+                        <!-- VERSO (Face arrière) -->
+                        <div class="flashcard-verso" style="
+                            position: absolute;
+                            width: 100%;
+                            height: 100%;
+                            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+                            color: white;
+                            padding: 30px;
+                            border-radius: 12px;
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            justify-content: center;
+                            text-align: center;
+                            font-size: 18px;
+                            font-weight: 600;
+                            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+                            transform: rotateY(180deg);
+                            backface-visibility: hidden;
+                            -webkit-backface-visibility: hidden;
+                        ">
+                            <span style="font-size: 14px; opacity: 0.8; margin-bottom: 10px;">✅ RÉPONSE</span>
+                            <span>${carte.verso}</span>
+                        </div>
+                    </div>
                 </div>
             `;
         });
         
         html += `
                 </div>
-                <button class="btn btn--primary" style="margin-top: var(--spacing-md); width: 100%;" onclick="App.validerExercice('flashcards')">✅ J'ai mémorisé</button>
+                <div style="margin-top: var(--spacing-lg); text-align: center;">
+                    <p style="color: var(--color-text-light); font-size: 14px; margin-bottom: var(--spacing-md);">
+                        Naviguez à travers les cartes et cliquez pour révéler les réponses
+                    </p>
+                    <button class="btn btn--primary" style="width: 100%; padding: var(--spacing-md);" onclick="App.validerExercice('flashcards')">✅ J'ai maîtrisé ces cartes</button>
+                </div>
             </div>
         `;
         
         // Retourner le HTML et attacher les événements après le rendu
         setTimeout(() => {
-            document.querySelectorAll('.flashcard').forEach(card => {
-                card.addEventListener('click', function() {
-                    const recto = this.querySelector('.recto');
-                    const verso = this.querySelector('.verso');
-                    const isFlipped = recto.style.display === 'none';
-                    recto.style.display = isFlipped ? 'flex' : 'none';
-                    verso.style.display = isFlipped ? 'none' : 'flex';
+            document.querySelectorAll('.flashcard-wrapper').forEach(wrapper => {
+                const inner = wrapper.querySelector('.flashcard-inner');
+                let isFlipped = false;
+                
+                // Clic pour retourner la carte
+                wrapper.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    isFlipped = !isFlipped;
+                    inner.style.transform = isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)';
                 });
                 
-                card.addEventListener('mouseover', function() {
-                    this.style.boxShadow = '0 8px 12px rgba(0,0,0,0.2)';
-                    this.style.transform = 'scale(1.02)';
+                // Hover pour feedback visuel
+                wrapper.addEventListener('mouseover', function() {
+                    this.style.boxShadow = '0 12px 24px rgba(0,0,0,0.3)';
+                    this.style.transform = 'translateY(-5px)';
                 });
                 
-                card.addEventListener('mouseout', function() {
-                    this.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
-                    this.style.transform = 'scale(1)';
+                wrapper.addEventListener('mouseout', function() {
+                    this.style.boxShadow = 'none';
+                    this.style.transform = 'translateY(0)';
+                });
+                
+                // Support tactile pour mobile
+                let touchStartX = 0;
+                wrapper.addEventListener('touchstart', function(e) {
+                    touchStartX = e.touches[0].clientX;
+                });
+                
+                wrapper.addEventListener('touchend', function(e) {
+                    const touchEndX = e.changedTouches[0].clientX;
+                    const diff = Math.abs(touchEndX - touchStartX);
+                    
+                    // Si déplacement minimal, considérer comme un clic
+                    if (diff < 20) {
+                        isFlipped = !isFlipped;
+                        inner.style.transform = isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)';
+                    }
                 });
             });
         }, 100);
@@ -1023,14 +1091,36 @@ const App = {
         // Stocker le chapitre actuel en session
         this.chapitreActuel = chapitreId;
         
-        document.getElementById('objectives-modal').classList.remove('hidden');
+        const modal = document.getElementById('objectives-modal');
+        modal.classList.remove('hidden');
+
+        // Support fermeture: clic outside du modal (sur overlay)
+        const overlay = modal;
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                this.fermerModalObjectives();
+            }
+        }, { once: true });
+
+        // Support fermeture: Escape key
+        const escapeHandler = (e) => {
+            if (e.key === 'Escape') {
+                this.fermerModalObjectives();
+                document.removeEventListener('keydown', escapeHandler);
+            }
+        };
+        document.addEventListener('keydown', escapeHandler);
+
+        console.log('📋 Modal objectifs affichés pour:', chapitre.titre);
     },
 
     /**
      * Ferme le modal objectifs
      */
     fermerModalObjectives() {
-        document.getElementById('objectives-modal').classList.add('hidden');
+        const modal = document.getElementById('objectives-modal');
+        modal.classList.add('hidden');
+        console.log('✕ Modal objectifs fermé');
     },
 
     /**

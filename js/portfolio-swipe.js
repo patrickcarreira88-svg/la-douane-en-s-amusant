@@ -91,7 +91,7 @@ const PortfolioSwipe = {
     },
 
     /**
-     * Attache les événements aux boutons
+     * Attache les événements aux boutons et gestes tactiles
      */
     attachEvents() {
         const btnLeft = document.getElementById('btn-portfolio-left');
@@ -116,6 +116,76 @@ const PortfolioSwipe = {
             if (e.key === 'ArrowUp') this.swipeCard('up');
             if (e.key === 'ArrowRight') this.swipeCard('right');
         });
+
+        // Support tactile (swipe mobile)
+        this.addTouchSupport();
+    },
+
+    /**
+     * Ajoute le support des gestes tactiles (swipe)
+     */
+    addTouchSupport() {
+        const deck = document.getElementById('deck');
+        if (!deck) return;
+
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchEndX = 0;
+        let touchEndY = 0;
+        const SWIPE_THRESHOLD = 30; // Minimum de pixels pour déclencher le swipe
+
+        deck.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].clientX;
+            touchStartY = e.changedTouches[0].clientY;
+            
+            // Feedback visuel: réduire la carte légèrement
+            const activeCard = deck.querySelector('.card[style*="opacity: 1"]');
+            if (activeCard) {
+                activeCard.style.transition = 'none';
+            }
+        }, false);
+
+        deck.addEventListener('touchmove', (e) => {
+            touchEndX = e.changedTouches[0].clientX;
+            touchEndY = e.changedTouches[0].clientY;
+
+            // Feedback visuel pendant le drag
+            const activeCard = deck.querySelector('.card[style*="opacity: 1"]');
+            if (activeCard) {
+                const dragDistance = touchEndX - touchStartX;
+                activeCard.style.transform = `translateX(${dragDistance * 0.5}px) scale(${1 - Math.abs(dragDistance) / 1000})`;
+            }
+        }, false);
+
+        deck.addEventListener('touchend', (e) => {
+            const dragDistance = touchEndX - touchStartX;
+            const dragVertical = touchEndY - touchStartY;
+
+            // Reset transition
+            const activeCard = deck.querySelector('.card[style*="opacity: 1"]');
+            if (activeCard) {
+                activeCard.style.transition = 'all 0.3s ease-out';
+            }
+
+            // Déterminer la direction du swipe
+            if (Math.abs(dragVertical) > Math.abs(dragDistance) && Math.abs(dragVertical) > SWIPE_THRESHOLD) {
+                // Swipe vertical (up)
+                if (dragVertical < 0) {
+                    this.swipeCard('up');
+                }
+            } else if (Math.abs(dragDistance) > SWIPE_THRESHOLD) {
+                // Swipe horizontal
+                if (dragDistance < 0) {
+                    // Swipe gauche (left) = pas maîtrisé
+                    this.swipeCard('left');
+                } else {
+                    // Swipe droit (right) = maîtrisé
+                    this.swipeCard('right');
+                }
+            }
+        }, false);
+
+        console.log('✅ Gestes tactiles activés pour le portfolio');
     },
 
     /**
