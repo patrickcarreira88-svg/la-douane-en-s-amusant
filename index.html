@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#4A3F87">
+    <meta name="description" content="Plateforme LMS gamifiée pour formation Brevet Fédéral. Apprentissage ludique avec chemin serpentin, badges et répétition espacée.">
+    <title>Douane LMS - Et si on jouait? La Douane en s'amusant!</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75'>🎓</text></svg>">
+
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/gamification.css">
+    <link rel="stylesheet" href="css/responsive.css">
+    <link rel="stylesheet" href="css/portfolio-swipe.css">
+</head>
+<!-- Modal Étape -->
+<div id="etape-modal" class="modal">
+    <div class="modal-overlay" onclick="App.fermerModal()"></div>
+    <div class="modal-content">
+        <button class="modal-close" onclick="App.fermerModal()">✕</button>
+        <div id="etape-detail"></div>
+    </div>
+</div>
+
+<!-- Modal Objectifs du Chapitre -->
+<div id="objectives-modal" class="modal-overlay hidden">
+    <div class="modal-content modal-objectives">
+        <div class="modal-header">
+            <h2>📋 Objectifs de ce chapitre</h2>
+            <button class="btn-close" onclick="App.fermerModalObjectives()">✕</button>
+        </div>
+        <div class="modal-body">
+            <div id="objectives-list" class="objectives-container">
+                <!-- Générés dynamiquement par JS -->
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn--secondary" onclick="App.fermerModalObjectives()">
+                Fermer
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Portfolio Swipe - Fin de Chapitre -->
+<div id="portfolio-modal" class="modal-overlay hidden">
+    <div class="modal-content modal-portfolio">
+        <div class="modal-header">
+            <h2>🎯 Plan de révision</h2>
+            <p class="modal-subtitle">Swipez pour noter votre maîtrise</p>
+            <button class="btn-close" onclick="App.fermerPortfolioModal()">✕</button>
+        </div>
+        
+        <div id="portfolio-swipe-container" class="portfolio-swipe">
+            <!-- Rempli dynamiquement par JS -->
+        </div>
+
+        <div class="portfolio-controls" id="portfolio-controls">
+            <button class="btn-swipe-action" id="btn-portfolio-left" title="Pas maîtrisé">❌ Pas maîtrisé</button>
+            <button class="btn-swipe-action" id="btn-portfolio-up" title="À approfondir">⚠️ À approfondir</button>
+            <button class="btn-swipe-action" id="btn-portfolio-right" title="Maîtrisé">✅ Maîtrisé</button>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn btn--secondary" onclick="App.fermerPortfolioModal()">
+                Fermer
+            </button>
+        </div>
+    </div>
+</div>
+
+<body>
+    <!-- Header avec stats -->
+    <header class="app-header">
+        <div class="header-content">
+            <div class="header-title">
+                <h1>🎓 Douane LMS</h1>
+                <span class="version">v2.0</span>
+            </div>
+            <div class="header-stats">
+                <div class="stat">
+                    <span class="stat-icon">⭐</span>
+                    <span class="stat-value" id="pointsDisplay">0</span>
+                    <span class="stat-label">Points</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-icon">🔥</span>
+                    <span class="stat-value" id="daysDisplay">0</span>
+                    <span class="stat-label">Jours</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-icon">🏆</span>
+                    <span class="stat-value" id="badgesDisplay">0</span>
+                    <span class="stat-label">Badges</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area (changera selon onglet actif) -->
+    <main id="app-content" class="app-content">
+        <!-- Les pages seront injectées ici dynamiquement -->
+    </main>
+
+    <!-- Navigation Bottom Bar (5 onglets) -->
+    <nav class="bottom-nav">
+        <button class="nav-item active" data-page="accueil" aria-label="Accueil">
+            <span class="nav-icon">🏠</span>
+            <span class="nav-label">Accueil</span>
+        </button>
+        <button class="nav-item" data-page="chapitres" aria-label="Mes Chapitres">
+            <span class="nav-icon">📚</span>
+            <span class="nav-label">Chapitres</span>
+        </button>
+        <button class="nav-item" data-page="pratique" aria-label="Pratique Libre">
+            <span class="nav-icon">🎯</span>
+            <span class="nav-label">Pratique</span>
+        </button>
+        <button class="nav-item" data-page="journal" aria-label="Mon Journal">
+            <span class="nav-icon">📔</span>
+            <span class="nav-label">Journal</span>
+        </button>
+        <button class="nav-item" data-page="profil" aria-label="Mon Profil">
+            <span class="nav-icon">👤</span>
+            <span class="nav-label">Profil</span>
+        </button>
+    </nav>
+
+    <!-- Scripts -->
+    <script src="js/storage.js"></script>
+    <script src="js/portfolio-swipe.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

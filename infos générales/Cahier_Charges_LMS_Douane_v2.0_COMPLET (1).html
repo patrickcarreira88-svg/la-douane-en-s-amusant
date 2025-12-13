@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cahier des Charges LMS Douane v2.0</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: white;
+            padding: 20px;
+        }
+
+        @media print {
+            body { padding: 0; }
+            .page-break { page-break-after: always; padding: 40px 20px; }
+            h1, h2, h3 { page-break-after: avoid; }
+            table { page-break-inside: avoid; }
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+        }
+
+        .cover {
+            text-align: center;
+            padding: 60px 40px;
+            background: linear-gradient(135deg, #4A3F87 0%, #6B5B95 100%);
+            color: white;
+            border-radius: 8px;
+            margin-bottom: 40px;
+        }
+
+        .cover h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .cover h2 {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            opacity: 0.9;
+        }
+
+        .cover-subtitle {
+            font-size: 1.2em;
+            margin-bottom: 40px;
+            color: #E0AAFF;
+        }
+
+        .cover-info {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 30px;
+            text-align: left;
+            font-size: 0.95em;
+        }
+
+        .cover-info div {
+            background: rgba(255,255,255,0.1);
+            padding: 12px;
+            border-radius: 4px;
+            border-left: 3px solid #C77DFF;
+        }
+
+        h1 {
+            color: #4A3F87;
+            font-size: 2em;
+            margin: 40px 0 20px 0;
+            border-bottom: 3px solid #E0AAFF;
+            padding-bottom: 10px;
+        }
+
+        h2 {
+            color: #6B5B95;
+            font-size: 1.5em;
+            margin: 30px 0 15px 0;
+            border-left: 4px solid #D0B3FF;
+            padding-left: 15px;
+        }
+
+        h3 {
+            color: #8B7BA8;
+            font-size: 1.2em;
+            margin: 20px 0 10px 0;
+        }
+
+        p {
+            margin-bottom: 12px;
+            text-align: justify;
+        }
+
+        ul, ol {
+            margin-left: 30px;
+            margin-bottom: 12px;
+        }
+
+        li {
+            margin-bottom: 6px;
+        }
+
+        .section {
+            margin: 30px 0;
+            padding: 20px;
+            background: #F5F0FF;
+            border-radius: 6px;
+            border-left: 5px solid #D0B3FF;
+        }
+
+        .highlight {
+            background: #E0AAFF;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            background: white;
+        }
+
+        th {
+            background: #D0B3FF;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: bold;
+        }
+
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #E0AAFF;
+        }
+
+        tr:nth-child(even) {
+            background: #F5F0FF;
+        }
+
+        .timeline {
+            background: white;
+            border-left: 4px solid #C77DFF;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+
+        .timeline-title {
+            color: #4A3F87;
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .timeline-item {
+            margin-left: 20px;
+            margin-bottom: 5px;
+            color: #555;
+        }
+
+        .timeline-item:before {
+            content: "☐ ";
+            color: #6B5B95;
+            font-weight: bold;
+        }
+
+        .page-break {
+            page-break-after: always;
+            margin: 40px 0;
+            border-top: 1px dashed #D0B3FF;
+            padding-top: 40px;
+        }
+
+        .toc {
+            background: #F5F0FF;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+
+        .toc ul {
+            list-style: none;
+            margin-left: 0;
+        }
+
+        .toc li {
+            padding: 8px;
+            border-bottom: 1px solid #E0AAFF;
+        }
+
+        .toc li:before {
+            content: "→ ";
+            color: #C77DFF;
+            font-weight: bold;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #D0B3FF;
+            color: #4A3F87;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            margin-right: 5px;
+            margin-bottom: 5px;
+        }
+
+        .feature-list {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+
+        .feature-item {
+            background: white;
+            padding: 15px;
+            border-left: 3px solid #C77DFF;
+            border-radius: 4px;
+        }
+
+        .comparison {
+            margin: 20px 0;
+        }
+
+        .comparison-positive { color: #2ecc71; font-weight: bold; }
+        .comparison-negative { color: #e74c3c; font-weight: bold; }
+
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #E0AAFF;
+            color: #999;
+            font-size: 0.9em;
+        }
+
+        @media (max-width: 768px) {
+            .cover-info {
+                grid-template-columns: 1fr;
+            }
+            h1 { font-size: 1.5em; }
+            h2 { font-size: 1.2em; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <!-- COUVERTURE -->
+        <div class="cover">
+            <h1>CAHIER DES CHARGES</h1>
+            <h2>PLATEFORME LMS GAMIFIÉE</h2>
+            <div class="cover-subtitle">Version 2.0 - Adaptée Mimo</div>
+            <h3 style="color: #E0AAFF; font-size: 1.3em;">Et si on jouait ? La Douane en s'amusant !</h3>
+            <div class="cover-info">
+                <div><strong>📅 Date:</strong> 9 décembre 2025</div>
+                <div><strong>🎯 Public:</strong> Brevet Fédéral (18-45 ans)</div>
+                <div><strong>🏗️ Plateforme:</strong> HTML5 SPA (Local)</div>
+                <div><strong>⏱️ Timeline:</strong> 15 jours</div>
+                <div><strong>💾 Dépendances:</strong> ZÉRO</div>
+                <div><strong>✅ RGPD:</strong> Conforme</div>
+            </div>
+        </div>
+
+        <div class="page-break"></div>
+
+        <!-- TABLE DES MATIÈRES -->
+        <h1>📑 TABLE DES MATIÈRES</h1>
+        <div class="toc">
+            <ul>
+                <li>1. Vue d'ensemble du projet</li>
+                <li>2. Architecture système (MISE À JOUR)</li>
+                <li>3. Composants fonctionnels (ADAPTÉS MIMO)</li>
+                <li>4. Spécifications techniques</li>
+                <li>5. Guide de développement (15 jours)</li>
+                <li>6. Normes et bonnes pratiques</li>
+                <li>7. Plan de déploiement</li>
+                <li>8. Comparaison Mimo vs Notre Plateforme</li>
+                <li>9. Fiche synthétique</li>
+            </ul>
+        </div>
+
+        <div class="page-break"></div>
+
+        <!-- SECTION 1 -->
+        <h1>1️⃣ VUE D'ENSEMBLE DU PROJET</h1>
+
+        <h2>1.1 Contexte & Objectif</h2>
+        <div class="highlight">
+            <strong>Nom du projet:</strong> Et si on jouait ? La Douane en s'amusant !<br/>
+            <strong>Type:</strong> Plateforme LMS locale (offline-first) avec gamification<br/>
+            <strong>Public:</strong> Apprenants Brevet Fédéral (18-45 ans)<br/>
+            <strong>Contexte:</strong> Formation théorique intensive en entreprise suisse
+        </div>
+
+        <h3>Besoin pédagogique identifié</h3>
+        <ul>
+            <li>✓ Faible accroche avec enseignement académique traditionnel</li>
+            <li>✓ Besoin de transposer théorie vers pratique</li>
+            <li>✓ Manque de motivation et d'engagement</li>
+            <li>✓ Habitudes d'apprentissage à développer (répétition espacée)</li>
+        </ul>
+
+        <h3>Contraintes majeures</h3>
+        <ul>
+            <li>✅ Déploiement LOCAL uniquement (HTML + JS + CSS, zéro serveur)</li>
+            <li>✅ RGPD strictement respecté (données sensibles, cloisonnement état)</li>
+            <li>✅ Responsive et tactile (tablettes + ordinateurs tactiles)</li>
+            <li>✅ Livraison prototype TFE (avant fin décembre 2025)</li>
+            <li>✅ Aucun framework externe (zéro dépendances)</li>
+        </ul>
+
+        <h2>1.2 Objectifs Pédagogiques</h2>
+        <p><strong>Objectif Principal:</strong> Créer une plateforme qui gamifie l'apprentissage tout en soutenant la réflexion métacognitive et l'autoévaluation, inspirée des meilleures pratiques Mimo.</p>
+
+        <h3>7 objectifs spécifiques</h3>
+        <ol>
+            <li>Motivation intrinsèque via gamification visuelle</li>
+            <li>Apprentissage durable via répétition espacée VISIBLE</li>
+            <li>Métaréflexion pédagogique (journal)</li>
+            <li>Autoévaluation formative (portfolio)</li>
+            <li>Tutorat asynchrone facilité</li>
+            <li>Vue d'ensemble des progrès (dashboard)</li>
+            <li>Pratique libre avec exercices aléatoires</li>
+        </ol>
+
+        <div class="page-break"></div>
+
+        <!-- SECTION 2 -->
+        <h1>2️⃣ ARCHITECTURE SYSTÈME (MISE À JOUR)</h1>
+
+        <h2>2.1 Stack Technologique</h2>
+        <table>
+            <tr>
+                <th>Composant</th>
+                <th>Technologie</th>
+            </tr>
+            <tr>
+                <td>Frontend</td>
+                <td>HTML5 SPA + Vanilla JS ES6+ + CSS3</td>
+            </tr>
+            <tr>
+                <td>Storage</td>
+                <td>LocalStorage (5MB) + JSON</td>
+            </tr>
+            <tr>
+                <td>Assets</td>
+                <td>Images/Vidéos optimisées + SVG</td>
+            </tr>
+            <tr>
+                <td>Accessibilité</td>
+                <td>WCAG 2.1 AA + Responsive 320-1920px</td>
+            </tr>
+        </table>
+
+        <h2>2.2 Navigation Principale (5 ONGLETS - Style Mimo)</h2>
+        <div class="feature-list">
+            <div class="feature-item">
+                <strong>🏠 ACCUEIL:</strong> Dashboard avec vue d'ensemble tous chapitres + statistiques globales
+            </div>
+            <div class="feature-item">
+                <strong>📚 MES CHAPITRES:</strong> Chemin serpentin + détail chapitre interactif
+            </div>
+            <div class="feature-item">
+                <strong>🎯 PRATIQUE LIBRE:</strong> Révisions SM2 visibles + exercices aléatoires (NEW)
+            </div>
+            <div class="feature-item">
+                <strong>📔 MON JOURNAL:</strong> Métaréflexion avec verbes Bloom
+            </div>
+            <div class="feature-item">
+                <strong>👤 PROFIL:</strong> Badges obtenus + statistiques personnelles (NEW)
+            </div>
+        </div>
+
+        <div class="page-break"></div>
+
+        <!-- SECTION 3 -->
+        <h1>3️⃣ COMPOSANTS FONCTIONNELS (ADAPTÉS MIMO)</h1>
+
+        <h2>3.1 Gamification - Chemin Serpentin</h2>
+        <div class="section">
+            <strong>Design Visuel:</strong> Chemin vertical/serpentin avec étapes carrées arrondies<br/>
+            <strong>États:</strong> 🔒 Verrouillé (gris) → ⚠️ En cours (orange) → ✅ Complété (mauve/vert)<br/>
+            <strong>Éléments:</strong> Points (+10/exercice), Badges/chapitre, Progression 0-100%, Ligne connectrice SVG animée<br/>
+            <strong>Interactions:</strong> Clic étape → Actions appropriées, Animations pop, Feedback sonore
+        </div>
+
+        <h2>3.2 Dashboard Principal (NEW)</h2>
+        <p>Affiche tous les chapitres (vue liste scrollable) avec progression individuelle. Montre statistiques globales (points totaux, chapitres complétés, progression %) et prochain défi suggéré.</p>
+
+        <h2>3.3 Pratique Libre (NEW - Très Important!)</h2>
+        <div class="feature-list">
+            <div class="feature-item">
+                <strong>🎯 Révisions Suggérées (Spaced Rep VISIBLE):</strong> Affiche "3 révisions suggérées aujourd'hui". Algo SM2 détermine quels exercices réviser. Liste mini-quiz du jour.
+            </div>
+            <div class="feature-item">
+                <strong>📚 Exercices Aléatoires:</strong> Bouton "Nouveau Quiz Aléatoire" genère exercices random depuis toute banque. Permet renforcer apprentissage. Tracking: "42 exercices maîtrisés / 12h passées".
+            </div>
+        </div>
+
+        <h2>3.4 Types d'Exercices (Priorités)</h2>
+        <ol>
+            <li><strong>QCM (4 choix)</strong> - Priorité absolue</li>
+            <li><strong>Vrai/Faux</strong></li>
+            <li><strong>Remplir les blancs (gaps)</strong></li>
+            <li><strong>Flashcards (swipe)</strong> - Tactile friendly</li>
+            <li><strong>Vidéos interactives</strong></li>
+            <li><strong>Drag & Drop</strong> - Pour procédures</li>
+        </ol>
+
+        <p>Chaque exercice: Feedback immédiat ✓/✗, Points attribués, Enregistrement SM2, Option "Je ne sais pas"</p>
+
+        <div class="page-break"></div>
+
+        <!-- SECTION 5 -->
+        <h1>5️⃣ GUIDE DÉVELOPPEMENT (TIMELINE 15 JOURS)</h1>
+
+        <h2>Phase 1 (Jours 1-3): Fondations</h2>
+        <div class="timeline">
+            <div class="timeline-item">Structure HTML SPA (5 onglets)</div>
+            <div class="timeline-item">Nav bar bottom (style Mimo)</div>
+            <div class="timeline-item">CSS Grid/Flexbox setup</div>
+            <div class="timeline-item">LocalStorage wrapper complet</div>
+            <div class="timeline-item">Chemin SVG serpentin (basique)</div>
+            <div class="timeline-item">Dashboard principal (vue chapitres)</div>
+        </div>
+
+        <h2>Phase 2 (Jours 4-7): Exercices Core</h2>
+        <div class="timeline">
+            <div class="timeline-item">QCM (4 choix) + Vrai/Faux</div>
+            <div class="timeline-item">Gaps + Flashcards</div>
+            <div class="timeline-item">Système points complet</div>
+            <div class="timeline-item">Feedback immédiat</div>
+            <div class="timeline-item">Vidéos + Drag & Drop</div>
+            <div class="timeline-item">Tests responsif complets</div>
+        </div>
+
+        <h2>Phase 3 (Jours 8-11): Gamification & Spaced Rep</h2>
+        <div class="timeline">
+            <div class="timeline-item">Badges system complet</div>
+            <div class="timeline-item">Algo SM2 (révisions intelligentes)</div>
+            <div class="timeline-item">Section Pratique Libre</div>
+            <div class="timeline-item">Affichage révisions suggérées</div>
+            <div class="timeline-item">Journal + Portfolio intégrés</div>
+        </div>
+
+        <h2>Phase 4 (Jours 12-15): Optimisation & Livraison</h2>
+        <div class="timeline">
+            <div class="timeline-item">Accessibilité WCAG AA complet</div>
+            <div class="timeline-item">Export/Import données JSON</div>
+            <div class="timeline-item">Tests multi-browser</div>
+            <div class="timeline-item">Documentation code (JSDoc)</div>
+            <div class="timeline-item">QA final + bug fixes</div>
+            <div class="timeline-item">✅ LIVE!</div>
+        </div>
+
+        <div class="page-break"></div>
+
+        <!-- SECTION 8 -->
+        <h1>8️⃣ COMPARAISON MIMO vs NOTRE PLATEFORME</h1>
+
+        <table>
+            <tr>
+                <th>FEATURE</th>
+                <th>MIMO</th>
+                <th>NOTRE PLATEFORME</th>
+                <th>STATUS</th>
+            </tr>
+            <tr>
+                <td>Chemin serpentin</td>
+                <td><span class="comparison-positive">✅</span></td>
+                <td><span class="comparison-positive">✅</span></td>
+                <td>IDENTIQUE</td>
+            </tr>
+            <tr>
+                <td>Points/XP</td>
+                <td><span class="comparison-positive">✅</span></td>
+                <td><span class="comparison-positive">✅</span></td>
+                <td>IDENTIQUE</td>
+            </tr>
+            <tr>
+                <td>Badges</td>
+                <td><span class="comparison-positive">✅</span></td>
+                <td><span class="comparison-positive">✅</span></td>
+                <td>IDENTIQUE</td>
+            </tr>
+            <tr>
+                <td>Vue chapitres</td>
+                <td><span class="comparison-positive">✅</span></td>
+                <td><span class="comparison-positive">✅</span></td>
+                <td>ADAPTÉ</td>
+            </tr>
+            <tr>
+                <td>Pratique libre</td>
+                <td><span class="comparison-positive">✅</span></td>
+                <td><span class="comparison-positive">✅</span></td>
+                <td>NEW (adapté)</td>
+            </tr>
+            <tr>
+                <td>Spaced rep VISIBLE</td>
+                <td><span class="comparison-positive">✅</span></td>
+                <td><span class="comparison-positive">✅</span></td>
+                <td>NEW!</td>
+            </tr>
+            <tr>
+                <td>Journal</td>
+                <td><span class="comparison-negative">❌</span></td>
+                <td><span class="comparison-positive">✅</span></td>
+                <td>NOTRE PLUS</td>
+            </tr>
+            <tr>
+                <td>Portfolio</td>
+                <td><span class="comparison-negative">❌</span></td>
+                <td><span class="comparison-positive">✅</span></td>
+                <td>NOTRE PLUS</td>
+            </tr>
+            <tr>
+                <td>Offline-first</td>
+                <td><span class="comparison-negative">❌</span></td>
+                <td><span class="comparison-positive">✅</span></td>
+                <td>NOTRE PLUS</td>
+            </tr>
+            <tr>
+                <td>RGPD conforme</td>
+                <td><span class="comparison-negative">❌</span></td>
+                <td><span class="comparison-positive">✅</span></td>
+                <td>NOTRE PLUS</td>
+            </tr>
+        </table>
+
+        <div class="page-break"></div>
+
+        <!-- SECTION 9 -->
+        <h1>9️⃣ FICHE SYNTHÉTIQUE</h1>
+
+        <div class="highlight">
+            <strong>NOM:</strong> Et si on jouait? La Douane en s'amusant!<br/>
+            <strong>VERSION:</strong> 2.0 (Adaptée Mimo)<br/>
+            <strong>PUBLIC:</strong> Apprenants Brevet Fédéral (18-45 ans)<br/>
+            <strong>PLATEFORME:</strong> HTML5 SPA (Local only)<br/>
+            <strong>TECHNOS:</strong> HTML5 + Vanilla JS + CSS3 + LocalStorage<br/>
+            <strong>TIMELINE:</strong> 15 jours (décembre 2025)<br/>
+            <strong>BUDGET:</strong> 0€<br/>
+            <strong>DÉPENDANCES:</strong> ZÉRO (0 frameworks)<br/>
+            <strong>RGPD:</strong> ✅ Conforme (données locales)<br/>
+            <strong>PAGES:</strong> 5 onglets (Accueil, Chapitres, Pratique, Journal, Profil)
+        </div>
+
+        <h2>✨ ADAPTATIONS MIMO INTÉGRÉES</h2>
+        <ul>
+            <li>✅ Chemin serpentin (design visual identique)</li>
+            <li>✅ États exercices visibles (verrouillé/en cours/complété)</li>
+            <li>✅ Dashboard avec vue chapitres</li>
+            <li>✅ Pratique libre avec quiz aléatoires</li>
+            <li>✅ Spaced rep VISIBLE (révisions suggérées du jour)</li>
+            <li>✅ Profil avec badges et statistiques</li>
+        </ul>
+
+        <h2>✨ NOTRE VALEUR AJOUTÉE (vs Mimo)</h2>
+        <ul>
+            <li>✨ Journal d'apprentissage (métacognition + verbes Bloom)</li>
+            <li>✨ Portfolio avec autoévaluation (swipe + checkboxes)</li>
+            <li>✨ Offline-first (100% local, zéro serveur)</li>
+            <li>✨ RGPD compliant (données sensibles sécurisées)</li>
+            <li>✨ Zéro dépendances (HTML/CSS/JS pur)</li>
+            <li>✨ Export/Import données (portabilité RGPD)</li>
+        </ul>
+
+        <div class="page-break"></div>
+
+        <!-- PAGE FINALE -->
+        <div style="text-align: center; padding: 60px 20px;">
+            <h1 style="border: none; font-size: 2em;">🎯 PRÊT À DÉMARRER!</h1>
+            <p style="font-size: 1.1em; margin-top: 30px;">
+                Ce cahier des charges v2.0 inclut toutes les adaptations Mimo<br/>
+                observées lors de l'analyse des captures d'écran de l'application.
+            </p>
+            <p style="margin-top: 20px; font-size: 0.95em;">
+                ✅ Chemin serpentin | ✅ Spaced rep visible | ✅ Pratique libre<br/>
+                ✅ Dashboard principal | ✅ Profil avec badges | ✅ 5 onglets
+            </p>
+        </div>
+
+        <footer>
+            <p>
+                <strong>Document généré:</strong> 9 décembre 2025 à 22h45<br/>
+                <strong>Version:</strong> 2.0 - Complète avec adaptations Mimo<br/>
+                <strong>Destinataires:</strong> Apprenant + Équipe développement + TFE
+            </p>
+        </footer>
+
+    </div>
+
+    <script>
+        // Pour imprimer en PDF: Ctrl+P ou Cmd+P
+        console.log('📄 Pour exporter en PDF: Ctrl+P (ou Cmd+P), puis "Enregistrer en tant que PDF"');
+    </script>
+</body>
+</html>
