@@ -318,6 +318,120 @@ function showErrorNotification(message, duration = 2000) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// GESTION VIDÉOS MODULE 101AB
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Charger module vidéo du chapitre
+ * S'appelle automatiquement quand on clique sur un chapitre
+ */
+async function loadChapterVideos(chapterId) {
+  try {
+    const response = await fetch('/assets/videos/101ab/video-manifest.json');
+    const manifest = await response.json();
+    
+    // Filtrer vidéos du chapitre
+    const chapterVideos = manifest.videos.filter(v => v.module === chapterId);
+    
+    console.log(`🎬 ${chapterVideos.length} vidéos trouvées pour ${chapterId}`);
+    
+    chapterVideos.forEach(video => {
+      renderVideoPlayer(video);
+    });
+    
+  } catch (error) {
+    console.error('❌ Erreur chargement vidéos:', error);
+  }
+}
+
+/**
+ * Afficher composant vidéo dans le DOM
+ */
+function renderVideoPlayer(videoData) {
+  const container = document.querySelector(`[data-step-id="${videoData.stepId}"]`);
+  
+  if (!container) {
+    console.warn('⚠️ Conteneur non trouvé pour:', videoData.stepId);
+    return;
+  }
+
+  // Vérifier si vidéo déjà présente
+  if (container.querySelector('video-player')) {
+    return;
+  }
+
+  // Créer élément vidéo
+  const videoElement = document.createElement('video-player');
+  videoElement.setAttribute('video-id', videoData.id);
+  videoElement.setAttribute('title', videoData.title);
+  videoElement.className = 'video-player-container';
+
+  // Insérer dans le conteneur
+  container.appendChild(videoElement);
+
+  // Listener pour complétude vidéo
+  videoElement.addEventListener('video-completed', (e) => {
+    handleVideoCompleted(videoData, e.detail);
+  });
+
+  console.log('✅ Vidéo insertée:', videoData.title);
+}
+
+/**
+ * Gestion complétude vidéo
+ * - Déverrouille étape suivante
+ * - Attribue points
+ * - Met à jour progression
+ */
+function handleVideoCompleted(videoData, completionData) {
+  console.log('✅ Vidéo complétée:', videoData.title);
+  
+  // Ajouter points au total
+  if (App.addPoints) {
+    App.addPoints(completionData.points, `Vidéo: ${videoData.title}`);
+  }
+
+  // Déverrouiller exercices associés
+  if (videoData.relatedExercises && videoData.relatedExercises.length > 0) {
+    console.log(`🔓 Déverrouillage ${videoData.relatedExercises.length} exercices`);
+  }
+
+  // Mettre à jour progression module
+  if (App.updateChapterProgress) {
+    App.updateChapterProgress(videoData.module);
+  }
+}
+
+/**
+ * Adapter bitrate en fonction vitesse réseau
+ */
+function getOptimalBitrate() {
+  if (!navigator.connection) return '720p';
+
+  const effectiveType = navigator.connection.effectiveType;
+  const downlink = navigator.connection.downlink;
+
+  if (effectiveType === '4g' && downlink >= 5) {
+    return '720p';
+  } else if (effectiveType === '3g' || downlink < 5) {
+    return '480p';
+  } else {
+    return '360p';
+  }
+}
+
+/**
+ * Envoyer événement tracking
+ */
+function trackEvent(eventName, data = {}) {
+  console.log(`📊 Event: ${eventName}`, data);
+  
+  if (window.analytics) {
+    window.analytics.track(eventName, data);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
 // OBJET APP PRINCIPAL
 // ═══════════════════════════════════════════════════════════════
 
@@ -351,6 +465,51 @@ const App = {
                 this.navigateTo(page);
             });
         });
+    },
+
+    /**
+     * Ajouter des points à l'utilisateur
+     */
+    addPoints(points, reason = '') {
+        const user = StorageManager.getUser();
+        user.totalPoints = (user.totalPoints || 0) + points;
+        StorageManager.updateUser(user);
+        
+        console.log(`⭐ +${points} points${reason ? ' (' + reason + ')' : ''}`);
+        
+        // Mettre à jour header
+        this.updateHeader();
+        
+        // Afficher notification
+        if (typeof showSuccessMessage === 'function') {
+            showSuccessMessage(`⭐ +${points} points! ${reason}`);
+        }
+    },
+
+    /**
+     * Mettre à jour progression chapitre
+     */
+    updateChapterProgress(chapterId) {
+        console.log(`📊 Mise à jour progression: ${chapterId}`);
+        
+        const user = StorageManager.getUser();
+        if (!user.chaptersProgress) user.chaptersProgress = {};
+        
+        const chapitre = CHAPITRES.find(ch => ch.id === chapterId);
+        if (chapitre) {
+            const completedSteps = chapitre.etapes.filter(e => e.completed).length;
+            const totalSteps = chapitre.etapes.length;
+            const percentage = Math.round((completedSteps / totalSteps) * 100);
+            
+            user.chaptersProgress[chapterId] = {
+                completed: completedSteps,
+                total: totalSteps,
+                percentage: percentage,
+                lastUpdated: new Date().toISOString()
+            };
+            
+            StorageManager.updateUser(user);
+        }
     },
     
     navigateTo(pageName) {
