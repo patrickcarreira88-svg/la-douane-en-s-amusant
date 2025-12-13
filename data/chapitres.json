@@ -52,6 +52,40 @@
           }
         },
         {
+          "id": "ch1_video1",
+          "numero": 3,
+          "titre": "Qu'est-ce qu'une marchandise commerciale?",
+          "type": "video",
+          "duree": "35 sec",
+          "contenu": "Découvrez la définition et les caractéristiques d'une marchandise commerciale",
+          "completed": false,
+          "points": 10,
+          "videoId": "video_101_marchandises",
+          "videoPath": "/assets/videos/101ab",
+          "exercice": {
+            "type": "video",
+            "titre": "Qu'est-ce qu'une marchandise commerciale?",
+            "description": "Regardez la vidéo pour comprendre la différence entre marchandises commerciales et biens personnels"
+          }
+        },
+        {
+          "id": "ch1_video2",
+          "numero": 4,
+          "titre": "Les 5 étapes du processus de dédouanement",
+          "type": "video",
+          "duree": "55 sec",
+          "contenu": "Découvrez les 5 étapes essentielles du dédouanement en Suisse",
+          "completed": false,
+          "points": 10,
+          "videoId": "video_101_processus",
+          "videoPath": "/assets/videos/101ab",
+          "exercice": {
+            "type": "video",
+            "titre": "Les 5 étapes du processus de dédouanement",
+            "description": "Regardez la vidéo pour comprendre le flux complet du dédouanement à l'importation suisse"
+          }
+        },
+        {
           "id": "ch1_step3",
           "numero": 3,
           "titre": "Rôles et responsabilités",

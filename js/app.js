@@ -643,7 +643,7 @@ const App = {
             <hr style="margin: var(--spacing-lg) 0;">
             
             <div id="exercice-container">
-                ${this.renderExercice(etape.exercice, etape.type)}
+                ${this.renderExercice(etape.exercice, etape.type, etape)}
             </div>
         `;
         
@@ -653,18 +653,37 @@ const App = {
         // Afficher le modal
         document.getElementById('etape-modal').classList.add('active');
         
+        // ✅ SI C'EST UNE VIDÉO, CHARGER LE LECTEUR APRÈS INJECTION DU HTML
+        if (etape.type === 'video' && etape.videoId) {
+            setTimeout(() => {
+                const container = document.querySelector(`[data-step-id="video-${etape.videoId}"]`);
+                if (container) {
+                    const videoElement = document.createElement('video-player');
+                    videoElement.setAttribute('video-id', etape.videoId);
+                    container.appendChild(videoElement);
+                    
+                    // Écouter complétude vidéo
+                    videoElement.addEventListener('video-completed', (e) => {
+                        console.log('✅ Vidéo complétée depuis modal:', etape.titre);
+                        App.validerExercice('video');
+                    });
+                }
+            }, 100);
+        }
+        
         console.log(`✅ Étape affichée: ${etape.titre}`);
     },
 
     /**
      * Rend l'exercice selon son type
      */
-    renderExercice(exercice, type) {
+    renderExercice(exercice, type, etape = null) {
         if (!exercice) return '<p>Aucun exercice</p>';
         
+        // Passer l'étape aux fonctions de rendu pour accès au videoId
         switch(exercice.type) {
             case 'video':
-                return this.renderExerciceVideo(exercice);
+                return this.renderExerciceVideo(exercice, etape);
             case 'qcm':
                 return this.renderExerciceQCM(exercice);
             case 'lecture':
@@ -679,30 +698,52 @@ const App = {
     },
 
     /**
-     * Rendu VIDEO
+     * Rendu VIDEO (Support à la fois YouTube et lecteur local)
      */
-    renderExerciceVideo(exercice) {
-        let embedUrl = exercice.url;
-        
-        // Gérer les différents formats d'URL YouTube
-        if (embedUrl.includes('watch?v=')) {
-            const videoId = embedUrl.split('v=')[1]?.split('&')[0];
-            embedUrl = `https://www.youtube.com/embed/${videoId}`;
-        } else if (embedUrl.includes('youtu.be/')) {
-            const videoId = embedUrl.split('youtu.be/')[1]?.split('?')[0];
-            embedUrl = `https://www.youtube.com/embed/${videoId}`;
+    renderExerciceVideo(exercice, etape = null) {
+        // Si c'est une URL YouTube
+        if (exercice.url) {
+            let embedUrl = exercice.url;
+            
+            // Gérer les différents formats d'URL YouTube
+            if (embedUrl.includes('watch?v=')) {
+                const videoId = embedUrl.split('v=')[1]?.split('&')[0];
+                embedUrl = `https://www.youtube.com/embed/${videoId}`;
+            } else if (embedUrl.includes('youtu.be/')) {
+                const videoId = embedUrl.split('youtu.be/')[1]?.split('?')[0];
+                embedUrl = `https://www.youtube.com/embed/${videoId}`;
+            }
+            
+            return `
+                <div style="background: var(--color-surface); padding: var(--spacing-md); border-radius: var(--radius-md);">
+                    <h3>${exercice.titre}</h3>
+                    <p style="color: var(--color-text-light); margin-bottom: var(--spacing-md);">${exercice.description}</p>
+                    <div style="position: relative; width: 100%; padding-bottom: 56.25%; margin-bottom: var(--spacing-md); background: #000;">
+                        <iframe title="${exercice.titre}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;" src="${embedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                    </div>
+                    <button class="btn btn--primary" style="margin-top: var(--spacing-md); width: 100%;" onclick="App.validerExercice('video')">✅ J'ai regardé la vidéo</button>
+                </div>
+            `;
         }
         
-        return `
-            <div style="background: var(--color-surface); padding: var(--spacing-md); border-radius: var(--radius-md);">
-                <h3>${exercice.titre}</h3>
-                <p style="color: var(--color-text-light); margin-bottom: var(--spacing-md);">${exercice.description}</p>
-                <div style="position: relative; width: 100%; padding-bottom: 56.25%; margin-bottom: var(--spacing-md); background: #000;">
-                    <iframe title="${exercice.titre}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;" src="${embedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+        // Si c'est une vidéo locale avec notre VideoPlayer
+        const videoId = etape?.videoId || exercice.videoId;
+        if (videoId) {
+            return `
+                <div class="video-section">
+                    <h3>🎬 ${exercice.titre}</h3>
+                    <p style="color: var(--color-text-light); margin-bottom: 20px;">${exercice.description}</p>
+                    
+                    <div data-step-id="video-${videoId}">
+                        <!-- VideoPlayer sera inséré ici dynamiquement -->
+                    </div>
+                    
+                    <button class="btn btn--primary" style="margin-top: var(--spacing-md); width: 100%;" onclick="App.validerExercice('video')">✅ J'ai regardé la vidéo</button>
                 </div>
-                <button class="btn btn--primary" style="margin-top: var(--spacing-md); width: 100%;" onclick="App.validerExercice('video')">✅ J'ai regardé la vidéo</button>
-            </div>
-        `;
+            `;
+        }
+        
+        return `<p>Format vidéo non supporté</p>`;
     },
 
     /**
@@ -1417,6 +1458,11 @@ const App = {
                 el.style.cursor = 'pointer';
             }
         });
+        
+        // ✅ CHARGER LES VIDÉOS DU CHAPITRE
+        setTimeout(() => {
+            loadChapterVideos(chapitreId);
+        }, 100);
     },
 
     // ═══════════════════════════════════════════════════════════
