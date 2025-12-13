@@ -17,18 +17,18 @@
       "bloomLevels": ["remember", "understand"],
       "keywords": ["marchandise", "commercial", "quantité", "revente", "personnel"],
       "sources": {
-        "720p": "marchandises_commerciales_720p.mp4",
-        "480p": "marchandises_commerciales_480p.mp4",
-        "360p": "marchandises_commerciales_360p.mp4"
+        "720p": "../Marchandise_Commerciale_-_35s.mp4",
+        "480p": "../Marchandise_Commerciale_-_35s.mp4",
+        "360p": "../Marchandise_Commerciale_-_35s.mp4"
       },
       "subtitles": "marchandises_fr.vtt",
       "transcript": "../texts/101ab_marchandises_transcript.txt",
       "relatedExercises": ["ex_101_001", "ex_101_002", "ex_101_003"],
       "relatedPortfolio": ["competency_definition_marchandise"],
       "estimatedFileSize": {
-        "720p": "3 MB",
-        "480p": "1.5 MB",
-        "360p": "0.8 MB"
+        "720p": "?",
+        "480p": "?",
+        "360p": "?"
       },
       "captions": {
         "fr": "marchandises_fr.vtt"
@@ -44,9 +44,9 @@
       "bloomLevels": ["understand", "apply"],
       "keywords": ["présentation", "déclaration", "contrôle", "taxation", "libération", "processus"],
       "sources": {
-        "720p": "processus_dedouanement_720p.mp4",
-        "480p": "processus_dedouanement_480p.mp4",
-        "360p": "processus_dedouanement_360p.mp4"
+        "720p": "../Dédouanement_Suisse_Expliqué.mp4",
+        "480p": "../Dédouanement_Suisse_Expliqué.mp4",
+        "360p": "../Dédouanement_Suisse_Expliqué.mp4"
       },
       "subtitles": "processus_fr.vtt",
       "transcript": "../texts/101ab_processus_transcript.txt",

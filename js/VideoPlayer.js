@@ -12,7 +12,7 @@ class VideoPlayer extends HTMLElement {
     super();
     this.attachShadow({ mode: 'open' });
     this.videoId = null;
-    this.currentBitrate = '720p';
+    this.currentBitrate = '360p'; // ⚡ Default to fastest loading
     this.isPlaying = false;
     this.currentTime = 0;
     this.duration = 0;
@@ -293,53 +293,53 @@ class VideoPlayer extends HTMLElement {
   }
 
   loadVideo() {
-    // Charger metadata depuis video-manifest.json
-    fetch('/assets/videos/101ab/video-manifest.json')
-      .then(res => res.json())
-      .then(manifest => {
-        const video = manifest.videos.find(v => v.id === this.videoId);
-        if (video) {
-          this.videoData = video;
-          const videoElement = this.shadowRoot.getElementById('video-element');
-          const spinner = this.shadowRoot.getElementById('loading-spinner');
-          
-          // Afficher titre
-          this.shadowRoot.getElementById('video-title').textContent = video.title;
-
-          // ⚡ OPTIMISATION: Charger source avec preload='metadata' seulement
-          const source = document.createElement('source');
-          source.src = `/assets/videos/101ab/${video.sources[this.currentBitrate]}`;
-          source.type = 'video/mp4';
-          videoElement.appendChild(source);
-          
-          // ⚡ IMPORTANT: preload='metadata' charge que les métadonnées, pas toute la vidéo
-          videoElement.preload = 'metadata';
-
-          // Charger sous-titres si dispo
-          if (video.subtitles) {
-            const track = videoElement.querySelector('track');
-            track.src = `/assets/videos/101ab/${video.subtitles}`;
-          }
-
-          // Charger transcription (asynchrone, pas bloquant)
-          if (video.transcript) {
-            this.loadTranscript(video.transcript);
-          }
-
-          // Hide spinner when metadata loaded (NOT when full video ready)
-          videoElement.addEventListener('loadedmetadata', () => {
-            if (spinner) spinner.style.display = 'none';
-            console.log(`⏱️ Métadonnées vidéo chargées (${video.duration}s)`);
-          });
-
-          console.log(`✅ Vidéo initialisée: ${video.title} (${this.currentBitrate})`);
-        }
-      })
-      .catch(err => {
-        console.error('❌ Erreur chargement vidéo:', err);
-        this.shadowRoot.getElementById('loading-spinner').innerHTML = 
-          '<p style="color:white;font-size:12px;">Erreur chargement</p>';
-      });
+    const videoElement = this.shadowRoot.getElementById('video-element');
+    const spinner = this.shadowRoot.getElementById('loading-spinner');
+    
+    console.log('🎥 Tentative chargement vidéo:', this.videoId);
+    
+    // Approach simple: charger directement sans manifest
+    // Si c'est marchandises, utiliser le fichier réel qui existe
+    let videoPath = '';
+    let videoTitle = '';
+    
+    if (this.videoId === 'video_101_marchandises') {
+      videoPath = '/assets/videos/Marchandise_Commerciale_-_35s.mp4';
+      videoTitle = 'Qu\'est-ce qu\'une marchandise commerciale?';
+    } else if (this.videoId === 'video_101_processus') {
+      videoPath = '/assets/videos/Dédouanement_Suisse_Expliqué.mp4';
+      videoTitle = 'Les 5 étapes du processus de dédouanement';
+    }
+    
+    if (!videoPath) {
+      console.error('❌ Vidéo ID inconnu:', this.videoId);
+      spinner.innerHTML = '<p style="color:white;">Vidéo non trouvée</p>';
+      return;
+    }
+    
+    this.shadowRoot.getElementById('video-title').textContent = videoTitle;
+    
+    // Créer source
+    const source = document.createElement('source');
+    source.src = videoPath;
+    source.type = 'video/mp4';
+    videoElement.appendChild(source);
+    
+    // ⚡ Configuration minimale pour chargement rapide
+    videoElement.preload = 'metadata';
+    
+    // Écoute du chargement
+    videoElement.addEventListener('loadedmetadata', () => {
+      console.log(`✅ Vidéo prête: ${videoTitle}`);
+      if (spinner) spinner.style.display = 'none';
+    });
+    
+    videoElement.addEventListener('error', (e) => {
+      console.error('❌ Erreur vidéo:', e, 'Chemin:', videoPath);
+      spinner.innerHTML = '<p style="color:red;">Erreur chargement vidéo</p>';
+    });
+    
+    console.log('📺 Chargement de:', videoPath);
   }
 
   loadTranscript(transcriptPath) {
