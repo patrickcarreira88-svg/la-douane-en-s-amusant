@@ -258,17 +258,20 @@ class VideoPlayer extends HTMLElement {
   }
 
   detectNetworkSpeed() {
+    // ⚡ PAR DÉFAUT: COMMENCER PAR 360p POUR CHARGEMENT RAPIDE
+    this.currentBitrate = '360p';
+    
     if (navigator.connection) {
       const type = navigator.connection.effectiveType;
       const downlink = navigator.connection.downlink;
       
-      if (type === '4g' && downlink >= 5) {
+      // Monter en qualité que si bonne connexion (très restrictif)
+      if (type === '4g' && downlink >= 10) {
         this.currentBitrate = '720p';
-      } else if (type === '3g' || downlink < 5) {
+      } else if (type === '4g' || (type === '3g' && downlink >= 5)) {
         this.currentBitrate = '480p';
-      } else {
-        this.currentBitrate = '360p';
       }
+      // Sinon rester à 360p
 
       // Afficher bitrate détecté
       const badge = this.shadowRoot.getElementById('bitrate-badge');
@@ -284,9 +287,9 @@ class VideoPlayer extends HTMLElement {
           console.log(`📡 Bitrate changé: ${oldBitrate} → ${this.currentBitrate}`);
         }
       });
-    } else {
-      this.currentBitrate = '720p'; // Fallback
     }
+    
+    console.log(`📺 Bitrate choisi: ${this.currentBitrate} (chargement rapide)`);
   }
 
   loadVideo() {
@@ -303,11 +306,14 @@ class VideoPlayer extends HTMLElement {
           // Afficher titre
           this.shadowRoot.getElementById('video-title').textContent = video.title;
 
-          // Charger source selon bitrate détecté
+          // ⚡ OPTIMISATION: Charger source avec preload='metadata' seulement
           const source = document.createElement('source');
           source.src = `/assets/videos/101ab/${video.sources[this.currentBitrate]}`;
           source.type = 'video/mp4';
           videoElement.appendChild(source);
+          
+          // ⚡ IMPORTANT: preload='metadata' charge que les métadonnées, pas toute la vidéo
+          videoElement.preload = 'metadata';
 
           // Charger sous-titres si dispo
           if (video.subtitles) {
@@ -315,17 +321,18 @@ class VideoPlayer extends HTMLElement {
             track.src = `/assets/videos/101ab/${video.subtitles}`;
           }
 
-          // Charger transcription
+          // Charger transcription (asynchrone, pas bloquant)
           if (video.transcript) {
             this.loadTranscript(video.transcript);
           }
 
-          // Hide spinner on canplay
-          videoElement.addEventListener('canplay', () => {
+          // Hide spinner when metadata loaded (NOT when full video ready)
+          videoElement.addEventListener('loadedmetadata', () => {
             if (spinner) spinner.style.display = 'none';
+            console.log(`⏱️ Métadonnées vidéo chargées (${video.duration}s)`);
           });
 
-          console.log(`✅ Vidéo chargée: ${video.title} (${this.currentBitrate})`);
+          console.log(`✅ Vidéo initialisée: ${video.title} (${this.currentBitrate})`);
         }
       })
       .catch(err => {
