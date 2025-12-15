@@ -793,6 +793,658 @@
         "emoji": "🛡️",
         "description": "Sécurité douanière maîtrisée!"
       }
+    },
+    {
+      "chapterId": "101BT",
+      "numero": 2,
+      "titre": "Marchandises & Processus: Mise en Pratique",
+      "emoji": "📋",
+      "couleur": "#FF6B9D",
+      "description": "Appliquer les fondamentaux douaniers à des cas concrets. Identification marchandises, flux processus, documents déclaration.",
+      "difficulty": 2,
+      "estimatedTime": "50 minutes",
+      "bloomLevels": ["understand", "apply", "analyze"],
+      "themeId": "theme_fondamentaux",
+      "prerequisites": ["101AB"],
+      "progression": 0,
+      "metadata": {
+        "createdDate": "2025-12-15",
+        "lastUpdated": "2025-12-15",
+        "version": "1.0",
+        "status": "structure_complete_awaiting_exercises",
+        "totalExercises": 40,
+        "totalCompetencies": 4,
+        "portfolioSwipeCount": 5
+      },
+      "objectifs": [
+        "Identifier correctement le statut des marchandises (commercial/personnel/touristique)",
+        "Appliquer les 5 étapes du processus à un import réel",
+        "Remplir les données clés d'une déclaration douanière",
+        "Détecter erreurs fréquentes et risques en douane",
+        "Mettre en pratique les fondamentaux appris en 101.AB"
+      ],
+      "etapes": [
+        {
+          "id": "101BT_objectives",
+          "numero": 1,
+          "titre": "🎯 Objectifs du Module",
+          "type": "objectives",
+          "locked": false,
+          "icon": "🎯",
+          "duree": "2 min",
+          "contenu": "À la fin de ce module, tu pourras: ✓ Identifier correctement le statut des marchandises ✓ Appliquer les 5 étapes du processus à un import réel ✓ Remplir les données clés d'une déclaration douanière ✓ Détecter erreurs fréquentes et risques",
+          "completed": false,
+          "points": 0,
+          "exercice": {
+            "type": "objectives",
+            "titre": "Objectifs d'apprentissage"
+          }
+        },
+        {
+          "id": "101BT_step_diagnostic",
+          "numero": 2,
+          "titre": "📋 Étape 1: Diagnostic (Pré-test)",
+          "type": "exercise_group",
+          "locked": false,
+          "icon": "📋",
+          "duree": "8 min",
+          "contenu": "Évalue tes connaissances 101.AB avant de continuer",
+          "completed": false,
+          "points": 50,
+          "exercices": [
+            {
+              "id": "101BT_ex_001",
+              "type": "qcm",
+              "titre": "[EX 1] Définition Marchandise Commerciale",
+              "description": "[À REMPLIR - 5 questions QCM]",
+              "order": 1,
+              "points": 10,
+              "bloomLevel": "remember",
+              "difficulty": 1,
+              "duree": "2 min",
+              "status": "awaiting_content"
+            },
+            {
+              "id": "101BT_ex_002",
+              "type": "qcm",
+              "titre": "[EX 2] Les 5 Étapes du Processus",
+              "description": "[À REMPLIR - 5 questions QCM]",
+              "order": 2,
+              "points": 10,
+              "bloomLevel": "remember",
+              "difficulty": 1,
+              "duree": "2 min",
+              "status": "awaiting_content"
+            },
+            {
+              "id": "101BT_ex_003",
+              "type": "vrai_faux",
+              "titre": "[EX 3] Personnel vs Commercial (10 items)",
+              "description": "[À REMPLIR - 10 affirmations à valider]",
+              "order": 3,
+              "points": 10,
+              "bloomLevel": "understand",
+              "difficulty": 1,
+              "duree": "2 min",
+              "status": "awaiting_content"
+            },
+            {
+              "id": "101BT_ex_004",
+              "type": "drag_drop",
+              "titre": "[EX 4] Ordonner les 5 Étapes",
+              "description": "[À REMPLIR - Drag-drop 5 étapes]",
+              "order": 4,
+              "points": 15,
+              "bloomLevel": "understand",
+              "difficulty": 2,
+              "duree": "2 min",
+              "status": "awaiting_content"
+            },
+            {
+              "id": "101BT_ex_005",
+              "type": "likert",
+              "titre": "[EX 5] Auto-Positionnement (4 Compétences)",
+              "description": "[À REMPLIR - Échelle Likert pour portfolio]",
+              "order": 5,
+              "points": 5,
+              "bloomLevel": "understand",
+              "difficulty": 1,
+              "duree": "1 min",
+              "status": "awaiting_content"
+            }
+          ]
+        },
+        {
+          "id": "101BT_step_videos",
+          "numero": 3,
+          "titre": "🎬 Étape 2: Révision Vidéos 101.AB",
+          "type": "exercise_group",
+          "locked": false,
+          "icon": "🎬",
+          "duree": "10 min",
+          "contenu": "S'assurer que vidéos sont bien maîtrisées avant d'avancer",
+          "completed": false,
+          "points": 75,
+          "exercices": [
+            {
+              "id": "101BT_ex_006",
+              "type": "qcm",
+              "titre": "[EX 6] QCM Post-Vidéo: Marchandises Commerciales",
+              "description": "[À REMPLIR - 3 questions QCM]",
+              "order": 1,
+              "points": 15,
+              "bloomLevel": "understand",
+              "difficulty": 1,
+              "duree": "2 min",
+              "relatedVideo": "video_101_marchandises",
+              "status": "awaiting_content"
+            },
+            {
+              "id": "101BT_ex_007",
+              "type": "matching",
+              "titre": "[EX 7] Situation ↔ Statut",
+              "description": "[À REMPLIR - Matching: situations vs personnel/touristique/commercial]",
+              "order": 2,
+              "points": 15,
+              "bloomLevel": "understand",
+              "difficulty": 1,
+              "duree": "2 min",
+              "status": "awaiting_content"
+            },
+            {
+              "id": "101BT_ex_008",
+              "type": "qcm",
+              "titre": "[EX 8] QCM Post-Vidéo: Processus Dédouanement",
+              "description": "[À REMPLIR - 3 questions QCM]",
+              "order": 3,
+              "points": 15,
+              "bloomLevel": "understand",
+              "difficulty": 1,
+              "duree": "2 min",
+              "relatedVideo": "video_101_processus",
+              "status": "awaiting_content"
+            },
+            {
+              "id": "101BT_ex_009",
+              "type": "drag_drop",
+              "titre": "[EX 9] Timeline: Placer Actions aux Étapes",
+              "description": "[À REMPLIR - 8 actions à placer aux 5 étapes]",
+              "order": 4,
+              "points": 15,
+              "bloomLevel": "understand",
+              "difficulty": 2,
+              "duree": "2 min",
+              "status": "awaiting_content"
+            },
+            {
+              "id": "101BT_ex_010",
+              "type": "qcm",
+              "titre": "[EX 10] Mini-Quiz Synthèse (4 questions)",
+              "description": "[À REMPLIR - QCM/VF mix sur flux complet]",
+              "order": 5,
+              "points": 15,
+              "bloomLevel": "understand",
+              "difficulty": 1,
+              "duree": "2 min",
+              "status": "awaiting_content"
+            }
+          ]
+        },
+        {
+          "id": "101BT_step_cas_simples",
+          "numero": 4,
+          "titre": "📦 Étape 3: Cas Simples - Identifier Marchandises",
+          "type": "exercise_group",
+          "locked": false,
+          "icon": "📦",
+          "duree": "12 min",
+          "contenu": "Appliquer critères marchandise à des cas concrets",
+          "completed": false,
+          "points": 75,
+          "exercices": [
+            {
+              "id": "101BT_ex_011",
+              "type": "scenario",
+              "titre": "[EX 11] Scénarios Courts: Touriste à Frontière (3 cas)",
+              "description": "[À REMPLIR - 3 scénarios QCM avec statut]",
+              "order": 1,
+              "points": 15,
+              "bloomLevel": "apply",
+              "difficulty": 2,
+              "duree": "3 min",
+              "status": "awaiting_content"
+            },
+            {
+              "id": "101BT_ex_012",
+              "type": "texte_trous",
+              "titre": "[EX 12] Tableau à Trous (Quantité + Intention + Statut)",
+              "description": "[À REMPLIR - 6 lignes à compléter]",
+              "order": 2,
+              "points": 15,
+              "bloomLevel": "apply",
+              "difficulty": 2,
+              "duree": "3 min",
+              "status": "awaiting_content"
+            },
+            {
+              "id": "101BT_ex_013",
+              "type": "drag_drop",
+              "titre": "[EX 13] Images: Charges ↔ Trafics",
+              "description": "[À REMPLIR - Drag images vers Personal/Tourist/Commercial]",
+              "order": 3,
+              "points": 15,
+              "bloomLevel": "apply",
+              "difficulty": 1,
+              "duree": "2 min",
+              "status": "awaiting_content"
+            },
+            {
+              "id": "101BT_ex_014",
+              "type": "vrai_faux",
+              "titre": "[EX 14] Vrai/Faux Contextualisé (8 items)",
+              "description": "[À REMPLIR - Seuils typiques / indices commerce]",
+              "order": 4,
+              "points": 15,
+              "bloomLevel": "understand",
+              "difficulty": 2,
+              "duree": "2 min",
+              "status": "awaiting_content"
+            },
+            {
+              "id": "101BT_ex_015",
+              "type": "flashcard",
+              "titre": "[EX 15] Flashcards: Vocab Rapide (5 cartes)",
+              "description": "[À REMPLIR - Recto: terme | Verso: définition + exemple]",
+              "order": 5,
+              "points": 15,
+              "bloomLevel": "remember",
+              "difficulty": 1,
+              "duree": "2 min",
+              "status": "awaiting_content"
+            }
+          ]
+        },
+        {
+          "id": "101BT_step_processus_guide",
+          "numero": 5,
+          "titre": "⚙️ Étape 4: Cas Guidé - Appliquer le Processus",
+          "type": "exercise_group",
+          "locked": false,
+          "icon": "⚙️",
+          "duree": "12 min",
+          "contenu": "Suivre un import simple à travers les 5 étapes",
+          "completed": false,
+          "points": 100,
+          "exercices": [
+            {
+              "id": "101BT_ex_016",
+              "type": "narrative",
+              "titre": "[EX 16] Cas Narratif + QCM Étapes",
+              "description": "[À REMPLIR - Narratif + questions 'quelle étape?']",
+              "order": 1,
+              "points": 20,
+              "bloomLevel": "apply",
+              "difficulty": 2,
+              "duree": "2 min",
+              "status": "awaiting_content"
+            },
+            {
+              "id": "101BT_ex_017",
+              "type": "drag_drop",
+              "titre": "[EX 17] Séquençage Documents (8 documents)",
+              "description": "[À REMPLIR - Ordonner documents dans flux]",
+              "order": 2,
+              "points": 20,
+              "bloomLevel": "apply",
+              "difficulty": 2,
+              "duree": "2 min",
+              "status": "awaiting_content"
+            },
+            {
+              "id": "101BT_ex_018",
+              "type": "qcm_decision",
+              "titre": "[EX 18] QCM Décisionnel: Que faire? (3 questions)",
+              "description": "[À REMPLIR - 'À cette étape, l'agent doit...']",
+              "order": 3,
+              "points": 20,
+              "bloomLevel": "apply",
+              "difficulty": 2,
+              "duree": "2 min",
+              "status": "awaiting_content"
+            },
+            {
+              "id": "101BT_ex_019",
+              "type": "matching",
+              "titre": "[EX 19] Étape ↔ Sortie Attendue (5 pairs)",
+              "description": "[À REMPLIR - Relier étapes aux outputs]",
+              "order": 4,
+              "points": 20,
+              "bloomLevel": "understand",
+              "difficulty": 1,
+              "duree": "2 min",
+              "status": "awaiting_content"
+            },
+            {
+              "id": "101BT_ex_020",
+              "type": "texte_court",
+              "titre": "[EX 20] Question Ouverte: Identifier Risques",
+              "description": "[À REMPLIR - 'Où les principaux risques?']",
+              "order": 5,
+              "points": 20,
+              "bloomLevel": "analyze",
+              "difficulty": 2,
+              "duree": "2 min",
+              "status": "awaiting_content"
+            }
+          ]
+        },
+        {
+          "id": "101BT_step_documents",
+          "numero": 6,
+          "titre": "📄 Étape 5: Documents - Lire & Compléter Déclaration",
+          "type": "exercise_group",
+          "locked": false,
+          "icon": "📄",
+          "duree": "12 min",
+          "contenu": "Maîtriser structure et contenu déclaration douanière",
+          "completed": false,
+          "points": 75,
+          "exercices": [
+            {
+              "id": "101BT_ex_021",
+              "type": "qcm",
+              "titre": "[EX 21] QCM: Champs Obligatoires (5 questions)",
+              "description": "[À REMPLIR - 'Lesquels sont obligatoires?']",
+              "order": 1,
+              "points": 15,
+              "bloomLevel": "understand",
+              "difficulty": 1,
+              "duree": "2 min",
+              "status": "awaiting_content"
+            },
+            {
+              "id": "101BT_ex_022",
+              "type": "texte_trous",
+              "titre": "[EX 22] Compléter Déclaration Simplifiée (6-8 trous)",
+              "description": "[À REMPLIR - Trous: importateur, marchandise, valeur...]",
+              "order": 2,
+              "points": 15,
+              "bloomLevel": "apply",
+              "difficulty": 2,
+              "duree": "2 min",
+              "status": "awaiting_content"
+            },
+            {
+              "id": "101BT_ex_023",
+              "type": "matching",
+              "titre": "[EX 23] Champ ↔ Définition (10 pairs)",
+              "description": "[À REMPLIR - 'Pays d'origine', 'Valeur en douane'...]",
+              "order": 3,
+              "points": 15,
+              "bloomLevel": "remember",
+              "difficulty": 1,
+              "duree": "2 min",
+              "status": "awaiting_content"
+            },
+            {
+              "id": "101BT_ex_024",
+              "type": "vrai_faux",
+              "titre": "[EX 24] Erreurs Fréquentes (8 items)",
+              "description": "[À REMPLIR - 'Provenance = Origine?' etc]",
+              "order": 4,
+              "points": 15,
+              "bloomLevel": "understand",
+              "difficulty": 2,
+              "duree": "2 min",
+              "status": "awaiting_content"
+            },
+            {
+              "id": "101BT_ex_025",
+              "type": "hotspot",
+              "titre": "[EX 25] Identification Visuelle: Cliquer 4 Champs",
+              "description": "[À REMPLIR - Image déclaration, cliquer zones clés]",
+              "order": 5,
+              "points": 15,
+              "bloomLevel": "understand",
+              "difficulty": 1,
+              "duree": "2 min",
+              "status": "awaiting_content"
+            }
+          ]
+        },
+        {
+          "id": "101BT_step_cas_complexes",
+          "numero": 7,
+          "titre": "🔴 Étape 6: Cas Complexes - Scénarios Multi-Étapes",
+          "type": "exercise_group",
+          "locked": false,
+          "icon": "🔴",
+          "duree": "12 min",
+          "contenu": "Gérer cas plus ambigus et problématiques",
+          "completed": false,
+          "points": 100,
+          "exercices": [
+            {
+              "id": "101BT_ex_026",
+              "type": "scenario",
+              "titre": "[EX 26] Scénario 1: Import Multi-Produits",
+              "description": "[À REMPLIR - 5 produits + 'Quel ordre actions?']",
+              "order": 1,
+              "points": 20,
+              "bloomLevel": "apply",
+              "difficulty": 2,
+              "duree": "2 min",
+              "status": "awaiting_content"
+            },
+            {
+              "id": "101BT_ex_027",
+              "type": "scenario",
+              "titre": "[EX 27] Scénario 2: Documents Incomplets",
+              "description": "[À REMPLIR - 'Que fait la douane?' (refus/complément/taxation)]",
+              "order": 2,
+              "points": 20,
+              "bloomLevel": "apply",
+              "difficulty": 2,
+              "duree": "2 min",
+              "status": "awaiting_content"
+            },
+            {
+              "id": "101BT_ex_028",
+              "type": "drag_drop",
+              "titre": "[EX 28] Problème ↔ Étape Impactée",
+              "description": "[À REMPLIR - 6 problèmes vers étapes]",
+              "order": 3,
+              "points": 20,
+              "bloomLevel": "analyze",
+              "difficulty": 2,
+              "duree": "2 min",
+              "status": "awaiting_content"
+            },
+            {
+              "id": "101BT_ex_029",
+              "type": "qcm_multiple",
+              "titre": "[EX 29] QCM Multi-Réponses: Infos à Demander",
+              "description": "[À REMPLIR - Cocher infos nécessaires]",
+              "order": 4,
+              "points": 20,
+              "bloomLevel": "apply",
+              "difficulty": 2,
+              "duree": "2 min",
+              "status": "awaiting_content"
+            },
+            {
+              "id": "101BT_ex_030",
+              "type": "qcm",
+              "titre": "[EX 30] Mini-Quiz (6 questions) Récapitulatif",
+              "description": "[À REMPLIR - QCM mix scénarios 1&2]",
+              "order": 5,
+              "points": 20,
+              "bloomLevel": "apply",
+              "difficulty": 2,
+              "duree": "2 min",
+              "status": "awaiting_content"
+            }
+          ]
+        },
+        {
+          "id": "101BT_step_revision",
+          "numero": 8,
+          "titre": "🔄 Étape 7: Révision Globale",
+          "type": "exercise_group",
+          "locked": false,
+          "icon": "🔄",
+          "duree": "10 min",
+          "contenu": "Consolider apprentissages avant portfolio",
+          "completed": false,
+          "points": 75,
+          "exercices": [
+            {
+              "id": "101BT_ex_031",
+              "type": "qcm",
+              "titre": "[EX 31] QCM Révision: 10 Items Mélangés",
+              "description": "[À REMPLIR - Mix marchandises/processus/documents]",
+              "order": 1,
+              "points": 15,
+              "bloomLevel": "understand",
+              "difficulty": 1,
+              "duree": "2 min",
+              "status": "awaiting_content"
+            },
+            {
+              "id": "101BT_ex_032",
+              "type": "vrai_faux",
+              "titre": "[EX 32] Vrai/Faux Récapitulatif (10 items)",
+              "description": "[À REMPLIR - Mix définitions/étapes/documents]",
+              "order": 2,
+              "points": 15,
+              "bloomLevel": "understand",
+              "difficulty": 1,
+              "duree": "2 min",
+              "status": "awaiting_content"
+            },
+            {
+              "id": "101BT_ex_033",
+              "type": "drag_drop",
+              "titre": "[EX 33] Reconstruire Schéma Global (3 colonnes)",
+              "description": "[À REMPLIR - Marchandises/Processus/Documents]",
+              "order": 3,
+              "points": 15,
+              "bloomLevel": "understand",
+              "difficulty": 2,
+              "duree": "2 min",
+              "status": "awaiting_content"
+            },
+            {
+              "id": "101BT_ex_034",
+              "type": "flashcard",
+              "titre": "[EX 34] Flashcards: Erreurs Fréquentes (6 cartes)",
+              "description": "[À REMPLIR - Recto: erreur | Verso: correction]",
+              "order": 4,
+              "points": 15,
+              "bloomLevel": "understand",
+              "difficulty": 1,
+              "duree": "2 min",
+              "status": "awaiting_content"
+            },
+            {
+              "id": "101BT_ex_035",
+              "type": "reflection",
+              "titre": "[EX 35] Auto-Évaluation Finale + Question Ouverte",
+              "description": "[À REMPLIR - 4 échelles + 'Ce qui reste difficile?']",
+              "order": 5,
+              "points": 15,
+              "bloomLevel": "reflect",
+              "difficulty": 1,
+              "duree": "2 min",
+              "status": "awaiting_content"
+            }
+          ]
+        },
+        {
+          "id": "101BT_step_portfolio",
+          "numero": 9,
+          "titre": "🎖️ Étape 8: Portfolio Swipe & Ancrage",
+          "type": "portfolio_swipe",
+          "locked": false,
+          "icon": "🎖️",
+          "duree": "5 min",
+          "contenu": "Ancrer apprentissages et préparer transfert en pratique",
+          "completed": false,
+          "points": 25,
+          "exercices": [
+            {
+              "id": "101BT_ex_036",
+              "type": "portfolio_swipe",
+              "titre": "[EX 36] Portfolio: Définir Marchandise Commerciale",
+              "description": "[À REMPLIR - Compétence + auto-score + liens ex 11-15]",
+              "order": 1,
+              "points": 5,
+              "bloomLevel": "apply",
+              "difficulty": 1,
+              "competencyId": "comp_marchandise",
+              "relatedExercises": ["101BT_ex_011", "101BT_ex_012", "101BT_ex_013", "101BT_ex_014", "101BT_ex_015"],
+              "status": "awaiting_content"
+            },
+            {
+              "id": "101BT_ex_037",
+              "type": "portfolio_swipe",
+              "titre": "[EX 37] Portfolio: Expliquer 5 Étapes Processus",
+              "description": "[À REMPLIR - Compétence + auto-score + liens ex 16-20, 26-30]",
+              "order": 2,
+              "points": 5,
+              "bloomLevel": "understand",
+              "difficulty": 1,
+              "competencyId": "comp_processus",
+              "relatedExercises": ["101BT_ex_004", "101BT_ex_009", "101BT_ex_016", "101BT_ex_017", "101BT_ex_019"],
+              "status": "awaiting_content"
+            },
+            {
+              "id": "101BT_ex_038",
+              "type": "portfolio_swipe",
+              "titre": "[EX 38] Portfolio: Lire & Compléter Déclaration Simple",
+              "description": "[À REMPLIR - Compétence + auto-score + liens ex 21-25]",
+              "order": 3,
+              "points": 5,
+              "bloomLevel": "apply",
+              "difficulty": 1,
+              "competencyId": "comp_documents",
+              "relatedExercises": ["101BT_ex_021", "101BT_ex_022", "101BT_ex_023", "101BT_ex_024", "101BT_ex_025"],
+              "status": "awaiting_content"
+            },
+            {
+              "id": "101BT_ex_039",
+              "type": "portfolio_swipe",
+              "titre": "[EX 39] Portfolio: Identifier Risques et Erreurs Fréquentes",
+              "description": "[À REMPLIR - Compétence + auto-score + liens ex 30, 34]",
+              "order": 4,
+              "points": 5,
+              "bloomLevel": "analyze",
+              "difficulty": 1,
+              "competencyId": "comp_risques",
+              "relatedExercises": ["101BT_ex_014", "101BT_ex_024", "101BT_ex_020", "101BT_ex_028", "101BT_ex_034"],
+              "status": "awaiting_content"
+            },
+            {
+              "id": "101BT_ex_040",
+              "type": "journal_entry",
+              "titre": "[EX 40] Journal d'Apprentissage: Entrée Guidée",
+              "description": "[À REMPLIR - 3 questions: appris / application / impact]",
+              "order": 5,
+              "points": 5,
+              "bloomLevel": "reflect",
+              "difficulty": 1,
+              "competencyId": "comp_journal",
+              "status": "awaiting_content"
+            }
+          ]
+        }
+      ],
+      "badge": {
+        "id": "badge_101bt",
+        "titre": "Expert en Mise en Pratique",
+        "emoji": "🏆",
+        "description": "Vous avez maîtrisé marchandises, processus et déclarations!"
+      }
     }
   ]
 }
