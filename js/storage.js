@@ -52,7 +52,11 @@ const StorageManager = {
                 totalPoints: 0,
                 consecutiveDays: 0,
                 startDate: new Date().toISOString(),
-                lastActivityDate: new Date().toISOString()
+                lastActivityDate: new Date().toISOString(),
+                nom: null,
+                prenom: null,
+                matricule: null,
+                profileCreated: false
             },
             chaptersProgress: {
                 ch1: {

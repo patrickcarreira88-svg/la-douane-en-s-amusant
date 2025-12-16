@@ -1,0 +1,567 @@
+{
+  "id": "101BT",
+  "emoji": "📋",
+  "titre": "Marchandises & Processus: Mise en Pratique",
+  "couleur": "#FF6B9D",
+  "description": "Appliquer les fondamentaux douaniers à des cas concrets. Identification marchandises, flux processus, documents déclaration.",
+  "difficulty": 2,
+  "estimatedTime": "50 minutes",
+  "bloomLevels": [
+    "understand",
+    "apply",
+    "analyze"
+  ],
+  "themeId": "theme_fondamentaux",
+  "prerequisites": [
+    "101AB"
+  ],
+  "numero": 2,
+  "progression": 0,
+  "metadata": {
+    "createdDate": "2025-12-15",
+    "lastUpdated": "2025-12-16",
+    "version": "1.3",
+    "status": "complete",
+    "totalExercises": 11,
+    "totalCompetencies": 5,
+    "portfolioSwipeCount": 5
+  },
+  "etapes": [
+    {
+      "id": "101BT_01_diagnostic",
+      "emoji": "📋",
+      "titre": "📋 Pré-test: Où en es-tu?",
+      "type": "exercise_group",
+      "numero": 1,
+      "locked": false,
+      "duree": "8 min",
+      "points": 45,
+      "description": "Évalue tes connaissances 101.AB avant de continuer",
+      "completed": false,
+      "exercices": [
+        {
+          "id": "101BT_ex_001",
+          "type": "qcm",
+          "titre": "[EX 1] QCM: Définition Marchandise Commerciale",
+          "description": "5 questions QCM simples sur définition marchandise",
+          "order": 1,
+          "points": 10,
+          "bloomLevel": "remember",
+          "difficulty": 1,
+          "duree": "2 min",
+          "content": {
+            "question": "Quelle est la définition d'une marchandise commerciale selon les critères douaniers suisses?",
+            "options": [
+              "Un bien acheté par un touriste en vacances",
+              "Un bien destiné à la revente en quantité importante avec intention commerciale",
+              "Un effet personnel d'un voyageur en transit",
+              "Un bien confisqué à la frontière pour infraction"
+            ],
+            "correctAnswer": 1,
+            "explanation": "Une marchandise commerciale se caractérise par: (1) une quantité importante, (2) une intention de revente, (3) un usage professionnel. Ces trois critères doivent être réunis."
+          },
+          "status": "complete"
+        },
+        {
+          "id": "101BT_ex_002",
+          "type": "qcm",
+          "titre": "[EX 2] QCM: Les 5 Étapes du Processus",
+          "description": "5 questions QCM sur étapes dédouanement",
+          "order": 2,
+          "points": 10,
+          "bloomLevel": "remember",
+          "difficulty": 1,
+          "duree": "2 min",
+          "content": {
+            "question": "Quel est l'ordre correct des 5 étapes du processus de dédouanement?",
+            "options": [
+              "Déclaration → Présentation → Contrôle → Taxation → Libération",
+              "Présentation → Déclaration → Contrôle → Taxation → Libération",
+              "Présentation → Contrôle → Déclaration → Libération → Taxation",
+              "Taxation → Présentation → Déclaration → Contrôle → Libération"
+            ],
+            "correctAnswer": 1,
+            "explanation": "Les 5 étapes dans l'ordre correct sont: 1) Présentation de la marchandise, 2) Déclaration des détails, 3) Contrôle par la douane, 4) Taxation (droits et TVA), 5) Libération de la marchandise."
+          },
+          "status": "complete"
+        },
+        {
+          "id": "101BT_ex_003",
+          "type": "true_false",
+          "titre": "[EX 3] Vrai/Faux: Personnel vs Commercial (10 items)",
+          "description": "10 affirmations à valider",
+          "order": 3,
+          "points": 10,
+          "bloomLevel": "understand",
+          "difficulty": 1,
+          "duree": "2 min",
+          "content": {
+            "items": [
+              {
+                "statement": "5 kg de café pour un commerce est une marchandise commerciale",
+                "answer": true
+              },
+              {
+                "statement": "2 tablettes de chocolat pour un touriste est un trafic touristique",
+                "answer": true
+              },
+              {
+                "statement": "Un costume personnel est soumis aux droits douaniers",
+                "answer": false
+              },
+              {
+                "statement": "Une quantité importante est le seul critère pour une marchandise commerciale",
+                "answer": false
+              },
+              {
+                "statement": "L'intention de revente détermine si c'est commercial",
+                "answer": true
+              },
+              {
+                "statement": "Un effet personnel peut devenir marchandise s'il y a quantité",
+                "answer": true
+              },
+              {
+                "statement": "Le trafic touristique a des règles spéciales à la frontière suisse",
+                "answer": true
+              },
+              {
+                "statement": "La TVA s'applique à tous les biens sans exception",
+                "answer": false
+              },
+              {
+                "statement": "L'usage professionnel est un critère clé du commercial",
+                "answer": true
+              },
+              {
+                "statement": "Un voyageur peut importer 100 montres sans déclaration",
+                "answer": false
+              }
+            ]
+          },
+          "status": "complete"
+        },
+        {
+          "id": "101BT_ex_004",
+          "type": "drag_drop",
+          "titre": "[EX 4] Drag-Drop: Ordonner les 5 Étapes",
+          "description": "Remettre étapes dans le bon ordre",
+          "order": 4,
+          "points": 15,
+          "bloomLevel": "understand",
+          "difficulty": 2,
+          "duree": "2 min",
+          "content": {
+            "items": [
+              {
+                "id": "step1",
+                "label": "Présentation de la marchandise au bureau de douane",
+                "correctPosition": 0
+              },
+              {
+                "id": "step2",
+                "label": "Déclaration complète des informations",
+                "correctPosition": 1
+              },
+              {
+                "id": "step3",
+                "label": "Contrôle des documents et vérification physique",
+                "correctPosition": 2
+              },
+              {
+                "id": "step4",
+                "label": "Taxation (calcul droits et TVA)",
+                "correctPosition": 3
+              },
+              {
+                "id": "step5",
+                "label": "Libération et enlèvement de la marchandise",
+                "correctPosition": 4
+              }
+            ]
+          },
+          "status": "complete"
+        }
+      ]
+    },
+    {
+      "id": "101BT_02_videos",
+      "emoji": "🎬",
+      "titre": "🎬 Révision Vidéo 101.AB",
+      "type": "exercise_group",
+      "numero": 2,
+      "locked": false,
+      "duree": "5 min",
+      "points": 20,
+      "description": "Regarder la vidéo de révision sur les principes fondamentaux",
+      "completed": false,
+      "exercices": [
+        {
+          "id": "101BT_ex_006",
+          "type": "video",
+          "titre": "[EX 6] Vidéo: Marchandises & Processus Douaniers",
+          "description": "Regarde la vidéo de révision sur les marchandises commerciales et les 5 étapes du dédouanement.",
+          "order": 1,
+          "points": 20,
+          "bloomLevel": "understand",
+          "difficulty": 1,
+          "duree": "5 min",
+          "content": {
+            "type": "youtube",
+            "url": "https://www.youtube.com/embed/jNQXAC9IVRw",
+            "transcriptAvailable": false,
+            "title": "Les fondamentaux du dédouanement"
+          },
+          "status": "complete"
+        }
+      ]
+    },
+    {
+      "id": "101BT_03_calculs_simplifies",
+      "emoji": "🧮",
+      "titre": "🧮 Calculs Simples & Avancés: TVA & Franchises",
+      "type": "exercise_group",
+      "numero": 3,
+      "locked": false,
+      "duree": "14 min",
+      "points": 60,
+      "description": "S'entraîner à calculer la TVA (2.6% et 8.1%) et vérifier la franchise en valeur (150 CHF) sur des marchandises de base.",
+      "completed": false,
+      "exercices": [
+        {
+          "id": "101BT_ex_012",
+          "type": "calculation",
+          "titre": "[EX 12] Calcul Néophyte: Franchise & TVA sur Marchandises",
+          "description": "Exercice débutant: calculer si la franchise de 150 CHF est dépassée et déterminer la TVA à appliquer selon les groupes tarifaires.",
+          "order": 1,
+          "points": 30,
+          "bloomLevel": "apply",
+          "difficulty": 1,
+          "duree": "8 min",
+          "content": {
+            "scenario": "🧳 SCÉNARIO: Retour de Week-end en Italie\n\nUne personne rentre en Suisse par la route après un week-end de courses.\nElle déclare les marchandises suivantes (valeur convertie en CHF):\n\n📍 Groupe Tarifaire 1 - VIANDE FRAÎCHE: 40 CHF → TVA réduite 2.6%\n📍 Groupe Tarifaire 2 - HUILE ALIMENTAIRE: 60 CHF → TVA réduite 2.6%\n📍 Groupe Tarifaire 3 - VÊTEMENTS & CADEAUX: 80 CHF → TVA normale 8.1%\n\nRAPPELS RÉGLEMENTAIRES:\n- Franchise-valeur par jour: 150 CHF (marchandises exonérées au-dessous)\n- TVA réduite (denrées alimentaires): 2.6%\n- TVA normale (autres marchandises): 8.1%\n- Si valeur total > 150 CHF → TOUTE la marchandise est imposable",
+            "questions": [
+              {
+                "id": "q1",
+                "question": "Calculez la valeur TOTALE de toutes les marchandises. La franchise de 150 CHF est-elle dépassée?",
+                "type": "numeric_input",
+                "unit": "CHF",
+                "correctAnswer": 180,
+                "tolerance": 0,
+                "hint": "Additionnez: 40 (viande) + 60 (huile) + 80 (vêtements) = ?",
+                "explanation": "Valeur totale = 40 + 60 + 80 = 180 CHF. Comme 180 > 150 CHF, la franchise est DÉPASSÉE. Toute la valeur (180 CHF) devient imposable."
+              },
+              {
+                "id": "q2",
+                "question": "Identifiez la base imposable pour les DENRÉES ALIMENTAIRES (viande + huile) soumises à TVA 2.6%.",
+                "type": "numeric_input",
+                "unit": "CHF",
+                "correctAnswer": 100,
+                "tolerance": 0,
+                "hint": "Additionnez viande (40) + huile (60).",
+                "explanation": "Base imposable denrées = 40 + 60 = 100 CHF. Ces deux groupes tarifaires alimentaires sont imposables à 2.6%."
+              },
+              {
+                "id": "q3",
+                "question": "Calculez la TVA sur les DENRÉES ALIMENTAIRES (100 CHF × 2.6%).",
+                "type": "numeric_input",
+                "unit": "CHF",
+                "correctAnswer": 2.6,
+                "tolerance": 0.1,
+                "hint": "Formule: Base × Taux = 100 × 0.026",
+                "explanation": "TVA denrées = 100 × 2.6% = 2.60 CHF. C'est la TVA réduite appliquée aux produits alimentaires."
+              },
+              {
+                "id": "q4",
+                "question": "Identifiez la base imposable pour les AUTRES MARCHANDISES (vêtements, cadeaux) soumises à TVA 8.1%.",
+                "type": "numeric_input",
+                "unit": "CHF",
+                "correctAnswer": 80,
+                "tolerance": 0,
+                "hint": "C'est la valeur des vêtements et cadeaux.",
+                "explanation": "Base imposable autres = 80 CHF. Ce groupe tarifaire non-alimentaire est imposable à 8.1%."
+              },
+              {
+                "id": "q5",
+                "question": "Calculez la TVA sur les AUTRES MARCHANDISES (80 CHF × 8.1%).",
+                "type": "numeric_input",
+                "unit": "CHF",
+                "correctAnswer": 6.48,
+                "tolerance": 0.1,
+                "hint": "Formule: Base × Taux = 80 × 0.081",
+                "explanation": "TVA autres = 80 × 8.1% = 6.48 CHF. C'est la TVA normale appliquée aux vêtements et cadeaux."
+              },
+              {
+                "id": "q6",
+                "question": "Calculez la TVA TOTALE à percevoir (TVA denrées + TVA autres).",
+                "type": "numeric_input",
+                "unit": "CHF",
+                "correctAnswer": 9.08,
+                "tolerance": 0.2,
+                "hint": "Additionnez: 2.60 CHF + 6.48 CHF = ?",
+                "explanation": "TVA totale = 2.60 + 6.48 = 9.08 CHF. C'est le montant total de TVA à percevoir sur l'ensemble des marchandises."
+              }
+            ],
+            "summary": "✅ RÉSUMÉ - Calcul TVA & Franchise pour Néophytes:\n\n📊 ANALYSE FRANCHISE:\n  - Valeur totale des marchandises: 180 CHF\n  - Franchise réglementaire: 150 CHF\n  - Résultat: 180 > 150 → FRANCHISE DÉPASSÉE ✗\n  - Conséquence: 100% de la marchandise est imposable\n\n💰 CALCUL TVA PAR GROUPE TARIFAIRE:\n  - Groupe 1 (Viande, Huile): 100 CHF × 2.6% = 2.60 CHF\n  - Groupe 2 (Vêtements, Cadeaux): 80 CHF × 8.1% = 6.48 CHF\n\n🎯 TVA TOTALE À PERCEVOIR: 9.08 CHF\n\n📝 RÈGLE CLÉS RETENUES:\n  ✓ Franchise s'applique à la valeur TOTALE\n  ✓ Si dépassée → tout est imposable\n  ✓ TVA réduite (2.6%) = denrées alimentaires\n  ✓ TVA normale (8.1%) = autres marchandises"
+          },
+          "status": "complete"
+        },
+        {
+          "id": "101BT_ex_013",
+          "type": "calculation",
+          "titre": "[EX 13] Calcul Avancé: Cas Complexe Café + Droits",
+          "description": "Exercice avancé: calculer droits de douane et TVA sur importation commerciale",
+          "order": 2,
+          "points": 30,
+          "bloomLevel": "apply",
+          "difficulty": 2,
+          "duree": "6 min",
+          "content": {
+            "scenario": "📦 SCÉNARIO: Importation Commerciale de Café\n\nUn importateur suisse commande 500 kg de café depuis la Colombie.\n- Prix unitaire: USD 5 par kg\n- Quantité: 500 kg\n- Frais de transport (international): USD 1'500\n- Assurance: USD 300\n- Cours de change: 1 USD = 0.88 CHF\n- Code HS: 0901.1100 (Café)\n- Taux de droit de douane: 6%\n- Taux TVA suisse: 7.7%",
+            "questions": [
+              {
+                "id": "calc1",
+                "question": "Calculez le PRIX TOTAL EN USD (Quantité × Prix unitaire):",
+                "type": "numeric_input",
+                "unit": "USD",
+                "correctAnswer": 2500,
+                "tolerance": 0,
+                "hint": "Prix = 500 kg × 5 USD/kg",
+                "explanation": "Prix FOB = 500 × 5 = 2'500 USD"
+              },
+              {
+                "id": "calc2",
+                "question": "Calculez la VALEUR EN DOUANE EN USD (FOB + Transport + Assurance):",
+                "type": "numeric_input",
+                "unit": "USD",
+                "correctAnswer": 4300,
+                "tolerance": 0,
+                "hint": "Valeur en douane = 2'500 + 1'500 + 300",
+                "explanation": "Valeur en douane = 2'500 + 1'500 + 300 = 4'300 USD"
+              },
+              {
+                "id": "calc3",
+                "question": "Convertissez la VALEUR EN DOUANE EN CHF (taux 0.88):",
+                "type": "numeric_input",
+                "unit": "CHF",
+                "correctAnswer": 3784,
+                "tolerance": 1,
+                "hint": "Valeur CHF = 4'300 USD × 0.88",
+                "explanation": "Valeur en douane = 4'300 × 0.88 = 3'784 CHF"
+              },
+              {
+                "id": "calc4",
+                "question": "Calculez les DROITS DE DOUANE (taux 6%):",
+                "type": "numeric_input",
+                "unit": "CHF",
+                "correctAnswer": 227.04,
+                "tolerance": 1,
+                "hint": "Droits = 3'784 CHF × 6%",
+                "explanation": "Droits de douane = 3'784 × 0.06 = 227.04 CHF"
+              },
+              {
+                "id": "calc5",
+                "question": "Calculez la TVA (7.7% sur valeur en douane + droits):",
+                "type": "numeric_input",
+                "unit": "CHF",
+                "correctAnswer": 308.49,
+                "tolerance": 1,
+                "hint": "TVA = (3'784 + 227.04) × 7.7%",
+                "explanation": "TVA = (3'784 + 227.04) × 7.7% = 4'011.04 × 0.077 ≈ 308.85 CHF"
+              },
+              {
+                "id": "calc6",
+                "question": "Calculez le COÛT TOTAL À L'IMPORTATION (Valeur + Droits + TVA):",
+                "type": "numeric_input",
+                "unit": "CHF",
+                "correctAnswer": 4319.53,
+                "tolerance": 2,
+                "hint": "Coût total = 3'784 + 227.04 + 308.49",
+                "explanation": "Coût total = 3'784 + 227.04 + 308.49 = 4'319.53 CHF"
+              }
+            ],
+            "summary": "✅ RÉSUMÉ - Calcul Avancé Cas Café:\n\n📊 CONVERSION DEVISES:\n  - Valeur en douane: 4'300 USD = 3'784 CHF\n\n💰 TAXATION:\n  - Droits de douane (6%): 227.04 CHF\n  - TVA (7.7%): 308.49 CHF\n\n🎯 COÛT TOTAL À L'IMPORTATION:\n  - **Total: 4'319.53 CHF**\n  - **Par kg: 8.64 CHF/kg** (4'319.53 ÷ 500)\n\n📝 COMPÉTENCES MAÎTRISÉES:\n  ✓ Conversion de devises\n  ✓ Calcul valeur en douane (INCOTERMS)\n  ✓ Application taux douanier\n  ✓ Calcul TVA multi-niveaux"
+          },
+          "status": "complete"
+        }
+      ]
+    },
+    {
+      "id": "101BT_04_cas_simples",
+      "emoji": "📦",
+      "titre": "📦 Cas Simples: Identifier Marchandises",
+      "type": "exercise_group",
+      "numero": 4,
+      "locked": false,
+      "duree": "12 min",
+      "points": 75,
+      "description": "Appliquer critères marchandise à des cas concrets",
+      "completed": false,
+      "exercices": [
+        {
+          "id": "101BT_ex_014",
+          "type": "qcm",
+          "titre": "[EX 14] Scénario: Touriste vs Importateur",
+          "description": "Distinguer marchandise personnelle de marchandise commerciale",
+          "order": 1,
+          "points": 15,
+          "bloomLevel": "understand",
+          "difficulty": 1,
+          "duree": "2 min",
+          "content": {
+            "question": "Un voyageur rentre en Suisse avec 20 montres 'Rolex' qu'il dit avoir achetées pour sa collection personnelle. Les douaniers soupçonnent une intention commerciale. Quel critère principal déterminerait que c'est une marchandise commerciale?",
+            "options": [
+              "La marque prestigieuse de la montre",
+              "La quantité importante (20 unités) associée à l'intention de revente présumée",
+              "Le prix d'achat de chaque montre",
+              "La nationalité du voyageur"
+            ],
+            "correctAnswer": 1,
+            "explanation": "La quantité est un critère clé: 20 montres identiques dépasse largement les besoins personnels. Combinée à l'intention présumée de revente, cela transforme ces biens en marchandises commerciales soumises aux droits douaniers."
+          },
+          "status": "complete"
+        },
+        {
+          "id": "101BT_ex_015",
+          "type": "true_false",
+          "titre": "[EX 15] Vrai/Faux: Critères Marchandise Commerciale",
+          "description": "Valider la compréhension des 3 critères (quantité, intention, usage)",
+          "order": 2,
+          "points": 15,
+          "bloomLevel": "understand",
+          "difficulty": 1,
+          "duree": "3 min",
+          "content": {
+            "items": [
+              {
+                "statement": "Un commerçant qui importe 100 chaises IKEA reste personnel car c'est du mobilier standard",
+                "answer": false
+              },
+              {
+                "statement": "2 bouteilles de vin pour un dîner personnel est une marchandise commerciale",
+                "answer": false
+              },
+              {
+                "statement": "L'intention de revente est le critère décisif si quantité et usage professionnel sont présents",
+                "answer": true
+              },
+              {
+                "statement": "Un restaurateur qui importe 50 kg de fromage pour son restaurant est en activité commerciale",
+                "answer": true
+              },
+              {
+                "statement": "La quantité seule suffit à définir une marchandise commerciale",
+                "answer": false
+              },
+              {
+                "statement": "Un artisan qui ramène des tissus de Thaïlande pour ses créations est en activité commerciale",
+                "answer": true
+              }
+            ]
+          },
+          "status": "complete"
+        },
+        {
+          "id": "101BT_ex_016",
+          "type": "matching",
+          "titre": "[EX 16] Matching: Cas Concrets → Classification",
+          "description": "Classer les scénarios en Personal ou Commercial",
+          "order": 3,
+          "points": 20,
+          "bloomLevel": "apply",
+          "difficulty": 2,
+          "duree": "3 min",
+          "content": {
+            "pairs": [
+              {
+                "id": "case1",
+                "left": "Voyageur revenant avec 1 paquet de chocolat suisse pour sa mère",
+                "right": "Personnel",
+                "correctMatch": true
+              },
+              {
+                "id": "case2",
+                "left": "Importateur ramenant 500 paires de chaussures de Chine",
+                "right": "Commercial",
+                "correctMatch": true
+              },
+              {
+                "id": "case3",
+                "left": "Étudiant revenant avec ses livres d'université depuis l'étranger",
+                "right": "Personnel",
+                "correctMatch": true
+              },
+              {
+                "id": "case4",
+                "left": "Grossiste ramenant 1000 kg de café pour sa boutique",
+                "right": "Commercial",
+                "correctMatch": true
+              },
+              {
+                "id": "case5",
+                "left": "Touriste avec 3 cadeaux souvenirs pour sa famille",
+                "right": "Personnel",
+                "correctMatch": true
+              }
+            ]
+          },
+          "status": "complete"
+        },
+        {
+          "id": "101BT_ex_017",
+          "type": "qcm_scenario",
+          "titre": "[EX 17] Scénario Complexe: Borderline Cases",
+          "description": "Analyser des cas limite (semi-commercial)",
+          "order": 4,
+          "points": 25,
+          "bloomLevel": "analyze",
+          "difficulty": 2,
+          "duree": "4 min",
+          "content": {
+            "scenario": "Sophie est une photographe professionnelle. Elle rentre en Suisse avec:\n- 5 appareils photo professionnels (Canon)\n- 20 objectifs de rechange\n- 10 batteries\n- 2 valises de matériel d'éclairage\n\nElle affirme que c'est du matériel personnel pour son studio. Cependant, la quantité de matériel neuf (non utilisé) semble anormale.",
+            "questions": [
+              {
+                "id": "q1",
+                "question": "Pourquoi cette importation POURRAIT être classée comme commerciale?",
+                "options": [
+                  "Parce que Sophie est photographe",
+                  "Parce que la quantité anormale de matériel neuf suggère une intention de revente ou d'exploitation professionnelle",
+                  "Parce que les appareils Canon sont coûteux",
+                  "Parce que Sophie a plusieurs valises"
+                ],
+                "correctAnswer": 1,
+                "explanation": "La quantité anormale (5 corps + 20 objectifs) associée à l'état neuf du matériel suggère une activité commerciale ou une intention d'exploitation professionnelle, plutôt que du matériel personnel d'une photographe."
+              },
+              {
+                "id": "q2",
+                "question": "Quel critère douanier serait DÉCISIF pour les douaniers?",
+                "options": [
+                  "Démontrer l'intention: est-ce pour usage personnel ou pour revente/location?",
+                  "Vérifier le certificat d'achat",
+                  "Analyser si le matériel est usagé ou neuf",
+                  "Consulter le registre commercial de Sophie"
+                ],
+                "correctAnswer": 0,
+                "explanation": "L'INTENTION est décisive. Si Sophie peut prouver que tout ce matériel est pour usage personnel dans son studio = personnel. Sinon = commercial imposable."
+              }
+            ]
+          },
+          "status": "complete"
+        }
+      ]
+    },
+    {
+      "id": "101BT_05_portfolio",
+      "emoji": "🎖️",
+      "titre": "🎖️ Auto-Évaluation: Portfolio Swipe",
+      "type": "portfolio_swipe",
+      "numero": 5,
+      "locked": false,
+      "duree": "5 min",
+      "points": 0,
+      "description": "Ancrer apprentissages et préparer transfert en pratique",
+      "completed": false,
+      "exercices": []
+    }
+  ]
+}

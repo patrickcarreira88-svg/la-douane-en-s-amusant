@@ -45,6 +45,35 @@
     </div>
 </div>
 
+<!-- Modal Création Profil - Premier Démarrage -->
+<div id="profile-creation-modal" class="modal-overlay hidden">
+    <div class="modal-content modal-profile-creation">
+        <div class="modal-header">
+            <h2>👤 Créer votre profil</h2>
+            <p class="modal-subtitle">Bienvenue! Créez votre profil pour commencer</p>
+        </div>
+        <div class="modal-body">
+            <form id="profile-form" class="profile-form">
+                <div class="form-group">
+                    <label for="profile-nom">Nom *</label>
+                    <input type="text" id="profile-nom" class="form-input" placeholder="Ex: Dupont" required>
+                </div>
+                <div class="form-group">
+                    <label for="profile-prenom">Prénom *</label>
+                    <input type="text" id="profile-prenom" class="form-input" placeholder="Ex: Jean" required>
+                </div>
+                <div class="form-group">
+                    <label for="profile-matricule">Numéro de Matricule *</label>
+                    <input type="text" id="profile-matricule" class="form-input" placeholder="Ex: 2024-001" required>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn--primary" onclick="App.saveProfile()">Créer le profil</button>
+        </div>
+    </div>
+</div>
+
 <!-- Modal Portfolio Swipe - Fin de Chapitre -->
 <div id="portfolio-modal" class="modal-overlay hidden">
     <div class="modal-content modal-portfolio">

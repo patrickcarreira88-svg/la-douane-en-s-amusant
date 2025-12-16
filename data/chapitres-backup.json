@@ -1,0 +1,930 @@
+{
+  "chapitres": [
+    {
+      "id": "ch1",
+      "numero": 1,
+      "titre": "Introduction à la Douane",
+      "description": "Découvrez les bases de l'organisation douanière suisse",
+      "couleur": "#E0AAFF",
+      "emoji": "🎯",
+      "progression": 0,
+      "objectifs": [
+        "Comprendre l'organisation douanière suisse (structurelle et contextuelle)",
+        "Identifier les trois domaines d'action douanière (commerce, sécurité, fiscalité)",
+        "Décrire les rôles et responsabilités des agents douaniers",
+        "Appliquer les concepts de base à des cas réels"
+      ],
+      "etapes": [
+        {
+          "id": "ch1_step1",
+          "numero": 1,
+          "titre": "Histoire de la Douane suisse",
+          "type": "video",
+          "duree": "3 min",
+          "contenu": "Découvrez les origines et l'évolution de la douane suisse",
+          "completed": false,
+          "points": 10,
+          "exercice": {
+            "type": "video",
+            "titre": "Histoire de la Douane suisse",
+            "url": "https://www.youtube.com/embed/jNQXAC9IVRw",
+            "description": "Regardez la vidéo pour comprendre l'histoire de la douane"
+          }
+        },
+        {
+          "id": "ch1_step2",
+          "numero": 2,
+          "titre": "Organisation actuelle",
+          "type": "qcm",
+          "duree": "5 min",
+          "contenu": "Testez vos connaissances sur l'organisation de la douane",
+          "completed": false,
+          "points": 10,
+          "exercice": {
+            "type": "qcm",
+            "question": "Combien de cantons compte la Suisse?",
+            "choix": [
+              { "id": "a", "texte": "24 cantons", "correct": false },
+              { "id": "b", "texte": "26 cantons", "correct": true },
+              { "id": "c", "texte": "28 cantons", "correct": false },
+              { "id": "d", "texte": "30 cantons", "correct": false }
+            ]
+          }
+        },
+        {
+          "id": "ch1_video1",
+          "numero": 3,
+          "titre": "Qu'est-ce qu'une marchandise commerciale?",
+          "type": "video",
+          "duree": "35 sec",
+          "contenu": "Découvrez la définition et les caractéristiques d'une marchandise commerciale",
+          "completed": false,
+          "points": 10,
+          "videoId": "video_101_marchandises",
+          "videoPath": "/assets/videos/101ab",
+          "exercice": {
+            "type": "video",
+            "titre": "Qu'est-ce qu'une marchandise commerciale?",
+            "description": "Regardez la vidéo pour comprendre la différence entre marchandises commerciales et biens personnels"
+          }
+        },
+        {
+          "id": "ch1_video2",
+          "numero": 4,
+          "titre": "Les 5 étapes du processus de dédouanement",
+          "type": "video",
+          "duree": "55 sec",
+          "contenu": "Découvrez les 5 étapes essentielles du dédouanement en Suisse",
+          "completed": false,
+          "points": 10,
+          "videoId": "video_101_processus",
+          "videoPath": "/assets/videos/101ab",
+          "exercice": {
+            "type": "video",
+            "titre": "Les 5 étapes du processus de dédouanement",
+            "description": "Regardez la vidéo pour comprendre le flux complet du dédouanement à l'importation suisse"
+          }
+        },
+        {
+          "id": "ch1_step3",
+          "numero": 3,
+          "titre": "Rôles et responsabilités",
+          "type": "lecture",
+          "duree": "7 min",
+          "contenu": "Texte explicatif sur les missions de la douane",
+          "completed": false,
+          "points": 10,
+          "exercice": {
+            "type": "lecture",
+            "titre": "Les missions de la douane suisse",
+            "texte": "La douane suisse remplit plusieurs missions essentielles:\n\n1. FISCALE: Perception des droits et taxes sur les marchandises importées\n\n2. PROTECTION: Lutte contre la contrebande et le trafic illicite\n\n3. SECURITE: Contrôle des marchandises dangereuses et prohibées\n\n4. STATISTIQUE: Collecte de données sur le commerce international\n\n5. ECONOMIQUE: Facilitation du commerce légitime\n\nCes missions font de la douane un acteur clé dans la gestion des frontières suisses."
+          }
+        },
+        {
+          "id": "ch1_step4",
+          "numero": 4,
+          "titre": "Les 3 domaines douaniers",
+          "type": "flashcards",
+          "duree": "10 min",
+          "contenu": "Mémorisez les 3 domaines principaux",
+          "completed": false,
+          "points": 10,
+          "exercice": {
+            "type": "flashcards",
+            "cartes": [
+              {
+                "id": "card1",
+                "recto": "Quel est le domaine FISCAL de la douane?",
+                "verso": "La perception des droits de douane et des taxes sur les marchandises importées"
+              },
+              {
+                "id": "card2",
+                "recto": "Quel est le domaine de PROTECTION?",
+                "verso": "La lutte contre la contrebande, le trafic et la fraude douanière"
+              },
+              {
+                "id": "card3",
+                "recto": "Quel est le domaine de SECURITE?",
+                "verso": "Le contrôle des marchandises dangereuses et prohibées pour protéger la population"
+              }
+            ]
+          }
+        },
+        {
+          "id": "ch1_step5",
+          "numero": 5,
+          "titre": "Quiz: Maîtrise les bases?",
+          "type": "qcm",
+          "duree": "10 min",
+          "contenu": "Quiz final du chapitre 1",
+          "completed": false,
+          "points": 20,
+          "exercice": {
+            "type": "quiz",
+            "titre": "Quiz - Introduction à la Douane",
+            "description": "Répondez aux 3 questions pour valider ce chapitre",
+            "questions": [
+              {
+                "id": "q1",
+                "question": "La douane suisse dépend de quel département?",
+                "choix": [
+                  { "id": "a", "texte": "Département de la Justice", "correct": false },
+                  { "id": "b", "texte": "Département des Finances", "correct": true },
+                  { "id": "c", "texte": "Département de l'Intérieur", "correct": false },
+                  { "id": "d", "texte": "Département de la Défense", "correct": false }
+                ]
+              },
+              {
+                "id": "q2",
+                "question": "Quel est le rôle PRINCIPAL de la douane?",
+                "choix": [
+                  { "id": "a", "texte": "Collecter les taxes et protéger les frontières", "correct": true },
+                  { "id": "b", "texte": "Gérer les prisons", "correct": false },
+                  { "id": "c", "texte": "Émettre les passeports", "correct": false },
+                  { "id": "d", "texte": "Gérer les aéroports", "correct": false }
+                ]
+              },
+              {
+                "id": "q3",
+                "question": "En quelle année la Suisse a-t-elle créé le 26ème canton?",
+                "choix": [
+                  { "id": "a", "texte": "1975", "correct": false },
+                  { "id": "b", "texte": "1978", "correct": true },
+                  { "id": "c", "texte": "1980", "correct": false },
+                  { "id": "d", "texte": "1985", "correct": false }
+                ]
+              }
+            ],
+            "scoreMin": 2
+          }
+        }
+      ],
+      "badge": {
+        "id": "badge_ch1",
+        "titre": "Apprenti Douanier",
+        "emoji": "🎓",
+        "description": "Vous avez complété le chapitre 1!"
+      }
+    },
+    {
+      "id": "101BT",
+      "numero": 2,
+      "titre": "Marchandises & Processus: Mise en Pratique",
+      "description": "Appliquer les fondamentaux douaniers à des cas concrets. Identification marchandises, flux processus, documents déclaration.",
+      "couleur": "#FF6B9D",
+      "emoji": "📋",
+      "progression": 0,
+      "externalDataFile": "data/101-BT.json",
+      "objectifs": [
+        "Identifier correctement le statut des marchandises (commercial/personnel/touristique)",
+        "Appliquer les 5 étapes du processus à un import réel",
+        "Remplir les données clés d'une déclaration douanière",
+        "Détecter erreurs fréquentes et risques en douane"
+      ],
+      "metadata": {
+        "createdDate": "2025-12-15",
+        "lastUpdated": "2025-12-15",
+        "version": "1.0",
+        "status": "complete",
+        "totalExercises": 40,
+        "totalCompetencies": 5,
+        "portfolioSwipeCount": 5,
+        "loadFromExternalFile": true
+      },
+      "etapes": [
+        {
+          "id": "101BT_01_objectives",
+          "numero": 1,
+          "titre": "🎯 Objectifs",
+          "type": "objectives",
+          "duree": "2 min",
+          "contenu": "Objectifs du module",
+          "completed": false,
+          "points": 0
+        },
+        {
+          "id": "101BT_01_diagnostic",
+          "numero": 2,
+          "titre": "📋 Pré-test",
+          "type": "exercise_group",
+          "duree": "8 min",
+          "contenu": "Diagnostic 101.AB",
+          "completed": false,
+          "points": 50,
+          "exercices": []
+        },
+        {
+          "id": "101BT_02_videos",
+          "numero": 3,
+          "titre": "🎬 Révision Vidéos",
+          "type": "exercise_group",
+          "duree": "10 min",
+          "contenu": "Révisions vidéos",
+          "completed": false,
+          "points": 75,
+          "exercices": []
+        },
+        {
+          "id": "101BT_03_cas_simples",
+          "numero": 4,
+          "titre": "📦 Cas Simples",
+          "type": "exercise_group",
+          "duree": "12 min",
+          "contenu": "Cas simples",
+          "completed": false,
+          "points": 75,
+          "exercices": []
+        },
+        {
+          "id": "101BT_04_processus_guide",
+          "numero": 5,
+          "titre": "⚙️ Cas Guidé",
+          "type": "exercise_group",
+          "duree": "12 min",
+          "contenu": "Cas guidé",
+          "completed": false,
+          "points": 100,
+          "exercices": []
+        },
+        {
+          "id": "101BT_05_documents",
+          "numero": 6,
+          "titre": "📄 Documents",
+          "type": "exercise_group",
+          "duree": "12 min",
+          "contenu": "Documents",
+          "completed": false,
+          "points": 75,
+          "exercices": []
+        },
+        {
+          "id": "101BT_06_cas_complexes",
+          "numero": 7,
+          "titre": "🔴 Cas Complexes",
+          "type": "exercise_group",
+          "duree": "12 min",
+          "contenu": "Cas complexes",
+          "completed": false,
+          "points": 100,
+          "exercices": []
+        },
+        {
+          "id": "101BT_07_revision",
+          "numero": 8,
+          "titre": "🔄 Révision",
+          "type": "exercise_group",
+          "duree": "10 min",
+          "contenu": "Révision globale",
+          "completed": false,
+          "points": 75,
+          "exercices": []
+        },
+        {
+          "id": "101BT_08_portfolio",
+          "numero": 9,
+          "titre": "🎖️ Portfolio",
+          "type": "portfolio_swipe",
+          "duree": "5 min",
+          "contenu": "Portfolio et ancrage",
+          "completed": false,
+          "points": 25,
+          "exercices": []
+        }
+      ],
+      "badge": {
+        "id": "badge_101bt",
+        "titre": "Expert en Mise en Pratique",
+        "emoji": "🏆",
+        "description": "Vous avez maîtrisé marchandises, processus et déclarations!"
+      }
+    },
+    {
+      "id": "ch2",
+      "numero": 3,
+      "titre": "Législation Douanière",
+      "description": "Les cadres légaux et régulations",
+      "couleur": "#C77DFF",
+      "emoji": "📜",
+      "progression": 0,
+      "objectifs": [
+        "Analyser les sources du droit douanier (Constitution, lois, ordonnances, traités)",
+        "Classer les marchandises selon la nomenclature tarifaire",
+        "Calculer les droits et taxes applicables",
+        "Évaluer la validité des documents douaniers"
+      ],
+      "etapes": [
+        {
+          "id": "ch2_step1",
+          "numero": 1,
+          "titre": "Sources du droit douanier",
+          "type": "lecture",
+          "duree": "8 min",
+          "contenu": "Les sources légales du droit douanier suisse",
+          "completed": false,
+          "points": 10,
+          "exercice": {
+            "type": "lecture",
+            "titre": "Hiérarchie des sources du droit douanier",
+            "texte": "Le droit douanier suisse s'appuie sur plusieurs sources:\n\n1. LA CONSTITUTION FEDERALE (loi suprême)\n   - Article 101: Autorité fédérale pour les douanes\n\n2. LES LOIS FEDERALES\n   - Loi sur les douanes (LD)\n   - Loi sur les tarifs des douanes\n\n3. LES ORDONNANCES\n   - Ordonnance du 7 octobre 2015 sur les douanes\n   - Ordonnance tarifaire\n\n4. LES TRAITES INTERNATIONAUX\n   - Accords bilatéraux\n   - Accords de l'OMC\n   - Conventions douanières\n\n5. LES DIRECTIVES ADMINISTRATIVES\n   - Manuels de la douane\n   - Circulaires\n\nCette hiérarchie garantit une cohérence et une légalité du système douanier."
+          }
+        },
+        {
+          "id": "ch2_step2",
+          "numero": 2,
+          "titre": "Traités internationaux",
+          "type": "qcm",
+          "duree": "6 min",
+          "contenu": "Quiz sur les accords internationaux",
+          "completed": false,
+          "points": 10,
+          "exercice": {
+            "type": "qcm",
+            "question": "La Suisse est-elle membre de l'UE?",
+            "choix": [
+              { "id": "a", "texte": "Oui, depuis 1995", "correct": false },
+              { "id": "b", "texte": "Oui, depuis 1986", "correct": false },
+              { "id": "c", "texte": "Non, la Suisse n'est pas membre de l'UE", "correct": true },
+              { "id": "d", "texte": "Oui, depuis 2004", "correct": false }
+            ]
+          }
+        },
+        {
+          "id": "ch2_step3",
+          "numero": 3,
+          "titre": "Classification tarifaire",
+          "type": "flashcards",
+          "duree": "15 min",
+          "contenu": "Codes HS et nomenclature douanière",
+          "completed": false,
+          "points": 10,
+          "exercice": {
+            "type": "flashcards",
+            "cartes": [
+              {
+                "id": "card1",
+                "recto": "Qu'est-ce que le système HS?",
+                "verso": "Le Système Harmonisé de désignation et de codification des marchandises (6 chiffres minimum)"
+              },
+              {
+                "id": "card2",
+                "recto": "Combien de chiffres a un tarif douanier suisse complet?",
+                "verso": "10 chiffres: 6 du SH + 2 pour la nomenclature tarifaire + 2 supplémentaires suisses"
+              },
+              {
+                "id": "card3",
+                "recto": "Quel est le code HS pour les pommes fraîches?",
+                "verso": "0808.30 (la position 8 signifie fruits, le reste précise le type)"
+              }
+            ]
+          }
+        },
+        {
+          "id": "ch2_step4",
+          "numero": 4,
+          "titre": "Droits et taxes",
+          "type": "video",
+          "duree": "5 min",
+          "contenu": "Video explicative sur les calculs de droits",
+          "completed": false,
+          "points": 10,
+          "exercice": {
+            "type": "video",
+            "titre": "Calcul des droits de douane",
+            "url": "https://www.youtube.com/embed/dQw4w9WgXcQ",
+            "description": "Apprenez comment calculer les droits de douane applicables"
+          }
+        },
+        {
+          "id": "ch2_step5",
+          "numero": 5,
+          "titre": "Quiz Législation",
+          "type": "qcm",
+          "duree": "15 min",
+          "contenu": "Évaluation complète du chapitre",
+          "completed": false,
+          "points": 20,
+          "exercice": {
+            "type": "quiz",
+            "titre": "Quiz - Législation Douanière",
+            "description": "3 questions pour valider vos connaissances",
+            "questions": [
+              {
+                "id": "q1",
+                "question": "Quel document régit les douanes en Suisse?",
+                "choix": [
+                  { "id": "a", "texte": "La Loi sur les douanes", "correct": true },
+                  { "id": "b", "texte": "La Loi fédérale des finances", "correct": false },
+                  { "id": "c", "texte": "La Constitution seulement", "correct": false },
+                  { "id": "d", "texte": "Des ordonnances locales", "correct": false }
+                ]
+              },
+              {
+                "id": "q2",
+                "question": "Le système HS a combien de chiffres minimums?",
+                "choix": [
+                  { "id": "a", "texte": "4 chiffres", "correct": false },
+                  { "id": "b", "texte": "6 chiffres", "correct": true },
+                  { "id": "c", "texte": "8 chiffres", "correct": false },
+                  { "id": "d", "texte": "10 chiffres", "correct": false }
+                ]
+              },
+              {
+                "id": "q3",
+                "question": "La Suisse applique les traités de l'OMC?",
+                "choix": [
+                  { "id": "a", "texte": "Non, jamais", "correct": false },
+                  { "id": "b", "texte": "Oui, partiellement", "correct": false },
+                  { "id": "c", "texte": "Oui, complètement", "correct": true },
+                  { "id": "d", "texte": "Seulement pour l'UE", "correct": false }
+                ]
+              }
+            ],
+            "scoreMin": 2
+          }
+        }
+      ],
+      "badge": {
+        "id": "badge_ch2",
+        "titre": "Expert Légal",
+        "emoji": "⚖️",
+        "description": "Législation maîtrisée!"
+      }
+    },
+    {
+      "id": "ch3",
+      "numero": 4,
+      "titre": "Procédures Douanières",
+      "description": "Dédouanement, déclaration et vérification",
+      "couleur": "#A78BFA",
+      "emoji": "📋",
+      "progression": 0,
+      "objectifs": [
+        "Exécuter le processus de déclaration en douane",
+        "Effectuer les contrôles formels de manière systématique",
+        "Analyser les situations de recours et de contestation",
+        "Justifier les décisions administratives"
+      ],
+      "etapes": [
+        {
+          "id": "ch3_step1",
+          "numero": 1,
+          "titre": "Déclaration en douane",
+          "type": "lecture",
+          "duree": "8 min",
+          "contenu": "Processus et exigences de déclaration",
+          "completed": false,
+          "points": 10,
+          "exercice": {
+            "type": "lecture",
+            "titre": "Les étapes de la déclaration en douane",
+            "texte": "La déclaration en douane est une démarche essentielle:\n\nEtape 1: PREPARATION\n- Rassembler tous les documents\n- Facture commerciale\n- Bon de livraison\n- Certificat d'origine\n- Documents spécialisés si nécessaire\n\nEtape 2: DECLARATION\n- Effectuer la déclaration en douane\n- Présentation directe ou électronique\n- Détail complet des marchandises\n- Valeur en douane\n\nEtape 3: VERIFICATION\n- Examen documentaire\n- Examen physique si nécessaire\n- Classement tarifaire\n- Calcul des droits\n\nEtape 4: PAIEMENT\n- Paiement des droits et taxes\n- Obtention de quittances\n\nEtape 5: DÉDOUANEMENT\n- Libération des marchandises\n- Livraison au destinataire\n\nLe délai moyen est de 24-48 heures pour les déclarations simples."
+          }
+        },
+        {
+          "id": "ch3_step2",
+          "numero": 2,
+          "titre": "Dédouanement simple",
+          "type": "video",
+          "duree": "6 min",
+          "contenu": "Cas de dédouanement standard",
+          "completed": false,
+          "points": 10,
+          "exercice": {
+            "type": "video",
+            "titre": "Procédure de dédouanement simple",
+            "url": "https://www.youtube.com/embed/dQw4w9WgXcQ",
+            "description": "Suivez un cas pratique de dédouanement"
+          }
+        },
+        {
+          "id": "ch3_step3",
+          "numero": 3,
+          "titre": "Contrôle et vérification",
+          "type": "qcm",
+          "duree": "10 min",
+          "contenu": "Quiz sur les vérifications douanières",
+          "completed": false,
+          "points": 10,
+          "exercice": {
+            "type": "qcm",
+            "question": "Quel est le taux de vérification physique à la douane suisse?",
+            "choix": [
+              { "id": "a", "texte": "100% des envois", "correct": false },
+              { "id": "b", "texte": "Entre 5% et 15%", "correct": true },
+              { "id": "c", "texte": "Seulement les cas suspects", "correct": false },
+              { "id": "d", "texte": "Aucun contrôle physique", "correct": false }
+            ]
+          }
+        },
+        {
+          "id": "ch3_step4",
+          "numero": 4,
+          "titre": "Recours et contestation",
+          "type": "flashcards",
+          "duree": "12 min",
+          "contenu": "Procédures de recours disponibles",
+          "completed": false,
+          "points": 10,
+          "exercice": {
+            "type": "flashcards",
+            "cartes": [
+              {
+                "id": "card1",
+                "recto": "Quel est le premier recours possible?",
+                "verso": "La demande de réexamen auprès de l'administration douanière"
+              },
+              {
+                "id": "card2",
+                "recto": "Vers quel organe faire appel après le refus de réexamen?",
+                "verso": "La Commission de recours douaniers (organe indépendant)"
+              },
+              {
+                "id": "card3",
+                "recto": "Quel est le dernier recours juridique?",
+                "verso": "Le Tribunal fédéral de la Confédération suisse"
+              }
+            ]
+          }
+        },
+        {
+          "id": "ch3_step5",
+          "numero": 5,
+          "titre": "Quiz Procédures",
+          "type": "qcm",
+          "duree": "15 min",
+          "contenu": "Évaluation pratique du chapitre",
+          "completed": false,
+          "points": 20,
+          "exercice": {
+            "type": "quiz",
+            "titre": "Quiz - Procédures Douanières",
+            "description": "3 questions pour valider ce chapitre",
+            "questions": [
+              {
+                "id": "q1",
+                "question": "Combien de temps dure généralement un dédouanement simple?",
+                "choix": [
+                  { "id": "a", "texte": "1-2 heures", "correct": false },
+                  { "id": "b", "texte": "24-48 heures", "correct": true },
+                  { "id": "c", "texte": "1 semaine", "correct": false },
+                  { "id": "d", "texte": "1 mois", "correct": false }
+                ]
+              },
+              {
+                "id": "q2",
+                "question": "Quel document est OBLIGATOIRE pour une déclaration?",
+                "choix": [
+                  { "id": "a", "texte": "La facture commerciale", "correct": true },
+                  { "id": "b", "texte": "Le passeport du transporteur", "correct": false },
+                  { "id": "c", "texte": "Une assurance spéciale", "correct": false },
+                  { "id": "d", "texte": "Un permis d'importation", "correct": false }
+                ]
+              },
+              {
+                "id": "q3",
+                "question": "Si vous contestez une décision douanière, vers quel organe allez-vous?",
+                "choix": [
+                  { "id": "a", "texte": "Le canton", "correct": false },
+                  { "id": "b", "texte": "La police", "correct": false },
+                  { "id": "c", "texte": "La Commission de recours douaniers", "correct": true },
+                  { "id": "d", "texte": "Un notaire", "correct": false }
+                ]
+              }
+            ],
+            "scoreMin": 2
+          }
+        }
+      ],
+      "badge": {
+        "id": "badge_ch3",
+        "titre": "Agent Confirmé",
+        "emoji": "🏢",
+        "description": "Procédures maîtrisées!"
+      }
+    },
+    {
+      "id": "ch4",
+      "numero": 5,
+      "titre": "Commerce International",
+      "description": "Échanges commerciaux et douane",
+      "couleur": "#93C5FD",
+      "emoji": "🌍",
+      "progression": 0,
+      "objectifs": [
+        "Comprendre les Incoterms et conditions commerciales",
+        "Classifier les documents commerciaux (factures, lettres de crédit, etc.)",
+        "Évaluer la valeur en douane",
+        "Appliquer les règles d'origine des marchandises"
+      ],
+      "etapes": [
+        {
+          "id": "ch4_step1",
+          "numero": 1,
+          "titre": "Incoterms et conditions",
+          "type": "lecture",
+          "duree": "10 min",
+          "contenu": "FOB, CIF, DAP et autres conditions",
+          "completed": false,
+          "points": 10,
+          "exercice": {
+            "type": "lecture",
+            "titre": "Les principaux INCOTERMS",
+            "texte": "Les INCOTERMS définissent les responsabilités dans le transport:\n\nEXW (Ex Works - À l'usine)\n- Vendeur: Aucune responsabilité\n- Acheteur: Responsable dès le départ\n- Risque: Chez l'acheteur\n\nFOB (Free on Board - Franco à bord)\n- Vendeur: Paie transport jusqu'au navire\n- Acheteur: Paie à partir du navire\n- Risque: Passe à l'acheteur au navire\n- Douane: Importation payée par acheteur\n\nCIF (Cost, Insurance and Freight)\n- Vendeur: Paie tout jusqu'à destination\n- Assurance: Comprise\n- Risque: Chez l'acheteur après navire\n- Douane: Payée par acheteur\n\nDAP (Delivered at Place)\n- Vendeur: Paie jusqu'à lieu converti\n- Risque: Chez l'acheteur à l'arrivée\n- Douane: Payée par acheteur\n- Plus simple et moderne\n\nCes conditions impactent directement l'évaluation en douane."
+          }
+        },
+        {
+          "id": "ch4_step2",
+          "numero": 2,
+          "titre": "Documents commerciaux",
+          "type": "flashcards",
+          "duree": "12 min",
+          "contenu": "Factures, lettres de crédit et documents",
+          "completed": false,
+          "points": 10,
+          "exercice": {
+            "type": "flashcards",
+            "cartes": [
+              {
+                "id": "card1",
+                "recto": "Qu'est-ce qu'une facture commerciale?",
+                "verso": "Document prouvant la transaction commerciale avec prix, quantités et conditions"
+              },
+              {
+                "id": "card2",
+                "recto": "Qu'est-ce qu'une lettre de crédit?",
+                "verso": "Garantie bancaire de paiement émise par la banque de l'acheteur"
+              },
+              {
+                "id": "card3",
+                "recto": "Qu'est-ce qu'un connaissement?",
+                "verso": "Document de transport attestant la prise en charge des marchandises par le transporteur"
+              }
+            ]
+          }
+        },
+        {
+          "id": "ch4_step3",
+          "numero": 3,
+          "titre": "Évaluation douanière",
+          "type": "qcm",
+          "duree": "10 min",
+          "contenu": "Calcul de la valeur en douane",
+          "completed": false,
+          "points": 10,
+          "exercice": {
+            "type": "qcm",
+            "question": "Quelle est la base de l'évaluation en douane suisse?",
+            "choix": [
+              { "id": "a", "texte": "Le prix d'achat seul", "correct": false },
+              { "id": "b", "texte": "La valeur transactionnelle (facture + transport + assurance)", "correct": true },
+              { "id": "c", "texte": "Le prix au détail", "correct": false },
+              { "id": "d", "texte": "Une estimation arbitraire", "correct": false }
+            ]
+          }
+        },
+        {
+          "id": "ch4_step4",
+          "numero": 4,
+          "titre": "Origines des marchandises",
+          "type": "video",
+          "duree": "7 min",
+          "contenu": "Règles d'origine et certifications",
+          "completed": false,
+          "points": 10,
+          "exercice": {
+            "type": "video",
+            "titre": "Les règles d'origine douanière",
+            "url": "https://www.youtube.com/embed/dQw4w9WgXcQ",
+            "description": "Comprendre les règles d'origine et leur importance"
+          }
+        },
+        {
+          "id": "ch4_step5",
+          "numero": 5,
+          "titre": "Quiz Commerce Int.",
+          "type": "qcm",
+          "duree": "15 min",
+          "contenu": "Évaluation finale du chapitre",
+          "completed": false,
+          "points": 20,
+          "exercice": {
+            "type": "quiz",
+            "titre": "Quiz - Commerce International",
+            "description": "3 questions pour valider ce chapitre",
+            "questions": [
+              {
+                "id": "q1",
+                "question": "FOB signifie?",
+                "choix": [
+                  { "id": "a", "texte": "Free on Board", "correct": true },
+                  { "id": "b", "texte": "Freight on Boat", "correct": false },
+                  { "id": "c", "texte": "Federal on Border", "correct": false },
+                  { "id": "d", "texte": "Free on Billing", "correct": false }
+                ]
+              },
+              {
+                "id": "q2",
+                "question": "L'assurance est incluse dans quel INCOTERM?",
+                "choix": [
+                  { "id": "a", "texte": "FOB", "correct": false },
+                  { "id": "b", "texte": "EXW", "correct": false },
+                  { "id": "c", "texte": "CIF", "correct": true },
+                  { "id": "d", "texte": "DAP", "correct": false }
+                ]
+              },
+              {
+                "id": "q3",
+                "question": "Qu'est-ce qu'un connaissement?",
+                "choix": [
+                  { "id": "a", "texte": "Une facture", "correct": false },
+                  { "id": "b", "texte": "Un document de transport", "correct": true },
+                  { "id": "c", "texte": "Une assurance", "correct": false },
+                  { "id": "d", "texte": "Un permis d'exportation", "correct": false }
+                ]
+              }
+            ],
+            "scoreMin": 2
+          }
+        }
+      ],
+      "badge": {
+        "id": "badge_ch4",
+        "titre": "Spécialiste Commerce",
+        "emoji": "🚢",
+        "description": "Commerce international maîtrisé!"
+      }
+    },
+    {
+      "id": "ch5",
+      "numero": 6,
+      "titre": "Douane et Sécurité",
+      "description": "Risques, fraude et contrôles",
+      "couleur": "#86EFAC",
+      "emoji": "🔒",
+      "progression": 0,
+      "objectifs": [
+        "Analyser les risques douaniers et profils de risque",
+        "Identifier les marchandises prohibées et restrictions",
+        "Appliquer les techniques de détection de fraude",
+        "Évaluer les mesures de prévention du blanchiment (AML)"
+      ],
+      "etapes": [
+        {
+          "id": "ch5_step1",
+          "numero": 1,
+          "titre": "Analyse de risque",
+          "type": "lecture",
+          "duree": "9 min",
+          "contenu": "Profils de risque douanier",
+          "completed": false,
+          "points": 10,
+          "exercice": {
+            "type": "lecture",
+            "titre": "L'analyse de risque en douane",
+            "texte": "L'analyse de risque est un outil moderne pour optimiser les contrôles:\n\nOBJECTIFS\n- Détecter les fraudes efficacement\n- Sécuriser les chaînes logistiques\n- Faciliter le commerce légitime\n- Allouer les ressources de contrôle\n\nCRITERES DE RISQUE\n1. Pays d'origine (zones à risque)\n2. Type de marchandise (produits sensibles)\n3. Valeur déclarée (anomalies)\n4. Opérateur (historique douanier)\n5. Voie de transport (aérienne, maritime, terrestre)\n6. Saison ou période\n\nNIVEAUX DE RISQUE\nBAS: Expéditeur connu, marchandises standards, documentation complète\nMOYEN: Quelques doutes, vérification documentaire simple\nELEVE: Signaux d'alarme, inspection physique obligatoire\n\nAVANTAGES\n- Plus efficace que contrôle aléatoire\n- Réduit les délais pour les bons opérateurs\n- Améliore la sécurité\n- Utilise l'IA et les données"
+          }
+        },
+        {
+          "id": "ch5_step2",
+          "numero": 2,
+          "titre": "Lutte contre la fraude",
+          "type": "video",
+          "duree": "8 min",
+          "contenu": "Techniques de détection des fraudes",
+          "completed": false,
+          "points": 10,
+          "exercice": {
+            "type": "video",
+            "titre": "Techniques de fraude douanière et détection",
+            "url": "https://www.youtube.com/embed/dQw4w9WgXcQ",
+            "description": "Découvrez les méthodes de fraude et comment les douaniers les détectent"
+          }
+        },
+        {
+          "id": "ch5_step3",
+          "numero": 3,
+          "titre": "Marchandises prohibées",
+          "type": "flashcards",
+          "duree": "14 min",
+          "contenu": "Listes et restrictions d'importation",
+          "completed": false,
+          "points": 10,
+          "exercice": {
+            "type": "flashcards",
+            "cartes": [
+              {
+                "id": "card1",
+                "recto": "Quelles sont les marchandises PROHIBEES?",
+                "verso": "Les armes, explosifs, drogues, contrefaçons, espèces protégées (interdiction absolue)"
+              },
+              {
+                "id": "card2",
+                "recto": "Que sont les marchandises REGLEMENTEES?",
+                "verso": "Produits nécessitant permis ou licence: médicaments, alcool, produits chimiques"
+              },
+              {
+                "id": "card3",
+                "recto": "Qui fournit la liste officielle des marchandises prohibées?",
+                "verso": "L'Administration fédérale des douanes suisses sur son site officiel"
+              }
+            ]
+          }
+        },
+        {
+          "id": "ch5_step4",
+          "numero": 4,
+          "titre": "Prévention du blanchiment",
+          "type": "qcm",
+          "duree": "10 min",
+          "contenu": "AML (Anti-Money Laundering) et signalement",
+          "completed": false,
+          "points": 10,
+          "exercice": {
+            "type": "qcm",
+            "question": "Quel est le rôle de la douane dans la prévention du blanchiment d'argent?",
+            "choix": [
+              { "id": "a", "texte": "Aucun rôle", "correct": false },
+              { "id": "b", "texte": "Détecter et signaler les opérations suspectes", "correct": true },
+              { "id": "c", "texte": "Poursuivre les criminels", "correct": false },
+              { "id": "d", "texte": "Geler les comptes bancaires", "correct": false }
+            ]
+          }
+        },
+        {
+          "id": "ch5_step5",
+          "numero": 5,
+          "titre": "Quiz Sécurité",
+          "type": "qcm",
+          "duree": "15 min",
+          "contenu": "Évaluation finale du chapitre",
+          "completed": false,
+          "points": 20,
+          "exercice": {
+            "type": "quiz",
+            "titre": "Quiz - Douane et Sécurité",
+            "description": "3 questions pour valider ce chapitre",
+            "questions": [
+              {
+                "id": "q1",
+                "question": "L'analyse de risque permet de?",
+                "choix": [
+                  { "id": "a", "texte": "Contrôler 100% des envois", "correct": false },
+                  { "id": "b", "texte": "Cibler les contrôles sur les risques élevés", "correct": true },
+                  { "id": "c", "texte": "Éviter tout contrôle", "correct": false },
+                  { "id": "d", "texte": "Accélérer systématiquement", "correct": false }
+                ]
+              },
+              {
+                "id": "q2",
+                "question": "Les armes sont-elles prohibées à l'importation en Suisse?",
+                "choix": [
+                  { "id": "a", "texte": "Non, jamais", "correct": false },
+                  { "id": "b", "texte": "Oui, toujours (interdiction absolue)", "correct": true },
+                  { "id": "c", "texte": "Oui, sauf avec permis", "correct": false },
+                  { "id": "d", "texte": "Dépend du type d'arme", "correct": false }
+                ]
+              },
+              {
+                "id": "q3",
+                "question": "Qu'est-ce que MROS?",
+                "choix": [
+                  { "id": "a", "texte": "Un service d'assurance", "correct": false },
+                  { "id": "b", "texte": "L'organisme suisse de signalement des opérations suspectes", "correct": true },
+                  { "id": "c", "texte": "Un groupe de douaniers", "correct": false },
+                  { "id": "d", "texte": "Une banque suisse", "correct": false }
+                ]
+              }
+            ],
+            "scoreMin": 2
+          }
+        }
+      ],
+      "badge": {
+        "id": "badge_ch5",
+        "titre": "Expert Sécurité",
+        "emoji": "🛡️",
+        "description": "Sécurité douanière maîtrisée!"
+      }
+    }
+  ]
+}

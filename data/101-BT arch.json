@@ -1,0 +1,485 @@
+{
+  "id": "101BT",
+  "emoji": "📋",
+  "titre": "Marchandises & Processus: Mise en Pratique",
+  "couleur": "#FF6B9D",
+  "description": "Appliquer les fondamentaux douaniers à des cas concrets. Identification marchandises, flux processus, documents déclaration.",
+  "difficulty": 2,
+  "estimatedTime": "50 minutes",
+  "bloomLevels": [
+    "understand",
+    "apply",
+    "analyze"
+  ],
+  "themeId": "theme_fondamentaux",
+  "prerequisites": [
+    "101AB"
+  ],
+  "numero": 2,
+  "progression": 0,
+  "metadata": {
+    "createdDate": "2025-12-15",
+    "lastUpdated": "2025-12-15",
+    "version": "1.0",
+    "status": "complete",
+    "totalExercises": 35,
+    "totalCompetencies": 5,
+    "portfolioSwipeCount": 5
+  },
+  "etapes": [
+    {
+      "id": "101BT_01_diagnostic",
+      "emoji": "📋",
+      "titre": "📋 Pré-test: Où en es-tu?",
+      "type": "exercise_group",
+      "numero": 1,
+      "locked": false,
+      "duree": "8 min",
+      "points": 45,
+      "description": "Évalue tes connaissances 101.AB avant de continuer",
+      "completed": false,
+      "exercices": [
+        {
+          "id": "101BT_ex_001",
+          "type": "qcm",
+          "titre": "[EX 1] QCM: Définition Marchandise Commerciale",
+          "description": "5 questions QCM simples sur définition marchandise",
+          "order": 1,
+          "points": 10,
+          "bloomLevel": "remember",
+          "difficulty": 1,
+          "duree": "2 min",
+          "content": {
+            "question": "Quelle est la définition d'une marchandise commerciale selon les critères douaniers suisses?",
+            "options": [
+              "Un bien acheté par un touriste en vacances",
+              "Un bien destiné à la revente en quantité importante avec intention commerciale",
+              "Un effet personnel d'un voyageur en transit",
+              "Un bien confisqué à la frontière pour infraction"
+            ],
+            "correctAnswer": 1,
+            "explanation": "Une marchandise commerciale se caractérise par: (1) une quantité importante, (2) une intention de revente, (3) un usage professionnel. Ces trois critères doivent être réunis."
+          },
+          "status": "complete"
+        },
+        {
+          "id": "101BT_ex_002",
+          "type": "qcm",
+          "titre": "[EX 2] QCM: Les 5 Étapes du Processus",
+          "description": "5 questions QCM sur étapes dédouanement",
+          "order": 2,
+          "points": 10,
+          "bloomLevel": "remember",
+          "difficulty": 1,
+          "duree": "2 min",
+          "content": {
+            "question": "Quel est l'ordre correct des 5 étapes du processus de dédouanement?",
+            "options": [
+              "Déclaration → Présentation → Contrôle → Taxation → Libération",
+              "Présentation → Déclaration → Contrôle → Taxation → Libération",
+              "Présentation → Contrôle → Déclaration → Libération → Taxation",
+              "Taxation → Présentation → Déclaration → Contrôle → Libération"
+            ],
+            "correctAnswer": 1,
+            "explanation": "Les 5 étapes dans l'ordre correct sont: 1) Présentation de la marchandise, 2) Déclaration des détails, 3) Contrôle par la douane, 4) Taxation (droits et TVA), 5) Libération de la marchandise."
+          },
+          "status": "complete"
+        },
+        {
+          "id": "101BT_ex_003",
+          "type": "true_false",
+          "titre": "[EX 3] Vrai/Faux: Personnel vs Commercial (10 items)",
+          "description": "10 affirmations à valider",
+          "order": 3,
+          "points": 10,
+          "bloomLevel": "understand",
+          "difficulty": 1,
+          "duree": "2 min",
+          "content": {
+            "items": [
+              {
+                "statement": "5 kg de café pour un commerce est une marchandise commerciale",
+                "answer": true
+              },
+              {
+                "statement": "2 tablettes de chocolat pour un touriste est un trafic touristique",
+                "answer": true
+              },
+              {
+                "statement": "Un costume personnel est soumis aux droits douaniers",
+                "answer": false
+              },
+              {
+                "statement": "Une quantité importante est le seul critère pour une marchandise commerciale",
+                "answer": false
+              },
+              {
+                "statement": "L'intention de revente détermine si c'est commercial",
+                "answer": true
+              },
+              {
+                "statement": "Un effet personnel peut devenir marchandise s'il y a quantité",
+                "answer": true
+              },
+              {
+                "statement": "Le trafic touristique a des règles spéciales à la frontière suisse",
+                "answer": true
+              },
+              {
+                "statement": "La TVA s'applique à tous les biens sans exception",
+                "answer": false
+              },
+              {
+                "statement": "L'usage professionnel est un critère clé du commercial",
+                "answer": true
+              },
+              {
+                "statement": "Un voyageur peut importer 100 montres sans déclaration",
+                "answer": false
+              }
+            ]
+          },
+          "status": "complete"
+        },
+        {
+          "id": "101BT_ex_004",
+          "type": "drag_drop",
+          "titre": "[EX 4] Drag-Drop: Ordonner les 5 Étapes",
+          "description": "Remettre étapes dans le bon ordre",
+          "order": 4,
+          "points": 15,
+          "bloomLevel": "understand",
+          "difficulty": 2,
+          "duree": "2 min",
+          "content": {
+            "items": [
+              {
+                "id": "step1",
+                "label": "Présentation de la marchandise au bureau de douane",
+                "correctPosition": 0
+              },
+              {
+                "id": "step2",
+                "label": "Déclaration complète des informations",
+                "correctPosition": 1
+              },
+              {
+                "id": "step3",
+                "label": "Contrôle des documents et vérification physique",
+                "correctPosition": 2
+              },
+              {
+                "id": "step4",
+                "label": "Taxation (calcul droits et TVA)",
+                "correctPosition": 3
+              },
+              {
+                "id": "step5",
+                "label": "Libération et enlèvement de la marchandise",
+                "correctPosition": 4
+              }
+            ]
+          },
+          "status": "complete"
+        }
+      ]
+    },
+    {
+      "id": "101BT_02_videos",
+      "emoji": "🎬",
+      "titre": "🎬 Révision Vidéos 101.AB",
+      "type": "exercise_group",
+      "numero": 2,
+      "locked": false,
+      "duree": "10 min",
+      "points": 75,
+      "description": "S'assurer que vidéos sont bien maîtrisées avant d'avancer",
+      "completed": false,
+      "exercices": [
+        {
+          "id": "101BT_ex_006",
+          "type": "qcm",
+          "titre": "[EX 6] QCM Post-Vidéo: Marchandises Commerciales",
+          "description": "3 questions après vidéo marchandises",
+          "order": 1,
+          "points": 15,
+          "bloomLevel": "understand",
+          "difficulty": 1,
+          "duree": "2 min",
+          "content": {
+            "question": "Selon la vidéo, combien de critères caractérisent une marchandise commerciale?",
+            "options": [
+              "Un seul: la quantité",
+              "Deux: la quantité et l'intention de revente",
+              "Trois: la quantité, l'intention de revente, et l'usage professionnel",
+              "Quatre: quantité, revente, profession, et origine"
+            ],
+            "correctAnswer": 2,
+            "explanation": "Les trois critères mentionnés dans la vidéo sont: (1) une quantité importante, (2) une intention de revente, (3) un usage professionnel. Tous trois doivent être présents."
+          },
+          "status": "complete"
+        },
+        {
+          "id": "101BT_ex_007",
+          "type": "matching",
+          "titre": "[EX 7] Matching: Situation ↔ Statut",
+          "description": "Associer situations concrètes aux statuts (personnel/touristique/commercial)",
+          "order": 2,
+          "points": 15,
+          "bloomLevel": "understand",
+          "difficulty": 1,
+          "duree": "2 min",
+          "pairs": [
+            {
+              "id": "pair_1",
+              "situation": "Un touriste avec 500g de chocolat suisse pour ramener",
+              "status": "stat2"
+            },
+            {
+              "id": "pair_2",
+              "situation": "Un commerçant avec 200 kg de café pour vendre",
+              "status": "stat3"
+            },
+            {
+              "id": "pair_3",
+              "situation": "Un voyageur avec ses vêtements personnels",
+              "status": "stat1"
+            }
+          ],
+          "statuses": [
+            { "id": "stat1", "name": "Personnel", "color": "#4CAF50" },
+            { "id": "stat2", "name": "Touristique", "color": "#2196F3" },
+            { "id": "stat3", "name": "Commercial", "color": "#FF9800" }
+          ],
+          "status": "complete"
+        },
+        {
+          "id": "101BT_ex_008",
+          "type": "qcm",
+          "titre": "[EX 8] QCM Post-Vidéo: Processus Dédouanement",
+          "description": "3 questions après vidéo processus",
+          "order": 3,
+          "points": 15,
+          "bloomLevel": "understand",
+          "difficulty": 1,
+          "duree": "2 min",
+          "content": {
+            "question": "À quelle étape la douane calcule-t-elle les droits de douane et la TVA?",
+            "options": [
+              "À la présentation",
+              "À la déclaration",
+              "À la taxation",
+              "À la libération"
+            ],
+            "correctAnswer": 2,
+            "explanation": "L'étape 4 (Taxation) est où la douane calcule les droits de douane et la taxe sur la valeur ajoutée (TVA) applicables selon le tarif douanier et la valeur déclarée."
+          },
+          "status": "complete"
+        },
+        {
+          "id": "101BT_ex_009",
+          "type": "drag_drop",
+          "titre": "[EX 9] Timeline Interactive: Placer Actions aux Étapes",
+          "description": "8 micro-actions à placer aux 5 étapes (certaines étapes en ont plusieurs)",
+          "order": 4,
+          "points": 15,
+          "bloomLevel": "understand",
+          "difficulty": 2,
+          "duree": "2 min",
+          "content": {
+            "timeline": [
+              {
+                "stepName": "Présentation",
+                "correctActions": [
+                  "Dépôt physique de la marchandise",
+                  "Identification du contenu"
+                ]
+              },
+              {
+                "stepName": "Déclaration",
+                "correctActions": [
+                  "Remplissage du formulaire",
+                  "Fourniture de documents"
+                ]
+              },
+              {
+                "stepName": "Contrôle",
+                "correctActions": [
+                  "Vérification des documents",
+                  "Inspection physique optionnelle"
+                ]
+              },
+              {
+                "stepName": "Taxation",
+                "correctActions": [
+                  "Calcul des droits",
+                  "Calcul de la TVA"
+                ]
+              },
+              {
+                "stepName": "Libération",
+                "correctActions": [
+                  "Approbation douanière",
+                  "Enlèvement de la marchandise"
+                ]
+              }
+            ],
+            "actions": [
+              {
+                "id": "act1",
+                "label": "Dépôt physique de la marchandise"
+              },
+              {
+                "id": "act2",
+                "label": "Remplissage du formulaire"
+              },
+              {
+                "id": "act3",
+                "label": "Vérification des documents"
+              },
+              {
+                "id": "act4",
+                "label": "Inspection physique optionnelle"
+              },
+              {
+                "id": "act5",
+                "label": "Calcul des droits"
+              },
+              {
+                "id": "act6",
+                "label": "Calcul de la TVA"
+              },
+              {
+                "id": "act7",
+                "label": "Approbation douanière"
+              },
+              {
+                "id": "act8",
+                "label": "Enlèvement de la marchandise"
+              }
+            ]
+          },
+          "status": "complete"
+        },
+        {
+          "id": "101BT_ex_010",
+          "type": "qcm_multiple_response",
+          "titre": "[EX 10] Mini-Quiz Synthèse (4 questions mélangées)",
+          "description": "Mix QCM/VF sur flux complet 101.AB",
+          "order": 5,
+          "points": 15,
+          "bloomLevel": "understand",
+          "difficulty": 1,
+          "duree": "2 min",
+          "content": {
+            "question": "Lesquelles de ces affirmations sont correctes? (plusieurs réponses possibles)",
+            "options": [
+              {
+                "label": "Un effet personnel n'est jamais soumis à droits",
+                "correct": false
+              },
+              {
+                "label": "La présentation est toujours la première étape",
+                "correct": true
+              },
+              {
+                "label": "La TVA s'applique sur la valeur en douane",
+                "correct": true
+              },
+              {
+                "label": "Le contrôle physique est obligatoire pour 100% des envois",
+                "correct": false
+              }
+            ],
+            "correctAnswers": [
+              1,
+              2
+            ],
+            "explanation": "La présentation est toujours la 1ère étape et la TVA s'applique à la valeur en douane. Cependant, les effets personnels peuvent être taxés selon leur nature, et le contrôle physique est aléatoire."
+          },
+          "status": "complete"
+        }
+      ]
+    },
+    {
+      "id": "101BT_03_cas_simples",
+      "emoji": "📦",
+      "titre": "📦 Cas Simples: Identifier Marchandises",
+      "type": "exercise_group",
+      "numero": 3,
+      "locked": false,
+      "duree": "12 min",
+      "points": 75,
+      "description": "Appliquer critères marchandise à des cas concrets",
+      "completed": false,
+      "exercices": [
+        {
+          "id": "101BT_ex_011",
+          "type": "qcm_scenario",
+          "titre": "[EX 11] Scénarios Courts: Touriste à Frontière (3 cas)",
+          "description": "3 scénarios courts + choix statut (personnel/touristique/commercial)",
+          "order": 1,
+          "points": 75,
+          "bloomLevel": "apply",
+          "difficulty": 2,
+          "duree": "5 min",
+          "scenario": {
+            "title": "🛫 Scénario: Classement Douanier selon Marchandises",
+            "description": "Vous travaillez à la douane et devez classifier des marchandises selon leur statut douanier (Personnel, Touristique, Commercial).",
+            "background_color": "#e3f2fd",
+            "icon": "🛫"
+          },
+          "questions": [
+            {
+              "id": "q1",
+              "question": "Une touriste française revient de vacances en Suisse avec 1 kg de chocolat Lindt, 3 montres suisses et des vêtements. Quel est le statut ?",
+              "type": "single",
+              "options": [
+                { "id": "opt1", "text": "Personnel", "correct": false, "explanation": "Quantité limitée, mais pas seulement pour consommation personnelle (3 montres)." },
+                { "id": "opt2", "text": "Touristique", "correct": true, "explanation": "Biens en quantité limitée pour consommation personnelle lors d'un voyage. C'est du trafic touristique." },
+                { "id": "opt3", "text": "Commercial", "correct": false, "explanation": "Non, il n'y a pas intention de revente professionnelle." }
+              ],
+              "points": 25
+            },
+            {
+              "id": "q2",
+              "question": "Un commerçant génois importe 500 kg de fromage pour sa fromagerie. Quel est le statut ?",
+              "type": "single",
+              "options": [
+                { "id": "opt1", "text": "Personnel", "correct": false, "explanation": "Quantité beaucoup trop importante pour être personnelle." },
+                { "id": "opt2", "text": "Touristique", "correct": false, "explanation": "Non, quantité trop importante et contexte professionnel." },
+                { "id": "opt3", "text": "Commercial", "correct": true, "explanation": "Quantité importante (500kg), intention claire de revente, usage professionnel." }
+              ],
+              "points": 25
+            },
+            {
+              "id": "q3",
+              "question": "Un homme en déplacement professionnel importe son ordinateur portable et son téléphone. Quel est le statut ?",
+              "type": "single",
+              "options": [
+                { "id": "opt1", "text": "Personnel", "correct": true, "explanation": "Effets personnels d'un voyageur en déplacement, pas pour revente. Outils de travail personnels." },
+                { "id": "opt2", "text": "Touristique", "correct": false, "explanation": "Pas du tourisme, mais outils professionnels personnels." },
+                { "id": "opt3", "text": "Commercial", "correct": false, "explanation": "Non, ce sont des effets personnels, pas une importation pour revente." }
+              ],
+              "points": 25
+            }
+          ],
+          "status": "complete"
+        }
+      ]
+    },
+    {
+      "id": "101BT_04_portfolio",
+      "emoji": "🎖️",
+      "titre": "🎖️ Auto-Évaluation: Portfolio Swipe",
+      "type": "portfolio_swipe",
+      "numero": 4,
+      "locked": false,
+      "duree": "5 min",
+      "points": 25,
+      "description": "Ancrer apprentissages et préparer transfert en pratique",
+      "completed": false,
+      "exercices": []
+    }
+  ]
+}
