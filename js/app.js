@@ -4,6 +4,15 @@
  */
 
 // ═══════════════════════════════════════════════════════════════
+// IMPORTS ET INSTANCES GLOBALES
+// ═══════════════════════════════════════════════════════════════
+
+// Modules d'exercices
+const exerciseLoader = new ExerciseLoader();
+const exerciseValidator = new ExerciseValidator();
+const exerciseNormalizer = new ExerciseNormalizer();
+
+// ═══════════════════════════════════════════════════════════════
 // CHARGE DES DONNÉES ET FONCTIONS UTILITAIRES
 // ═══════════════════════════════════════════════════════════════
 
@@ -29,6 +38,23 @@ async function loadChapitres() {
         for (let chapitre of data.chapitres) {
             initializeChapterStorage(chapitre);
         }
+        
+        // Nouveau: Charger tous les exercices
+        console.log('📚 Chargement exercices...');
+        const allExercises = await exerciseLoader.loadAll();
+        console.log(`✅ ${allExercises.length} exercices chargés`);
+        
+        // Valider
+        const validation = await exerciseValidator.validateAllFiles(allExercises);
+        if (!validation.valid) {
+            console.error('❌ Erreurs validation:', validation.errors);
+        } else {
+            console.log('✅ Validation OK');
+        }
+        
+        // Normaliser (compat ancien format)
+        data.chapitres = exerciseNormalizer.normalizeAll(data.chapitres);
+        console.log('✅ Normalisation complète');
         
         return data.chapitres;
     } catch (error) {
