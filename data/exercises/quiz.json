@@ -14,6 +14,7 @@
             "id": "q1",
             "question": "La douane suisse dépend de quel département?",
             "points": 7,
+            "correctAnswer": 1,
             "options": [
               { "id": "opt1", "text": "Département de la Justice", "correct": false, "explanation": "Incorrecte. La douane dépend des Finances." },
               { "id": "opt2", "text": "Département des Finances", "correct": true, "explanation": "Correcte. La douane suisse est sous l'autorité du Département fédéral des finances (DFF)." },
@@ -25,6 +26,7 @@
             "id": "q2",
             "question": "Quel est le rôle PRINCIPAL de la douane?",
             "points": 7,
+            "correctAnswer": 0,
             "options": [
               { "id": "opt1", "text": "Collecter les taxes et protéger les frontières", "correct": true, "explanation": "Correcte. La douane a pour mission principale de collecter les droits et taxes, et de protéger les frontières suisses." },
               { "id": "opt2", "text": "Gérer les prisons", "correct": false, "explanation": "Incorrecte. La douane ne gère pas les prisons." },
@@ -36,6 +38,7 @@
             "id": "q3",
             "question": "En quelle année la Suisse a-t-elle créé le 26ème canton?",
             "points": 6,
+            "correctAnswer": 1,
             "options": [
               { "id": "opt1", "text": "1975", "correct": false, "explanation": "Incorrecte. Le 26ème canton a été créé en 1978." },
               { "id": "opt2", "text": "1978", "correct": true, "explanation": "Correcte. Le Jura, 26ème canton de la Suisse, a été créé en 1978 par la scission d'une partie du canton de Berne." },
@@ -61,6 +64,7 @@
             "id": "q1",
             "question": "Quel document régit les douanes en Suisse?",
             "points": 7,
+            "correctAnswer": 0,
             "options": [
               { "id": "opt1", "text": "La Loi sur les douanes", "correct": true, "explanation": "Correcte. La Loi sur les douanes (LD) est le document principal qui régit l'activité des douanes en Suisse." },
               { "id": "opt2", "text": "La Loi fédérale des finances", "correct": false, "explanation": "Incorrecte. C'est la Loi sur les douanes qui régit les douanes." },
@@ -72,6 +76,7 @@
             "id": "q2",
             "question": "Le système HS a combien de chiffres minimums?",
             "points": 7,
+            "correctAnswer": 1,
             "options": [
               { "id": "opt1", "text": "4 chiffres", "correct": false, "explanation": "Incorrecte. Le système HS utilise 6 chiffres minimums." },
               { "id": "opt2", "text": "6 chiffres", "correct": true, "explanation": "Correcte. Le Système Harmonisé utilise un code de 6 chiffres minimums pour classifier les marchandises." },
@@ -83,6 +88,7 @@
             "id": "q3",
             "question": "Qu'est-ce que les Incoterms?",
             "points": 6,
+            "correctAnswer": 0,
             "options": [
               { "id": "opt1", "text": "Clauses commerciales internationales", "correct": true, "explanation": "Correcte. Les Incoterms sont des clauses commerciales internationales définissant les responsabilités." },
               { "id": "opt2", "text": "Les taxes douanières", "correct": false, "explanation": "Incorrecte. Les Incoterms ne sont pas des taxes." },
@@ -108,6 +114,7 @@
             "id": "q1",
             "question": "Combien de temps dure généralement un dédouanement simple?",
             "points": 7,
+            "correctAnswer": 1,
             "options": [
               { "id": "opt1", "text": "1-2 heures", "correct": false, "explanation": "Incorrecte. Le délai est plus long." },
               { "id": "opt2", "text": "24-48 heures", "correct": true, "explanation": "Correcte. Un dédouanement simple prend généralement 24 à 48 heures selon la complexité et la charge de travail." },
@@ -119,6 +126,7 @@
             "id": "q2",
             "question": "Quel document est OBLIGATOIRE pour une déclaration?",
             "points": 7,
+            "correctAnswer": 0,
             "options": [
               { "id": "opt1", "text": "La facture commerciale", "correct": true, "explanation": "Correcte. La facture commerciale est le document obligatoire pour effectuer une déclaration en douane." },
               { "id": "opt2", "text": "Le passeport du transporteur", "correct": false, "explanation": "Incorrecte. Le passeport n'est pas un document douanier." },
@@ -130,6 +138,7 @@
             "id": "q3",
             "question": "Si vous contestez une décision douanière, vers quel organe allez-vous?",
             "points": 6,
+            "correctAnswer": 1,
             "options": [
               { "id": "opt1", "text": "Le canton", "correct": false, "explanation": "Incorrecte. Il existe un organe spécialisé: la Commission de recours douaniers." },
               { "id": "opt2", "text": "La Commission de recours douaniers", "correct": true, "explanation": "Correcte. La Commission de recours douaniers (indépendante) entend les contestations." },
@@ -155,6 +164,7 @@
             "id": "q1",
             "question": "FOB signifie?",
             "points": 7,
+            "correctAnswer": 0,
             "options": [
               { "id": "opt1", "text": "Free on Board", "correct": true, "explanation": "Correcte. FOB signifie 'Free on Board' (Franco à bord), une condition commerciale importante." },
               { "id": "opt2", "text": "Freight on Boat", "correct": false, "explanation": "Incorrecte. FOB signifie 'Free on Board'." },
@@ -166,6 +176,7 @@
             "id": "q2",
             "question": "L'assurance est incluse dans quel INCOTERM?",
             "points": 7,
+            "correctAnswer": 2,
             "options": [
               { "id": "opt1", "text": "FOB", "correct": false, "explanation": "Incorrecte. L'assurance n'est pas incluse en FOB." },
               { "id": "opt2", "text": "EXW", "correct": false, "explanation": "Incorrecte. EXW est le moins coûteux. L'assurance n'y est pas incluse." },
@@ -177,6 +188,7 @@
             "id": "q3",
             "question": "Qu'est-ce qu'un connaissement?",
             "points": 6,
+            "correctAnswer": 1,
             "options": [
               { "id": "opt1", "text": "Une facture", "correct": false, "explanation": "Incorrecte. Le connaissement est un document de transport, pas une facture." },
               { "id": "opt2", "text": "Un document de transport", "correct": true, "explanation": "Correcte. Un connaissement est un document de transport attestant la prise en charge des marchandises." },
@@ -202,6 +214,7 @@
             "id": "q1",
             "question": "L'analyse de risque permet de?",
             "points": 7,
+            "correctAnswer": 1,
             "options": [
               { "id": "opt1", "text": "Contrôler 100% des envois", "correct": false, "explanation": "Incorrecte. L'analyse de risque cible les risques élevés, pas 100%." },
               { "id": "opt2", "text": "Cibler les contrôles sur les risques élevés", "correct": true, "explanation": "Correcte. L'analyse de risque permet de cibler les contrôles sur les envois à risque élevé, optimisant ainsi les ressources." },
@@ -213,6 +226,7 @@
             "id": "q2",
             "question": "Les armes sont-elles prohibées à l'importation en Suisse?",
             "points": 7,
+            "correctAnswer": 1,
             "options": [
               { "id": "opt1", "text": "Non, jamais", "correct": false, "explanation": "Incorrecte. Les armes sont prohibées à l'importation." },
               { "id": "opt2", "text": "Oui, toujours (interdiction absolue)", "correct": true, "explanation": "Correcte. Les armes sont prohibées à l'importation en Suisse (interdiction absolue) sauf exceptions très limitées." },
@@ -224,6 +238,7 @@
             "id": "q3",
             "question": "Qu'est-ce que MROS?",
             "points": 6,
+            "correctAnswer": 1,
             "options": [
               { "id": "opt1", "text": "Un service d'assurance", "correct": false, "explanation": "Incorrecte. MROS n'est pas un service d'assurance." },
               { "id": "opt2", "text": "L'organisme suisse de signalement des opérations suspectes", "correct": true, "explanation": "Correcte. MROS (Meldestelle für Geldwäscherei) est l'organisme suisse responsable du signalement des opérations suspectes." },
