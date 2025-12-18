@@ -55,6 +55,7 @@ async function loadChapitres() {
         // Normaliser (compat ancien format)
         data.chapitres = exerciseNormalizer.normalizeAll(data.chapitres);
         console.log('✅ Normalisation complète');
+        console.log('📊 Chapitres normalisés:', data.chapitres);
         
         return data.chapitres;
     } catch (error) {
@@ -738,6 +739,8 @@ function normalizeExercise(exercice) {
 
 // Stocker les chapitres globalement
 let CHAPITRES = [];
+// Alias pour faciliter debug console
+window.CHAPTERS = CHAPITRES;
 
 /**
  * Charge et affiche les objectifs du chapitre sélectionné
@@ -4658,6 +4661,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Charger les chapitres
     CHAPITRES = await loadChapitres();
+    // Mettre à jour alias
+    window.CHAPTERS = CHAPITRES;
+    console.log('✅ CHAPITRES et CHAPTERS alias initialisés');
     
     // Charger la progression sauvegardée
     const chaptersProgress = StorageManager.getChaptersProgress();
