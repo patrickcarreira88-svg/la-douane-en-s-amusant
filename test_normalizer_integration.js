@@ -156,7 +156,8 @@ class ExerciseNormalizer {
           if (!normalized.content) {
             const contentKeys = ['pairs', 'statuses', 'scenario', 'questions', 'items', 
                                'leftItems', 'rightItems', 'targets', 'cards', 
-                               'question', 'options', 'rows', 'text', 'timeline'];
+                               'question', 'options', 'rows', 'text', 'timeline',
+                               'url', 'videoId', 'description', 'recto', 'verso'];
             
             const hasStructuredContent = contentKeys.some(key => key in normalized);
             

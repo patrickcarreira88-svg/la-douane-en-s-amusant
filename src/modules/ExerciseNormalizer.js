@@ -198,7 +198,8 @@ class ExerciseNormalizer {
           if (!normalized.content) {
             const contentKeys = ['pairs', 'statuses', 'scenario', 'questions', 'items', 
                                'leftItems', 'rightItems', 'targets', 'cards', 
-                               'question', 'options', 'rows', 'text', 'timeline'];
+                               'question', 'options', 'rows', 'text', 'timeline',
+                               'url', 'videoId', 'description', 'recto', 'verso'];
             
             const hasStructuredContent = contentKeys.some(key => key in normalized);
             
@@ -209,12 +210,12 @@ class ExerciseNormalizer {
               for (const key of contentKeys) {
                 if (key in normalized) {
                   normalized.content[key] = normalized[key];
-                  delete normalized[key];
+                  delete normalized[key];  // ⭐ Supprimer du niveau racine
                 }
               }
               
               // Préserver les propriétés métadonnées au niveau exercise
-              // Les clés gardées à la racine: id, type, titre, description, order, points, etc.
+              // Les clés gardées à la racine: id, type, titre, order, points, bloomLevel, difficulty, duree, etc.
             }
           }
       }
