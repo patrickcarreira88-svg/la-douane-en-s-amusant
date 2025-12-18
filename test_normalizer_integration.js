@@ -173,6 +173,20 @@ class ExerciseNormalizer {
               }
             }
           }
+          
+          // ⭐ NETTOYAGE: Si content existe déjà, supprimer les doublons au niveau racine
+          if (normalized.content) {
+            const contentKeys = ['pairs', 'statuses', 'scenario', 'questions', 'items', 
+                               'leftItems', 'rightItems', 'targets', 'cards', 
+                               'question', 'options', 'rows', 'text', 'timeline',
+                               'url', 'videoId', 'description', 'recto', 'verso'];
+            
+            for (const key of contentKeys) {
+              if (key in normalized && key in normalized.content) {
+                delete normalized[key];
+              }
+            }
+          }
       }
 
       if (!normalized.content) {

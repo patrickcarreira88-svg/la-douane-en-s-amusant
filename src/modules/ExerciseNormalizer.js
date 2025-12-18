@@ -218,6 +218,20 @@ class ExerciseNormalizer {
               // Les clés gardées à la racine: id, type, titre, order, points, bloomLevel, difficulty, duree, etc.
             }
           }
+          
+          // ⭐ NETTOYAGE: Si content existe déjà, supprimer les doublons au niveau racine
+          if (normalized.content) {
+            const contentKeys = ['pairs', 'statuses', 'scenario', 'questions', 'items', 
+                               'leftItems', 'rightItems', 'targets', 'cards', 
+                               'question', 'options', 'rows', 'text', 'timeline',
+                               'url', 'videoId', 'description', 'recto', 'verso'];
+            
+            for (const key of contentKeys) {
+              if (key in normalized && key in normalized.content) {
+                delete normalized[key];  // ⭐ Supprimer le doublon
+              }
+            }
+          }
       }
 
       // Vérifier que le résultat a la clé "content"
