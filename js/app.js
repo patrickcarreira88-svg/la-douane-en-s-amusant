@@ -1603,6 +1603,39 @@ const App = {
         // ✅ NORMALISER L'EXERCICE (convertir ancien format → format unifié)
         exercice = normalizeExercise(exercice);
         
+        // ⭐ Si exercice incomplet (pas de content), ajouter script pour le charger async
+        if (!exercice.content) {
+            return `
+                <div id="exercice-${exercice.id}" data-exercice-id="${exercice.id}">
+                    <div style="text-align: center; padding: var(--spacing-lg);">
+                        <p>⏳ Chargement de l'exercice...</p>
+                    </div>
+                </div>
+                <script>
+                    (async function() {
+                        const exerciceId = '${exercice.id}';
+                        const container = document.getElementById('exercice-' + exerciceId);
+                        if (!container) return;
+                        
+                        try {
+                            console.log('📚 Chargement exercice async:', exerciceId);
+                            const fullExercice = await exerciseLoader.loadExerciseById(exerciceId);
+                            if (!fullExercice) {
+                                container.innerHTML = '<p>❌ Exercice non trouvé</p>';
+                                return;
+                            }
+                            console.log('✅ Exercice chargé:', exerciceId);
+                            const html = App.renderExercice(fullExercice, fullExercice.type);
+                            container.outerHTML = html;
+                        } catch (error) {
+                            console.error('❌ Erreur chargement exercice:', error);
+                            container.innerHTML = '<p>❌ Erreur lors du chargement</p>';
+                        }
+                    })();
+                </script>
+            `;
+        }
+        
         // Passer l'étape aux fonctions de rendu pour accès au videoId
         switch(exercice.type) {
             case 'video':
