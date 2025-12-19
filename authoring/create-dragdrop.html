@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🎯 Créer Drag & Drop - Outil Auteur</title>
+  <link rel="stylesheet" href="css/authoring.css">
+</head>
+<body>
+  <div class="container">
+    <div class="nav">
+      <a href="index.html">← Retour</a>
+      <a href="create-qcm.html">QCM</a>
+      <a href="create-dragdrop.html" class="active">Drag & Drop</a>
+      <a href="create-scenario.html">Scénario</a>
+    </div>
+
+    <h1>🎯 Créer un Drag & Drop</h1>
+
+    <div id="alertBox" class="alert"></div>
+
+    <form id="dragForm">
+      
+      <!-- Section 1: Identifiants -->
+      <fieldset style="border: 1px solid #e5e7eb; padding: 20px; border-radius: 6px; margin-bottom: 25px;">
+        <legend style="font-weight: 600; padding: 0 10px;">📋 Identifiants</legend>
+        
+        <div class="form-group">
+          <label for="exerciseId">ID Exercice *</label>
+          <input type="text" id="exerciseId" placeholder="ex: ch3ex010" required>
+          <small style="color: #6b7280; display: block; margin-top: 5px;">Format: ch{chap}ex{num}</small>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+          <div class="form-group">
+            <label for="chapterId">Chapitre *</label>
+            <input type="text" id="chapterId" placeholder="ex: ch3" required>
+          </div>
+          <div class="form-group">
+            <label for="stepId">Étape *</label>
+            <input type="text" id="stepId" placeholder="ex: ch3step2" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="title">Titre du Drag & Drop *</label>
+          <input type="text" id="title" placeholder="ex: Organiser les étapes douanières" required>
+        </div>
+      </fieldset>
+
+      <!-- Section 2: Contenu -->
+      <fieldset style="border: 1px solid #e5e7eb; padding: 20px; border-radius: 6px; margin-bottom: 25px;">
+        <legend style="font-weight: 600; padding: 0 10px;">📝 Contenu</legend>
+
+        <div class="form-group">
+          <label for="instruction">Instruction *</label>
+          <textarea id="instruction" placeholder="Décrivez ce que l'utilisateur doit faire..." required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Éléments à organiser *</label>
+          <small style="color: #6b7280; display: block; margin-bottom: 10px;">Un élément par ligne (minimum 2, maximum 10). Format: élément|position</small>
+          <small style="color: #666; display: block; margin-bottom: 10px;">Exemple: Présentation|0 → Déclaration|1 → Vérification|2</small>
+          <textarea id="items" placeholder="Présentation|0&#10;Déclaration|1&#10;Vérification|2" required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="points">Points *</label>
+          <input type="number" id="points" value="15" min="1" max="100" required>
+        </div>
+      </fieldset>
+
+      <!-- Section 3: Actions -->
+      <div style="background: #f9fafb; padding: 20px; border-radius: 6px; margin-bottom: 25px;">
+        <button type="button" class="btn-primary" onclick="generateDragDropJSON()">📋 Générer JSON</button>
+        <button type="button" class="btn-secondary" onclick="resetDragForm()">🔄 Réinitialiser</button>
+      </div>
+
+    </form>
+
+    <!-- Section 4: Résultat JSON -->
+    <div id="jsonOutput" style="display: none;">
+      <div class="output-section">
+        <h3>✅ JSON généré</h3>
+        <p style="color: #6b7280; font-size: 13px;">Copie ce JSON et ajoute-le dans <code>data/exercises/dragdrop.json</code></p>
+        <textarea id="jsonText" readonly rows="25"></textarea>
+        <button type="button" class="btn-success" onclick="copyToClipboard()" style="margin-top: 15px;">📋 Copier au presse-papiers</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="js/generator.js"></script>
+</body>
+</html>

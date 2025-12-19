@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🎬 Créer Scénario - Outil Auteur</title>
+  <link rel="stylesheet" href="css/authoring.css">
+</head>
+<body>
+  <div class="container">
+    <div class="nav">
+      <a href="index.html">← Retour</a>
+      <a href="create-qcm.html">QCM</a>
+      <a href="create-dragdrop.html">Drag & Drop</a>
+      <a href="create-scenario.html" class="active">Scénario</a>
+    </div>
+
+    <h1>🎬 Créer un Scénario</h1>
+
+    <div id="alertBox" class="alert"></div>
+
+    <form id="scenarioForm">
+      
+      <!-- Section 1: Identifiants -->
+      <fieldset style="border: 1px solid #e5e7eb; padding: 20px; border-radius: 6px; margin-bottom: 25px;">
+        <legend style="font-weight: 600; padding: 0 10px;">📋 Identifiants</legend>
+        
+        <div class="form-group">
+          <label for="exerciseId">ID Exercice *</label>
+          <input type="text" id="exerciseId" placeholder="ex: 101BTex011" required>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+          <div class="form-group">
+            <label for="chapterId">Chapitre *</label>
+            <input type="text" id="chapterId" placeholder="ex: 101BT" required>
+          </div>
+          <div class="form-group">
+            <label for="stepId">Étape *</label>
+            <input type="text" id="stepId" placeholder="ex: 101BT03cassimples" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="title">Titre du Scénario *</label>
+          <input type="text" id="title" placeholder="ex: Classement Douanier" required>
+        </div>
+      </fieldset>
+
+      <!-- Section 2: Scénario -->
+      <fieldset style="border: 1px solid #e5e7eb; padding: 20px; border-radius: 6px; margin-bottom: 25px;">
+        <legend style="font-weight: 600; padding: 0 10px;">🎬 Scénario</legend>
+
+        <div class="form-group">
+          <label for="scenarioTitle">Titre du scénario *</label>
+          <input type="text" id="scenarioTitle" placeholder="ex: Vous travaillez à la douane..." required>
+        </div>
+
+        <div class="form-group">
+          <label for="scenarioDescription">Description du scénario *</label>
+          <textarea id="scenarioDescription" placeholder="Décrivez le contexte du scénario..." required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="scenarioIcon">Emoji du scénario</label>
+          <input type="text" id="scenarioIcon" placeholder="🎯" value="🎯" maxlength="2">
+        </div>
+      </fieldset>
+
+      <!-- Section 3: Questions -->
+      <fieldset style="border: 1px solid #e5e7eb; padding: 20px; border-radius: 6px; margin-bottom: 25px;">
+        <legend style="font-weight: 600; padding: 0 10px;">❓ Questions</legend>
+
+        <div id="questionsContainer">
+          <div class="question-block" style="border-left: 3px solid #3182ce; padding: 15px; margin-bottom: 15px; background: #f0f9ff;">
+            <h4 style="margin-top: 0;">Question 1</h4>
+            
+            <div class="form-group">
+              <label>Texte de la question *</label>
+              <input type="text" class="question-text" placeholder="Posez votre question..." required>
+            </div>
+
+            <div class="form-group">
+              <label>Options (une par ligne) *</label>
+              <textarea class="question-options" placeholder="Option 1&#10;Option 2&#10;Option 3" required></textarea>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+              <div class="form-group">
+                <label>Bonne réponse (numéro) *</label>
+                <input type="number" class="question-answer" min="0" max="5" required>
+              </div>
+              <div class="form-group">
+                <label>Points *</label>
+                <input type="number" class="question-points" value="25" min="1" max="100" required>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Explication *</label>
+              <textarea class="question-explanation" placeholder="Expliquez la réponse..." required></textarea>
+            </div>
+          </div>
+        </div>
+
+        <button type="button" class="btn-secondary" onclick="addQuestion()" style="margin-top: 15px;">➕ Ajouter une question</button>
+      </fieldset>
+
+      <!-- Section 4: Actions -->
+      <div style="background: #f9fafb; padding: 20px; border-radius: 6px; margin-bottom: 25px;">
+        <button type="button" class="btn-primary" onclick="generateScenarioJSON()">📋 Générer JSON</button>
+        <button type="button" class="btn-secondary" onclick="resetScenarioForm()">🔄 Réinitialiser</button>
+      </div>
+
+    </form>
+
+    <!-- Section 5: Résultat JSON -->
+    <div id="jsonOutput" style="display: none;">
+      <div class="output-section">
+        <h3>✅ JSON généré</h3>
+        <p style="color: #6b7280; font-size: 13px;">Copie ce JSON et ajoute-le dans <code>data/exercises/scenario.json</code></p>
+        <textarea id="jsonText" readonly rows="30"></textarea>
+        <button type="button" class="btn-success" onclick="copyToClipboard()" style="margin-top: 15px;">📋 Copier au presse-papiers</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="js/generator.js"></script>
+</body>
+</html>

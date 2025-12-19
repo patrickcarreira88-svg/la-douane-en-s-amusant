@@ -104,6 +104,34 @@
           { "id": "target3", "text": "Interdiction absolue", "correctItem": "item3" }
         ]
       }
+    },
+    {
+      "id": "ch3ex010",
+      "chapterId": "ch3",
+      "stepId": "ch3step2",
+      "title": "Organiser etapes douanieres",
+      "type": "dragdrop",
+      "points": 15,
+      "content": {
+        "instruction": "Classez les etapes dans le bon ordre",
+        "items": [
+          {
+            "id": "item0",
+            "label": "Presentation",
+            "correctPosition": 0
+          },
+          {
+            "id": "item1",
+            "label": "Declaration",
+            "correctPosition": 1
+          },
+          {
+            "id": "item2",
+            "label": "Verification",
+            "correctPosition": 2
+          }
+        ]
+      }
     }
   ]
 }

@@ -54,6 +54,41 @@
           }
         ]
       }
+    },
+    {
+      "id": "101BTex011",
+      "chapterId": "101BT",
+      "stepId": "101BT03cassimples",
+      "title": "Scenario Classement",
+      "type": "scenario",
+      "points": 75,
+      "content": {
+        "scenario": {
+          "title": "Classement Douanier",
+          "description": "Vous travaillez a la douane...",
+          "icon": "qcm"
+        },
+        "questions": [
+          {
+            "id": "q1",
+            "number": 1,
+            "question": "Touriste avec chocolat, montres, vetements?",
+            "options": ["Personnel", "Touristique", "Commercial"],
+            "correctAnswer": 1,
+            "explanation": "Quantite limitee = touristique",
+            "points": 25
+          },
+          {
+            "id": "q2",
+            "number": 2,
+            "question": "Commerant avec 500kg fromage?",
+            "options": ["Personnel", "Touristique", "Commercial"],
+            "correctAnswer": 2,
+            "explanation": "Quantite importante = commercial",
+            "points": 25
+          }
+        ]
+      }
     }
   ]
 }

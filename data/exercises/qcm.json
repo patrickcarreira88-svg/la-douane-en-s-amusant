@@ -21,6 +21,25 @@
       }
     },
     {
+        "id": "ch1ex999",
+        "chapterId": "ch1",
+        "stepId": "ch1step2",
+        "title": "QCM Test Tarifaire",
+        "type": "qcm",
+        "points": 10,
+        "content": {
+            "question": "Quel est le taux forfaitaire?",
+            "options": [
+                "12.- CHF/L",
+                "15.- CHF/L",
+                "16.- CHF/L",
+                "18.- CHF/L"
+    ],
+    "correctAnswer": 2,
+    "explanation": "15.- CHF le litre"
+  }
+},
+    {
       "id": "ch2_ex_002",
       "chapterId": "ch2",
       "stepId": "ch2_step2",
