@@ -50,3 +50,13 @@
 ## 🧪 Tests
 
 Tous les tests passent (15/15) ✅
+
+## 📞 Support
+
+- Consulte la [FAQ Admin](docs/GUIDE_ADMIN.md)
+- GitHub Issues: https://github.com/patrickcarreira88-svg/la-douane-en-s-amusant/issues
+- Email: patrick.carreira@example.com
+
+---
+
+**Projet TFE | Décembre 2025 | Suisse 🇨🇭**
