@@ -1,110 +1,269 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>➕ Créer QCM - Outil Auteur</title>
-  <link rel="stylesheet" href="css/authoring.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Outil Auteur - Créer un QCM</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        input[type="text"],
+        input[type="number"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.3s;
+        }
+        
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        .id-display {
+            display: inline-block;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 6px;
+            font-weight: bold;
+            margin-top: 8px;
+            font-size: 16px;
+            letter-spacing: 1px;
+        }
+        
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        button:active {
+            transform: scale(0.98);
+        }
+        
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            display: none;
+            border-left: 4px solid;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border-left-color: #28a745;
+        }
+        
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border-left-color: #dc3545;
+        }
+        
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border-left-color: #17a2b8;
+        }
+        
+        .help-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .divider {
+            border-top: 2px solid #e0e0e0;
+            margin: 30px 0;
+        }
+        
+        #existingExercises {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 20px;
+            font-size: 13px;
+        }
+        
+        #existingExercises h3 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        #existingExercises ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        #existingExercises li {
+            padding: 5px 0;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        #existingExercises li:last-child {
+            border-bottom: none;
+        }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <div class="nav">
-      <a href="index.html">← Retour</a>
-      <a href="create-qcm.html" class="active">QCM</a>
-      <a href="create-dragdrop.html">Drag & Drop</a>
-      <a href="create-scenario.html">Scénario</a>
-    </div>
-
-    <h1>➕ Créer un QCM</h1>
-
-    <div id="alertBox" class="alert"></div>
-
-    <form id="qcmForm">
-      
-      <!-- Section 1: Identifiants -->
-      <fieldset style="border: 1px solid #e5e7eb; padding: 20px; border-radius: 6px; margin-bottom: 25px;">
-        <legend style="font-weight: 600; padding: 0 10px;">📋 Identifiants</legend>
+    <div class="container">
+        <h1>✍️ Créer un QCM</h1>
+        <p class="subtitle">Outil auteur automatisé avec Replit</p>
         
-        <div class="form-group">
-          <label for="exerciseId">ID Exercice *</label>
-          <input type="text" id="exerciseId" placeholder="ex: ch1ex002" required>
-          <small style="color: #6b7280; display: block; margin-top: 5px;">Format: ch{chap}ex{num} ex: ch1ex002, ch2ex015</small>
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-          <div class="form-group">
-            <label for="chapterId">Chapitre *</label>
-            <input type="text" id="chapterId" placeholder="ex: ch1" required>
-          </div>
-          <div class="form-group">
-            <label for="stepId">Étape *</label>
-            <input type="text" id="stepId" placeholder="ex: ch1step2" required>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label for="title">Titre du QCM *</label>
-          <input type="text" id="title" placeholder="ex: QCM - Les 26 cantons" required>
-        </div>
-      </fieldset>
-
-      <!-- Section 2: Contenu -->
-      <fieldset style="border: 1px solid #e5e7eb; padding: 20px; border-radius: 6px; margin-bottom: 25px;">
-        <legend style="font-weight: 600; padding: 0 10px;">📝 Contenu</legend>
-
-        <div class="form-group">
-          <label for="question">Question *</label>
-          <textarea id="question" placeholder="Posez votre question ici..." required></textarea>
-        </div>
-
-        <div class="form-group">
-          <label>Options de réponse *</label>
-          <small style="color: #6b7280; display: block; margin-bottom: 10px;">Une option par ligne (minimum 2, maximum 6)</small>
-          <textarea id="options" placeholder="Option 1&#10;Option 2&#10;Option 3&#10;Option 4" required></textarea>
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-          <div class="form-group">
-            <label for="correctAnswer">Bonne réponse (numéro) *</label>
-            <input type="number" id="correctAnswer" min="0" max="5" placeholder="0, 1, 2..." required>
-            <small style="color: #6b7280; display: block; margin-top: 5px;">0 = 1ère option, 1 = 2e option, etc.</small>
-          </div>
-          <div class="form-group">
-            <label for="points">Points *</label>
-            <input type="number" id="points" value="10" min="1" max="100" required>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label for="explanation">Explication *</label>
-          <textarea id="explanation" placeholder="Expliquez pourquoi cette réponse est correcte..." required></textarea>
-        </div>
-      </fieldset>
-
-      <!-- Section 3: Actions -->
-      <div style="background: #f9fafb; padding: 20px; border-radius: 6px; margin-bottom: 25px;">
-        <button type="button" class="btn-primary" onclick="generateJSON()">📋 Générer JSON</button>
-        <button type="button" class="btn-secondary" onclick="resetForm()">🔄 Réinitialiser</button>
-      </div>
-
-    </form>
-
-    <!-- Section 4: Résultat JSON -->
-    <div id="jsonOutput" style="display: none;">
-      <div class="output-section">
-        <h3>✅ JSON généré</h3>
-        <p style="color: #6b7280; font-size: 13px;">Copie ce JSON et ajoute-le dans <code>data/exercises/qcm.json</code></p>
-        <textarea id="jsonText" readonly rows="25"></textarea>
-        <button type="button" class="btn-success" onclick="copyToClipboard()" style="margin-top: 15px;">📋 Copier au presse-papiers</button>
-      </div>
+        <div id="alert"></div>
+        
+        <form onsubmit="event.preventDefault(); saveExerciseToServer();">
+            
+            <!-- Chapitre -->
+            <div class="form-group">
+                <label for="chapterId">📚 Chapitre</label>
+                <select id="chapterId" required>
+                    <option value="">-- Chargement --</option>
+                </select>
+                <div class="help-text">Sélectionne le chapitre pour ajouter cet exercice</div>
+            </div>
+            
+            <!-- ID Auto -->
+            <div class="form-group">
+                <label>🆔 ID (Auto-généré)</label>
+                <div class="id-display" id="autoID" title="ID généré automatiquement">ch1ex001</div>
+                <input type="hidden" id="exerciseId">
+                <div class="help-text">L'ID est généré automatiquement. Format: chXexYYY</div>
+            </div>
+            
+            <!-- Step ID -->
+            <div class="form-group">
+                <label for="stepId">📍 Step ID (optionnel)</label>
+                <input type="text" id="stepId" placeholder="ch1step1">
+                <div class="help-text">Laisser vide pour auto-remplissage</div>
+            </div>
+            
+            <!-- Titre -->
+            <div class="form-group">
+                <label for="title">📝 Titre</label>
+                <input type="text" id="title" placeholder="Titre de l'exercice" required>
+                <div class="help-text">Exemple: 'QCM - Nombre de cantons'</div>
+            </div>
+            
+            <!-- Question -->
+            <div class="form-group">
+                <label for="question">❓ Question</label>
+                <textarea id="question" placeholder="Pose ta question..." required></textarea>
+                <div class="help-text">Sois clair et concis</div>
+            </div>
+            
+            <!-- Options -->
+            <div class="form-group">
+                <label for="options">🎯 Options (une par ligne)</label>
+                <textarea id="options" placeholder="Option A&#10;Option B&#10;Option C&#10;Option D" required></textarea>
+                <div class="help-text">Minimum 2, maximum 6 options</div>
+            </div>
+            
+            <!-- Bonne réponse -->
+            <div class="form-group">
+                <label for="correctAnswer">✅ Bonne réponse (numéro)</label>
+                <input type="number" id="correctAnswer" value="0" min="0" required>
+                <div class="help-text">0 = première option, 1 = deuxième, etc.</div>
+            </div>
+            
+            <!-- Explication -->
+            <div class="form-group">
+                <label for="explanation">💡 Explication</label>
+                <textarea id="explanation" placeholder="Explique pourquoi c'est la bonne réponse..." required></textarea>
+                <div class="help-text">Aide l'apprenant à comprendre</div>
+            </div>
+            
+            <!-- Points -->
+            <div class="form-group">
+                <label for="points">⭐ Points</label>
+                <input type="number" id="points" value="10" min="1" max="100" required>
+                <div class="help-text">Nombre de points pour cet exercice</div>
+            </div>
+            
+            <!-- Bouton Sauvegarder -->
+            <button type="submit">💾 Sauvegarder dans qcm.json</button>
+            
+        </form>
+        
+        <div class="divider"></div>
+        
+        <!-- Exercices existants -->
+        <div id="existingExercises"></div>
     </div>
-
-  </div>
-
-  <script src="js/generator.js"></script>
-  <script>
-    // Charger generator au démarrage
-    console.log('✅ create-qcm.html chargé');
-  </script>
+    
+    <!-- Script -->
+    <script src="js/generator-v2.js"></script>
 </body>
 </html>
