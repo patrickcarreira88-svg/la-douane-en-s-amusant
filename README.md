@@ -216,7 +216,69 @@ Les suggestions et améliorations sont bienvenues!
 
 Pour toute question ou signalement de bug, ouvrez une [issue](https://github.com/patrickcarreira88-svg/la-douane-en-s-amusant/issues).
 
+## 📖 Documentation supplémentaire
+
+- **[Guide Utilisateur](docs/GUIDE_UTILISATEUR.md)** - Pour les apprenants
+- **[Guide Auteur](docs/GUIDE_AUTEUR.md)** - Pour les formateurs  
+- **[Guide Admin](docs/GUIDE_ADMIN.md)** - Pour les administrateurs
+
+## 🧪 Tests
+
+Exécuter la suite de tests:
+
+```bash
+node tests.js
+```
+
+Résultat attendu: 100% pass ✅
+
+## 🎯 Chapitres
+
+1. **CH1** - Introduction (Cantons, géographie)
+2. **CH2** - Marchandises (Classification, définitions)
+3. **CH3** - Législation (Tarifs, douanes)
+4. **CH4** - Procédures (Dédouanement, documents)
+5. **CH5** - Commerce International (Incoterms, échanges)
+6. **CH6** - Sécurité (Contrôles, risques)
+
+## 📱 Navigation principale
+
+- 🏠 **Accueil** - Vue d'ensemble et statistiques
+- 📚 **Apprentissage** - Cours + exercices interactifs
+- 🎯 **Pratique** - Révision ciblée et pool d'exercices
+- 📔 **Journal** - Historique et réflexions
+- 👤 **Profil** - Données personnelles et badges
+
+## 🛠️ Stack Technique
+
+- **Frontend:** HTML5, CSS3, Vanilla JavaScript (ES6+)
+- **Data:** JSON statique
+- **Storage:** localStorage (données privées côté client)
+- **Deploy:** GitHub Pages, Netlify, ou serveur custom
+- **Performance:** Pas de dépendances externes
+
+## 🔒 Sécurité & Confidentialité
+
+- ✅ **Pas de backend** = pas de base de données
+- ✅ **localStorage local** = données stockées localement
+- ✅ **Pas d'authentification requise** (à ajouter si nécessaire)
+- ✅ **HTTPS inclus** (GitHub Pages, Netlify)
+- ✅ **Export/Import** pour contrôler ses données
+
+## 🚀 Serveur local (développement)
+
+```bash
+# Avec Python 3
+python -m http.server 5500
+
+# Puis accéder à http://localhost:5500
+```
+
+## 📝 Licence
+
+Projet éducatif - TFE Brevet Fédéral Douane Suisse
+
 ---
 
-**Dernière mise à jour:** Décembre 2025  
+**Développé pour la Suisse 🇨🇭 | Décembre 2025**  
 **Version:** 2.0.0
