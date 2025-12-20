@@ -1,12 +1,25 @@
+# Node modules
 node_modules/
-.DS_Store
-*.log
+npm-debug.log
 .env
-.vscode/settings.json
-dist/
-build/
-.cache/
+.env.local
+
+# IDE
+.vscode/
+.idea/
 *.swp
 *.swo
 *~
-.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build
+dist/
+build/
+*.log
+
+# Temporaires
+*.tmp
+temp/
