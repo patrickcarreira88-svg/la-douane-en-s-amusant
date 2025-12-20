@@ -4044,6 +4044,21 @@ ${content.summary}
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- À PROPOS -->
+                    <section id="about" style="margin-top: 40px; padding: 20px; background: #f0f0f0; border-radius: 8px;">
+                        <h2>📋 À propos</h2>
+                        <p><strong>Version:</strong> 2.1 (Décembre 2025)</p>
+                        <p><strong>Plateforme:</strong> GitHub Pages</p>
+                        <p><strong>Durée de formation:</strong> 15-20 heures</p>
+                        <p><strong>Documentation:</strong></p>
+                        <ul style="margin: 10px 0 0 20px;">
+                            <li><a href="https://github.com/patrickcarreira88-svg/la-douane-en-s-amusant" target="_blank" style="color: #0066cc; text-decoration: none;">📍 Code source (GitHub)</a></li>
+                            <li><a href="docs/GUIDE_UTILISATEUR.md" target="_blank" style="color: #0066cc; text-decoration: none;">📖 Guide utilisateur</a></li>
+                            <li><a href="docs/GUIDE_AUTEUR.md" target="_blank" style="color: #0066cc; text-decoration: none;">✍️ Guide auteur</a></li>
+                            <li><a href="docs/GUIDE_ADMIN.md" target="_blank" style="color: #0066cc; text-decoration: none;">🔧 Guide admin</a></li>
+                        </ul>
+                    </section>
                 </div>
             </div>
         `;
