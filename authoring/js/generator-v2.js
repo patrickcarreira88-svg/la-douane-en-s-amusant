@@ -219,7 +219,7 @@ async function saveExerciseToServer() {
     const response = await fetch(`${API_URL}/api/save-exercise`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'qcm', exercise })
+      body: JSON.stringify(exercise) 
     });
     
     const result = await response.json();
