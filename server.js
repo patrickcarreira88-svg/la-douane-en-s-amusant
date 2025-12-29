@@ -63,7 +63,7 @@ app.post('/api/save-exercise', (req, res) => {
         
         // Déterminer le type d'exercice
         const exerciseType = newExercise.type;
-        const exercisePath = path.join(__dirname, `data/exercises/${exerciseType}.json`);
+        const exercisePath = path.join(__dirname, `data/${exerciseType}.json`);
         let exercises = { exercises: [] };
         
         // Charger les exercices existants
