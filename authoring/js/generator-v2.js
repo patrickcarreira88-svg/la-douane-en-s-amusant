@@ -78,7 +78,7 @@ function displayChapters() {
 }
 
 // ========================================
-// 3. AUTO-GÉNÉRER L'ID
+// 3. AUTO-GÉNÉRER L'ID (CÔTÉ JAVASCRIPT)
 // ========================================
 
 async function updateAutoID() {
@@ -88,24 +88,40 @@ async function updateAutoID() {
   }
   
   try {
-    const response = await fetch(
-      `${API_URL}/api/next-id/${selectedChapter}/qcm`
-    );
+    // Extraire le numéro du chapitre (ex: 'ch1' → '1')
+    const chapterNum = selectedChapter.match(/\d+/)[0];
     
-    if (!response.ok) throw new Error('Impossible de générer ID');
+    // Chercher le plus grand numéro d'exercice pour ce chapitre
+    let maxExNum = 0;
+    if (existingExercises && Array.isArray(existingExercises)) {
+      existingExercises.forEach(ex => {
+        // Regex pour matcher ch{chap}ex{num}
+        const regex = new RegExp(`^ch${chapterNum}ex(\\d+)$`);
+        const match = ex.id?.match(regex);
+        if (match && match[1]) {
+          const num = parseInt(match[1], 10);
+          if (num > maxExNum) maxExNum = num;
+        }
+      });
+    }
     
-    const data = await response.json();
+    // Générer le prochain ID
+    const nextNum = maxExNum + 1;
+    const nextId = `ch${chapterNum}ex${String(nextNum).padStart(3, '0')}`;
     
     // Afficher l'ID
     const idDisplay = document.getElementById('autoID');
-    idDisplay.textContent = data.nextId;
-    idDisplay.title = `Exercice numéro ${data.nextNum}`;
+    idDisplay.textContent = nextId;
+    idDisplay.title = `Exercice numéro ${nextNum}`;
     
     // Pré-remplir le champ caché
-    document.getElementById('exerciseId').value = data.nextId;
+    document.getElementById('exerciseId').value = nextId;
+    
+    console.log(`✅ ID auto-généré: ${nextId}`);
     
   } catch (error) {
-    console.log('⚠️ Impossible de générer ID auto');
+    console.error('⚠️ Erreur lors de la génération d\'ID:', error);
+    // Fallback: utiliser le format basique
     document.getElementById('autoID').textContent = `${selectedChapter}ex001`;
   }
 }
