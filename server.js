@@ -6,6 +6,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -46,6 +47,68 @@ app.get('/api/exercises/:type', (req, res) => {
     }
 });
 
+// ============================================
+// ENDPOINT: Sauvegarder un nouvel exercice
+// ============================================
+app.post('/api/save-exercise', (req, res) => {
+    try {
+        const newExercise = req.body;
+        
+        // Validation minimale
+        if (!newExercise.id || !newExercise.type) {
+            return res.status(400).json({ 
+                error: 'ID et type requis' 
+            });
+        }
+        
+        // Déterminer le type d'exercice
+        const exerciseType = newExercise.type;
+        const exercisePath = path.join(__dirname, `data/exercises/${exerciseType}.json`);
+        let exercises = { exercises: [] };
+        
+        // Charger les exercices existants
+        try {
+            const data = fs.readFileSync(exercisePath, 'utf8');
+            exercises = JSON.parse(data);
+        } catch (e) {
+            // Fichier n'existe pas ou JSON invalide, on démarre vide
+            exercises = { exercises: [] };
+        }
+        
+        // Vérifier que l'ID n'existe pas déjà
+        const exists = exercises.exercises.some(ex => ex.id === newExercise.id);
+        if (exists) {
+            return res.status(409).json({ 
+                error: `L'exercice ${newExercise.id} existe déjà` 
+            });
+        }
+        
+        // Ajouter le nouvel exercice
+        exercises.exercises.push(newExercise);
+        
+        // Sauvegarder dans le fichier
+        fs.writeFileSync(
+            exercisePath,
+            JSON.stringify(exercises, null, 2),
+            'utf8'
+        );
+        
+        console.log(`✅ Exercice sauvegardé: ${newExercise.id}`);
+        
+        res.json({
+            success: true,
+            message: `Exercice ${newExercise.id} sauvegardé`,
+            exercise: newExercise
+        });
+        
+    } catch (error) {
+        console.error('Erreur lors de la sauvegarde:', error);
+        res.status(500).json({ 
+            error: 'Erreur serveur lors de la sauvegarde' 
+        });
+    }
+});
+
 // Route par défaut - servir index.html
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
@@ -64,6 +127,7 @@ app.listen(PORT, HOST, () => {
     console.log('📚 API Health: GET /api/health');
     console.log('📖 Chapitres: GET /api/chapitres');
     console.log('✏️  Exercices: GET /api/exercises/:type');
+    console.log('💾 Sauvegarder: POST /api/save-exercise');
     console.log('⏸️  Ctrl+C pour arrêter');
 });
 

@@ -1,0 +1,112 @@
+Solution: Créer la route manquante
+Ton backend (Replit) doit avoir une endpoint POST qui:
+
+Reçoit les données du QCM en JSON
+
+Sauvegarde/ajoute à data/qcm.json
+
+Retourne un succès 200
+
+Va dans ton server.js (ou app.js) sur Replit et ajoute cette route:
+
+javascript
+// ============================================
+// ENDPOINT: Sauvegarder un nouvel exercice QCM
+// ============================================
+
+app.post('/api/save-exercise', (req, res) => {
+  try {
+    const newExercise = req.body;
+    
+    // Validation minimale
+    if (!newExercise.id || !newExercise.type) {
+      return res.status(400).json({ 
+        error: 'ID et type requis' 
+      });
+    }
+    
+    // Charger les exercices existants
+    const qcmPath = path.join(__dirname, 'data/qcm.json');
+    let exercises = { exercises: [] };
+    
+    try {
+      const data = fs.readFileSync(qcmPath, 'utf8');
+      exercises = JSON.parse(data);
+    } catch (e) {
+      // Fichier n'existe pas ou JSON invalide, on démarre vide
+      exercises = { exercises: [] };
+    }
+    
+    // Vérifier que l'ID n'existe pas déjà
+    const exists = exercises.exercises.some(ex => ex.id === newExercise.id);
+    if (exists) {
+      return res.status(409).json({ 
+        error: `L'exercice ${newExercise.id} existe déjà` 
+      });
+    }
+    
+    // Ajouter le nouvel exercice
+    exercises.exercises.push(newExercise);
+    
+    // Sauvegarder dans le fichier
+    fs.writeFileSync(
+      qcmPath,
+      JSON.stringify(exercises, null, 2),
+      'utf8'
+    );
+    
+    console.log(`✅ Exercice sauvegardé: ${newExercise.id}`);
+    
+    res.json({
+      success: true,
+      message: `Exercice ${newExercise.id} sauvegardé`,
+      exercise: newExercise
+    });
+    
+  } catch (error) {
+    console.error('Erreur lors de la sauvegarde:', error);
+    res.status(500).json({ 
+      error: 'Erreur serveur lors de la sauvegarde' 
+    });
+  }
+});
+📋 Où ajouter ce code
+Va sur Replit, ouvre le fichier server.js (ou app.js ou index.js - le fichier principal du backend)
+
+Cherche les autres routes (par exemple: app.get('/api/exercises/qcm'))
+
+Ajoute cette route juste après, avant les autres POST si présentes
+
+Sauvegarde le fichier
+
+Le serveur Replit se redémarre automatiquement
+
+🧪 Après l'ajout: Teste à nouveau
+En local:
+
+Remplis le formulaire
+
+Clique "Sauvegarder"
+
+Regarde la console
+
+Tu devrais voir:
+
+text
+✅ Exercice sauvegardé: ch1ex1000
+Via GitHub Pages:
+
+Même test
+
+L'erreur Solana restera (c'est une extension Chrome, ignore-la)
+
+Mais le POST devrait fonctionner
+
+✅ Vérification finale
+Après avoir ajouté la route et testé la sauvegarde:
+
+Va sur Replit → ouvre data/qcm.json
+
+Tu devrais voir le nouvel exercice (ch1ex1000) ajouté à la liste
+
+Fais-le et envoie-moi une capture de la réponse dans la console (succès ou erreur)! 🚀
