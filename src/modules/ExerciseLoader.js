@@ -1,15 +1,18 @@
 /**
  * ExerciseLoader - Gestionnaire de chargement des exercices
- * Charge les exercices depuis les fichiers JSON de /data/exercises/
+ * Charge les exercices depuis Replit (API) ou fallback local
  */
 class ExerciseLoader {
   constructor() {
     this.cache = {};
     this.types = ['qcm', 'dragdrop', 'fillblanks', 'matching', 'flashcards', 'scenario', 'video', 'lecture', 'quiz'];
+    // URL Replit - à adapter selon l'environnement
+    this.replitAPI = 'https://la-douane-en-s-amusant--patrickcarreira.replit.app';
   }
 
   /**
    * Charge les exercices d'un type spécifique
+   * Essaie d'abord Replit, puis fallback local
    * @param {string} type - Type d'exercice (qcm, flashcards, video, etc.)
    * @returns {Promise<Array>} Array d'exercices du type
    */
@@ -21,17 +24,37 @@ class ExerciseLoader {
         return this.cache[type].exercises || [];
       }
 
-      // Charger depuis le fichier JSON
       console.log(`📥 ${type}: Chargement en cours...`);
-      const response = await fetch(`data/exercises/${type}.json`);
       
-      if (!response.ok) {
-        console.error(`❌ ${type}: HTTP ${response.status} - ${response.statusText}`);
-        this.cache[type] = { exercises: [] };
-        return [];
-      }
+      let data;
+      
+      // 1️⃣ Essayer Replit en premier
+      try {
+        console.log(`🔌 ${type}: Tentative Replit...`);
+        const response = await fetch(`${this.replitAPI}/api/exercises/${type}`, {
+          timeout: 3000
+        });
+        
+        if (response.ok) {
+          data = await response.json();
+          console.log(`✅ ${type}: Chargé depuis Replit (${data.exercises?.length || 0} exercices)`);
+        } else {
+          throw new Error(`HTTP ${response.status}`);
+        }
+      } catch (replitError) {
+        // 2️⃣ Fallback: charger depuis fichier local
+        console.warn(`⚠️ ${type}: Replit indisponible, fallback local`, replitError.message);
+        const response = await fetch(`data/exercises/${type}.json`);
+        
+        if (!response.ok) {
+          console.error(`❌ ${type}: HTTP ${response.status} - ${response.statusText}`);
+          this.cache[type] = { exercises: [] };
+          return [];
+        }
 
-      const data = await response.json();
+        data = await response.json();
+        console.log(`✅ ${type}: Chargé depuis local (${data.exercises?.length || 0} exercices)`);
+      }
 
       // Valider la structure
       if (!Array.isArray(data.exercises)) {
@@ -42,7 +65,7 @@ class ExerciseLoader {
 
       // Stocker en cache
       this.cache[type] = data;
-      console.log(`✅ ${type}: ${data.exercises.length} exercices chargés`);
+      console.log(`✅ ${type}: ${data.exercises.length} exercices prêts`);
       return data.exercises;
 
     } catch (error) {
