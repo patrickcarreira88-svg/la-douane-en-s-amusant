@@ -5,7 +5,7 @@
 // 🌐 URL du serveur (à adapter selon l'environnement)
 const API_URL = window.location.hostname === 'localhost' 
   ? 'http://localhost:3000'
-  : 'https://lms-douane.replit.dev';
+  : 'https://la-douane-en-s-amusant--patrickcarreira.replit.app';
 
 console.log('🔌 API connectée à:', API_URL);
 
