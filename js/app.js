@@ -17,25 +17,34 @@ const exerciseNormalizer = new ExerciseNormalizer();
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * Charge les données des chapitres depuis chapitres.json
+ * Charge les données des chapitres depuis chapitres-N1N4.json
  */
-async function loadChapitres() {
+async function loadChapitres(niveauId = 'N1') {
     try {
-        const response = await fetch('data/chapitres.json');
-        if (!response.ok) throw new Error('Erreur chargement chapitres.json');
+        const response = await fetch('data/chapitres-N1N4.json');
+        if (!response.ok) throw new Error('Erreur chargement chapitres-N1N4.json');
         
         const data = await response.json();
-        console.log('✅ Chapitres chargés:', data.chapitres.length);
+        
+        // Extraire les chapitres du niveau spécifié
+        const niveau = data.niveaux.find(n => n.id === niveauId);
+        if (!niveau) {
+            console.warn(`⚠️ Niveau ${niveauId} non trouvé`);
+            return [];
+        }
+        
+        const chapitres = niveau.chapitres || [];
+        console.log(`✅ Chapitres du niveau ${niveauId} chargés: ${chapitres.length} chapitres`);
         
         // Charger les données externes pour les chapitres qui les requièrent
-        for (let chapitre of data.chapitres) {
+        for (let chapitre of chapitres) {
             if (chapitre.externalDataFile) {
                 await loadExternalChapterData(chapitre);
             }
         }
         
         // ✅ INITIALISER localStorage APRÈS chargement
-        for (let chapitre of data.chapitres) {
+        for (let chapitre of chapitres) {
             initializeChapterStorage(chapitre);
         }
         
@@ -53,14 +62,155 @@ async function loadChapitres() {
         }
         
         // Normaliser (compat ancien format)
-        data.chapitres = exerciseNormalizer.normalizeAll(data.chapitres);
+        const chapitresNormalises = exerciseNormalizer.normalizeAll(chapitres);
         console.log('✅ Normalisation complète');
-        console.log('📊 Chapitres normalisés:', data.chapitres);
+        console.log(`📊 Chapitres du niveau ${niveauId} normalisés:`, chapitresNormalises);
         
-        return data.chapitres;
+        return chapitresNormalises;
     } catch (error) {
         console.error('❌ Erreur chargement chapitres:', error);
         return [];
+    }
+}
+
+/**
+ * Vérifie si un niveau est déverrouillé
+ * 
+ * Règles de déblocage:
+ * - N1: Toujours déverrouillé ✅
+ * - N2: Déverrouillé si N1.completion === 100%
+ * - N3: Déverrouillé si N2.completion === 100%
+ * - N4: Déverrouillé si N3.completion === 100%
+ * 
+ * @param {string} niveauId - ID du niveau ('N1', 'N2', 'N3', 'N4')
+ * @returns {boolean} true si déverrouillé, false si verrouillé
+ */
+function isNiveauUnlocked(niveauId) {
+    try {
+        const unlocked = StorageManager.isNiveauUnlocked(niveauId);
+        const status = unlocked ? '✅ Déverrouillé' : '🔒 Verrouillé';
+        console.log(`🔓 Niveau ${niveauId}: ${status}`);
+        return unlocked;
+    } catch (error) {
+        console.error(`❌ Erreur vérification déblocage ${niveauId}:`, error);
+        return false;
+    }
+}
+
+/**
+ * Obtient l'état d'un niveau avec complétude
+ * 
+ * @param {string} niveauId - ID du niveau
+ * @returns {Object} { unlocked: boolean, completion: number, chapitres: number }
+ */
+function getNiveauState(niveauId) {
+    try {
+        const user = StorageManager.getUser();
+        const niveau = user.niveaux?.[niveauId];
+        
+        if (!niveau) {
+            console.warn(`⚠️ Niveau ${niveauId} non trouvé dans storage`);
+            return { unlocked: false, completion: 0, chapitres: 0 };
+        }
+        
+        return {
+            unlocked: isNiveauUnlocked(niveauId),
+            completion: niveau.completion || 0,
+            chapitres: Object.keys(niveau.chapters || {}).length
+        };
+    } catch (error) {
+        console.error(`❌ Erreur récupération état ${niveauId}:`, error);
+        return { unlocked: false, completion: 0, chapitres: 0 };
+    }
+}
+
+/**
+ * Affiche les 4 niveaux avec cartes interactives
+ * Génère HTML avec progress ring SVG, titre, description, statut
+ * 
+ * @async
+ * @returns {Promise<string>} HTML des 4 niveaux
+ */
+async function afficherNiveaux() {
+    try {
+        // 1. Charger JSON
+        const response = await fetch('data/chapitres-N1N4.json');
+        if (!response.ok) throw new Error('Erreur chargement chapitres-N1N4.json');
+        
+        const data = await response.json();
+        
+        // 2. Vérifier structure
+        if (!data.niveaux || !Array.isArray(data.niveaux)) {
+            throw new Error('Structure niveaux invalide dans JSON');
+        }
+        
+        // 3. Générer HTML des 4 niveaux
+        let html = '<div class="niveaux-section">\n';
+        html += '<h2>🎯 Niveaux de Formation</h2>\n';
+        html += '<div class="niveaux-grid">\n';
+        
+        const niveaux = ['N1', 'N2', 'N3', 'N4'];
+        
+        niveaux.forEach(niveauId => {
+            // Récupérer l'état du niveau
+            const state = getNiveauState(niveauId);
+            
+            // Récupérer les infos du JSON
+            const niveauData = data.niveaux.find(n => n.id === niveauId);
+            const titre = niveauData?.titre || `Niveau ${niveauId}`;
+            const description = niveauData?.description || 'Compétences essentielles';
+            const couleur = niveauData?.couleur || 'E0AAFF';
+            
+            // Calculer offset du progress ring (circumference = 2*π*r = 2*π*54 ≈ 339)
+            const circumference = 2 * Math.PI * 54;
+            const strokeDashoffset = circumference * (100 - state.completion) / 100;
+            
+            // Générer HTML carte
+            html += `
+    <div class="niveau-card" data-niveau="${niveauId}" data-locked="${!state.unlocked}">
+        <div class="niveau-header">
+            <h3>${niveauId}</h3>
+            <span class="niveau-status">${state.unlocked ? '✅' : '🔒'}</span>
+        </div>
+        
+        <h4>${titre}</h4>
+        <p class="niveau-description">${description}</p>
+        
+        <!-- Progress Ring SVG -->
+        <svg class="progress-ring" viewBox="0 0 120 120" width="120" height="120">
+            <circle cx="60" cy="60" r="54" class="progress-background" />
+            <circle cx="60" cy="60" r="54" class="progress-fill" 
+                    style="stroke-dasharray: ${circumference}; stroke-dashoffset: ${strokeDashoffset};" />
+            <text x="60" y="70" class="progress-text" text-anchor="middle">${state.completion}%</text>
+        </svg>
+        
+        <div class="niveau-stats">
+            <p class="stat"><strong>${state.chapitres}</strong> chapitres</p>
+            <p class="stat"><strong>${state.completion}%</strong> complété</p>
+        </div>
+        
+        <div class="niveau-footer">
+            ${state.unlocked 
+                ? `<button class="btn btn--primary btn--small" onclick="App.afficherNiveau('${niveauId}')">Commencer</button>`
+                : `<button class="btn btn--disabled" disabled>Verrouillé</button>`
+            }
+            ${!state.unlocked 
+                ? `<p class="unlock-message">🔒 Déblocage: Complétez N${parseInt(niveauId.slice(1))-1} à 100%</p>`
+                : ''
+            }
+        </div>
+    </div>
+`;
+        });
+        
+        html += '</div>\n</div>\n';
+        
+        console.log('✅ Niveaux HTML générés');
+        return html;
+        
+    } catch (error) {
+        console.error('❌ Erreur afficherNiveaux():', error);
+        return '<p class="error">Erreur chargement des niveaux</p>';
     }
 }
 
@@ -1308,6 +1458,17 @@ const App = {
         console.log(`📌 Événements pour ${pageName} attachés`);
 
         if (pageName === 'accueil') {
+            // ✅ CHARGER LES NIVEAUX dynamiquement
+            afficherNiveaux().then(niveauxHtml => {
+                const container = document.getElementById('niveaux-container-accueil');
+                if (container) {
+                    container.innerHTML = niveauxHtml;
+                    console.log('✅ Niveaux chargés dans accueil');
+                }
+            }).catch(error => {
+                console.error('❌ Erreur chargement niveaux:', error);
+            });
+            
             document.querySelectorAll('.chapitre-card-accueil').forEach(card => {
                 card.addEventListener('click', () => {
                     const chapitreId = card.dataset.chapitreId;
@@ -1341,6 +1502,110 @@ const App = {
         // ✅ MAINTENANT: Afficher directement le contenu (chemin + jalon objectifs)
         // Les objectifs apparaissent comme un jalon clickable dans le chemin
         this.afficherChapitreContenu(chapitreId);
+    },
+    
+    /**
+     * Affiche les chapitres d'un niveau spécifique
+     * @param {string} niveauId - ID du niveau (N1, N2, N3, N4)
+     */
+    async afficherNiveau(niveauId) {
+        try {
+            // 1. Vérifier déblocage
+            if (!isNiveauUnlocked(niveauId)) {
+                console.warn(`❌ Niveau ${niveauId} verrouillé`);
+                alert(`❌ Le niveau ${niveauId} est verrouillé.\n\nDéblocage: Complétez le niveau précédent à 100%.`);
+                return;
+            }
+            
+            console.log(`📚 Chargement niveau ${niveauId}`);
+            
+            // 2. Charger chapitres du niveau
+            CHAPITRES = await loadChapitres(niveauId);
+            
+            if (!CHAPITRES || CHAPITRES.length === 0) {
+                console.warn(`⚠️ Aucun chapitre pour ${niveauId}`);
+                alert(`⚠️ Le niveau ${niveauId} n'a pas encore de chapitres.`);
+                return;
+            }
+            
+            // 3. Créer container
+            const container = document.getElementById('app-content');
+            if (!container) {
+                console.error('❌ Container #app-content manquant');
+                return;
+            }
+            
+            // 4. Générer HTML
+            let html = `
+                <div class="niveau-view">
+                    <button class="btn btn--secondary" onclick="App.navigateTo('accueil')" style="margin-bottom: 20px;">
+                        ← Retour aux niveaux
+                    </button>
+                    <h1>📚 ${niveauId} - Chapitres</h1>
+                    <div class="chapitres-list">
+            `;
+            
+            // 5. Boucler chapitres
+            const chapitresArray = Array.isArray(CHAPITRES) ? CHAPITRES : Object.values(CHAPITRES);
+            
+            chapitresArray.forEach(chapitre => {
+                if (!chapitre || !chapitre.id) return;
+                
+                const completion = chapitre.progression || 0;
+                const chapId = chapitre.id;
+                const titre = chapitre.titre || chapitre.id;
+                const description = chapitre.description || '';
+                const etapes = chapitre.etapes?.length || 0;
+                const exercices = chapitre.exercices?.length || 0;
+                
+                // Déterminer l'icône et le texte du bouton
+                let btnText = 'Commencer';
+                let btnIcon = '▶';
+                if (completion === 100) {
+                    btnText = 'Réviser';
+                    btnIcon = '🔄';
+                } else if (completion > 0) {
+                    btnText = 'Continuer';
+                    btnIcon = '▶';
+                }
+                
+                html += `
+                    <div class="chapitre-card" data-chapitre="${chapId}" style="border-left: 5px solid ${chapitre.couleur || '#C77DFF'};">
+                        <div class="chapitre-header">
+                            <h3>${chapitre.emoji || '📖'} ${titre}</h3>
+                            <span class="chapitre-status">${completion}%</span>
+                        </div>
+                        <p class="chapitre-description">${description}</p>
+                        <div class="chapitre-meta">
+                            <span>📝 ${etapes} étapes</span>
+                            <span>•</span>
+                            <span>✏️ ${exercices} exercices</span>
+                        </div>
+                        <div class="chapitre-progress">
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${completion}%;"></div>
+                            </div>
+                        </div>
+                        <button class="btn btn--primary" onclick="App.afficherChapitre('${chapId}')" style="width: 100%;">
+                            ${btnIcon} ${btnText}
+                        </button>
+                    </div>
+                `;
+            });
+            
+            html += `
+                    </div>
+                </div>
+            `;
+            
+            // 6. Injecter HTML
+            container.innerHTML = html;
+            console.log(`✅ ${niveauId}: ${chapitresArray.length} chapitres affichés`);
+            
+        } catch (error) {
+            console.error(`❌ Erreur afficherNiveau(${niveauId}):`, error);
+            alert('Erreur lors du chargement du niveau');
+        }
     },
     
     afficherEtape(stepId, chapitreId) {
@@ -3928,6 +4193,14 @@ ${content.summary}
         }) || CHAPITRES.find(ch => !ch.etapes.every(e => e.completed));
         
         let html = `
+            <div class="page active">
+                <!-- SECTION NIVEAUX (chargée dynamiquement) -->
+                <div id="niveaux-container-accueil" class="niveaux-section-accueil">
+                    <div style="text-align: center; padding: 40px 20px;">
+                        <p>⏳ Chargement des niveaux...</p>
+                    </div>
+                </div>
+
             <div class="page active">
                 <!-- HEADER ACCUEIL -->
                 <div class="accueil-header">

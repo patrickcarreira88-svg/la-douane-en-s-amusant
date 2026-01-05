@@ -56,7 +56,26 @@ const StorageManager = {
                 nom: null,
                 prenom: null,
                 matricule: null,
-                profileCreated: false
+                profileCreated: false,
+                // Structure multi-niveaux (N1-N4)
+                niveaux: {
+                    N1: {
+                        completion: 0,
+                        chapters: {}
+                    },
+                    N2: {
+                        completion: 0,
+                        chapters: {}
+                    },
+                    N3: {
+                        completion: 0,
+                        chapters: {}
+                    },
+                    N4: {
+                        completion: 0,
+                        chapters: {}
+                    }
+                }
             },
             chaptersProgress: {
                 ch1: {
@@ -351,10 +370,213 @@ const StorageManager = {
             return true;
         }
         return false;
+    },
+
+    // ================================================================
+    // MULTI-NIVEAUX (N1, N2, N3, N4) - Nouvelles fonctions
+    // ================================================================
+
+    /**
+     * 1. Initialise la structure multi-niveaux (N1-N4)
+     * - Crée la structure si elle n'existe pas
+     * - Migre les anciennes données (chapitres plat) vers le nouveau format
+     */
+    initializeNiveaux() {
+        const data = this.getAll();
+        if (!data) return false;
+
+        // Si la structure N1-N4 n'existe pas, la créer
+        if (!data.user.niveaux) {
+            console.log('🔄 Migration vers structure multi-niveaux...');
+            
+            // Récupérer les chapitres actuels (ancien format)
+            const oldChapters = data.chaptersProgress || {};
+            
+            // Créer la structure N1-N4
+            data.user.niveaux = {
+                N1: {
+                    completion: 0,
+                    chapters: {}
+                },
+                N2: {
+                    completion: 0,
+                    chapters: {}
+                },
+                N3: {
+                    completion: 0,
+                    chapters: {}
+                },
+                N4: {
+                    completion: 0,
+                    chapters: {}
+                }
+            };
+            
+            // Migrer les chapitres existants vers N1
+            if (Object.keys(oldChapters).length > 0) {
+                data.user.niveaux.N1.chapters = oldChapters;
+                console.log(`✅ ${Object.keys(oldChapters).length} chapitres migrés vers N1`);
+            }
+            
+            // Recalculer la complétion de N1
+            data.user.niveaux.N1.completion = this.calculateNiveauCompletion('N1');
+            
+            this.set(data);
+            console.log('✅ Structure multi-niveaux initialisée');
+            return true;
+        }
+        
+        return false;
+    },
+
+    /**
+     * 2. Calcule le % de complétion d'un niveau
+     * Retour: nombre entre 0 et 100 (moyenne des chapitres du niveau)
+     */
+    calculateNiveauCompletion(niveauId) {
+        const user = this.getUser();
+        
+        if (!user.niveaux || !user.niveaux[niveauId]) {
+            return 0;
+        }
+        
+        const chapters = user.niveaux[niveauId].chapters;
+        const chapterIds = Object.keys(chapters);
+        
+        if (chapterIds.length === 0) {
+            return 0;
+        }
+        
+        const totalCompletion = chapterIds.reduce((sum, chId) => {
+            return sum + (chapters[chId].completion || 0);
+        }, 0);
+        
+        const average = Math.round(totalCompletion / chapterIds.length);
+        return average;
+    },
+
+    /**
+     * 3. Met à jour la progression d'un niveau
+     * - Recalcule le % de complétion après changement de chapitre
+     * - Sauvegarde dans localStorage
+     * Retour: nouveau % de complétion du niveau
+     */
+    updateNiveauProgress(niveauId) {
+        const user = this.getUser();
+        
+        if (!user.niveaux || !user.niveaux[niveauId]) {
+            console.warn(`⚠️ Niveau ${niveauId} introuvable`);
+            return 0;
+        }
+        
+        // Recalculer la complétion
+        const newCompletion = this.calculateNiveauCompletion(niveauId);
+        user.niveaux[niveauId].completion = newCompletion;
+        
+        // Sauvegarder
+        this.updateUser(user);
+        
+        console.log(`📊 Niveau ${niveauId}: ${newCompletion}% complété`);
+        return newCompletion;
+    },
+
+    /**
+     * 4. Récupère les chapitres d'un niveau
+     * Retour: {ch1: {completion: 100}, 101BT: {...}, ...}
+     */
+    getNiveauChapitres(niveauId) {
+        const user = this.getUser();
+        
+        if (!user.niveaux || !user.niveaux[niveauId]) {
+            return {};
+        }
+        
+        return user.niveaux[niveauId].chapters || {};
+    },
+
+    /**
+     * 5. Vérifie si un niveau est déverrouillé
+     * Logique de déblocage:
+     * - N1: toujours déverrouillé
+     * - N2: si N1 = 100%
+     * - N3: si N2 = 100%
+     * - N4: si N3 = 100%
+     * Retour: boolean
+     */
+    isNiveauUnlocked(niveauId) {
+        const user = this.getUser();
+        
+        if (!user.niveaux) {
+            return niveauId === 'N1'; // N1 toujours accessible
+        }
+        
+        switch (niveauId) {
+            case 'N1':
+                return true; // N1 toujours déverrouillé
+            case 'N2':
+                return user.niveaux.N1.completion === 100;
+            case 'N3':
+                return user.niveaux.N2.completion === 100;
+            case 'N4':
+                return user.niveaux.N3.completion === 100;
+            default:
+                return false;
+        }
+    },
+
+    /**
+     * 6. Modifie la progression d'un chapitre et met à jour son niveau
+     * - Trouvé quel niveau contient ce chapitre
+     * - Mise à jour du chapitre
+     * - Recalcul de la complétion du niveau
+     */
+    setChapterProgress(chapterId, updates) {
+        const user = this.getUser();
+        
+        if (!user.niveaux) {
+            console.warn('⚠️ Structure niveaux non initialisée');
+            return null;
+        }
+        
+        // Trouver quel niveau contient ce chapitre
+        let foundNiveauId = null;
+        for (const niveauId in user.niveaux) {
+            if (user.niveaux[niveauId].chapters[chapterId]) {
+                foundNiveauId = niveauId;
+                break;
+            }
+        }
+        
+        if (!foundNiveauId) {
+            console.warn(`⚠️ Chapitre ${chapterId} non trouvé dans aucun niveau`);
+            return null;
+        }
+        
+        // Mise à jour du chapitre
+        const chapter = user.niveaux[foundNiveauId].chapters[chapterId];
+        if (chapter) {
+            user.niveaux[foundNiveauId].chapters[chapterId] = {
+                ...chapter,
+                ...updates
+            };
+            
+            // Sauvegarder l'utilisateur mis à jour
+            this.updateUser(user);
+            
+            // Recalculer la complétion du niveau
+            this.updateNiveauProgress(foundNiveauId);
+            
+            console.log(`✅ Chapitre ${chapterId} mis à jour dans ${foundNiveauId}`);
+            return user.niveaux[foundNiveauId].chapters[chapterId];
+        }
+        
+        return null;
     }
 };
 
 // Initialiser au chargement
 document.addEventListener('DOMContentLoaded', () => {
     StorageManager.init();
+    // Initialiser la structure multi-niveaux au premier chargement
+    StorageManager.initializeNiveaux();
 });
