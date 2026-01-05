@@ -2376,3 +2376,197 @@ body {
         height: 90px;
     }
 }
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* ÉTAPE VIEW - AFFICHAGE ÉTAPES AVEC NAVIGATION */
+/* ═══════════════════════════════════════════════════════════════ */
+
+.etape-view {
+    padding: var(--spacing-lg);
+    padding-bottom: 120px;  /* ← Éviter que les boutons soient masqués sous la nav */
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.etape-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-lg);
+}
+
+.etape-header h1 {
+    margin: 0;
+    font-size: 1.8em;
+}
+
+.etape-progress {
+    margin: var(--spacing-lg) 0;
+}
+
+.etape-progress .progress-bar {
+    background: var(--color-border);
+    border-radius: var(--radius-sm);
+    height: 8px;
+    overflow: hidden;
+    margin-bottom: var(--spacing-sm);
+}
+
+.etape-progress .progress-fill {
+    background: linear-gradient(90deg, var(--color-accent), var(--color-primary));
+    height: 100%;
+    transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.etape-content {
+    margin: var(--spacing-lg) 0;
+    padding: var(--spacing-md);
+    background: var(--color-surface);
+    border-radius: var(--radius-md);
+    border-left: 4px solid var(--color-accent);
+}
+
+.exercices-list {
+    display: grid;
+    gap: var(--spacing-md);
+}
+
+.exercice-item {
+    padding: var(--spacing-md);
+    background: var(--color-surface);
+    border-radius: var(--radius-md);
+    border-left: 4px solid var(--color-primary);
+    transition: all 0.3s ease-out;
+}
+
+.exercice-item:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
+
+.exercice-video,
+.exercice-qcm,
+.exercice-autre {
+    padding: var(--spacing-md);
+}
+
+.exercice-video h4,
+.exercice-qcm h4,
+.exercice-autre h4 {
+    margin: 0 0 var(--spacing-sm) 0;
+    color: var(--color-primary);
+    font-size: 1.05em;
+}
+
+.exercice-video p,
+.exercice-qcm p,
+.exercice-autre p {
+    margin: var(--spacing-sm) 0;
+    color: var(--color-text-light);
+    line-height: 1.5;
+}
+
+.exercice-qcm label {
+    display: block;
+    margin: var(--spacing-sm) 0;
+    padding: var(--spacing-sm);
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.exercice-qcm label:hover {
+    background: var(--color-accent-light);
+    border-color: var(--color-primary);
+}
+
+.exercice-qcm input[type="radio"] {
+    margin-right: var(--spacing-sm);
+    cursor: pointer;
+}
+
+.etape-navigation {
+    display: flex;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-lg);
+    justify-content: space-between;
+    padding-top: var(--spacing-lg);
+    border-top: 1px solid var(--color-border);
+}
+
+.etape-navigation .btn {
+    flex: 1;
+    max-width: 250px;
+    padding: 12px 20px;
+    font-size: 0.95em;
+    font-weight: 600;
+    transition: all 0.2s ease-out;
+}
+
+.etape-navigation .btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+.etape-navigation .btn:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.btn--success {
+    background: linear-gradient(135deg, #2ECC71 0%, #27AE60 100%);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+}
+
+.btn--success:hover:not(:disabled) {
+    background: linear-gradient(135deg, #27AE60 0%, #229954 100%);
+}
+
+/* Responsive - Étape View */
+@media (max-width: 768px) {
+    .etape-view {
+        padding: var(--spacing-md);
+        padding-bottom: 120px;  /* ← Éviter que les boutons soient masqués sous la nav */
+    }
+    
+    .etape-header {
+        flex-direction: column;
+        gap: var(--spacing-md);
+    }
+    
+    .etape-header h1 {
+        font-size: 1.4em;
+    }
+    
+    .etape-navigation {
+        flex-direction: column;
+    }
+    
+    .etape-navigation .btn {
+        max-width: 100%;
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .etape-view {
+        padding: var(--spacing-sm);
+        padding-bottom: 120px;  /* ← Éviter que les boutons soient masqués sous la nav */
+    }
+    
+    .etape-header h1 {
+        font-size: 1.2em;
+    }
+    
+    .etape-header div:last-child {
+        font-size: 0.8em;
+    }
+    
+    .exercice-item {
+        padding: var(--spacing-sm);
+    }
+}
