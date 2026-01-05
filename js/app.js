@@ -1723,12 +1723,26 @@ const App = {
         document.getElementById('app-content').innerHTML = html;
         console.log(`✅ Étape ${index + 1}/${totalEtapes} affichée: ${etape.titre}`);
 
-        // ✅ Marquer l'étape comme visitée dans le storage
-        StorageManager.saveEtapeState(chapitreId, index, {
-            visited: true,
-            completed: false,
-            status: 'in_progress'
-        });
+        // ✅ Détecter si l'étape a des exercices
+        const hasExercises = etape.exercices && etape.exercices.length > 0;
+
+        if (!hasExercises) {
+            // 🎬 Vidéo seule = auto-complète (passable immédiatement)
+            StorageManager.saveEtapeState(chapitreId, index, {
+                visited: true,
+                completed: true,
+                status: 'completed'
+            });
+            console.log(`🎬 Étape vidéo seule → auto-complétée`);
+        } else {
+            // 📝 Avec exercices = in_progress (user doit valider)
+            StorageManager.saveEtapeState(chapitreId, index, {
+                visited: true,
+                completed: false,
+                status: 'in_progress'
+            });
+            console.log(`📝 Étape avec exercices → in_progress`);
+        }
 
         // Remplir exercices
         setTimeout(() => {
