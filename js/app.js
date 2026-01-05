@@ -1723,6 +1723,13 @@ const App = {
         document.getElementById('app-content').innerHTML = html;
         console.log(`✅ Étape ${index + 1}/${totalEtapes} affichée: ${etape.titre}`);
 
+        // ✅ Marquer l'étape comme visitée dans le storage
+        StorageManager.saveEtapeState(chapitreId, index, {
+            visited: true,
+            completed: false,
+            status: 'in_progress'
+        });
+
         // Remplir exercices
         setTimeout(() => {
             this.remplirExercicesEtape(etape);

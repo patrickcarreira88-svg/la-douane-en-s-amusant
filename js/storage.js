@@ -571,6 +571,89 @@ const StorageManager = {
         }
         
         return null;
+    },
+
+    /**
+     * 7. Sauvegarde l'état d'une étape visitée
+     * - Marque l'étape comme visitée/en cours
+     * - Initialise la structure d'étape si nécessaire
+     * Retour: état sauvegardé
+     */
+    saveEtapeState(chapterId, etapeIndex, state = {}) {
+        const user = this.getUser();
+        
+        if (!user.niveaux) {
+            console.warn('⚠️ Structure niveaux non initialisée');
+            return null;
+        }
+        
+        // Trouver le niveau qui contient ce chapitre
+        let foundNiveauId = null;
+        for (const niveauId in user.niveaux) {
+            if (user.niveaux[niveauId].chapters[chapterId]) {
+                foundNiveauId = niveauId;
+                break;
+            }
+        }
+        
+        if (!foundNiveauId) {
+            console.warn(`⚠️ Chapitre ${chapterId} non trouvé dans aucun niveau`);
+            return null;
+        }
+        
+        const chapter = user.niveaux[foundNiveauId].chapters[chapterId];
+        
+        // Initialiser stepsCompleted si nécessaire
+        if (!chapter.stepsCompleted) {
+            chapter.stepsCompleted = [];
+        }
+        
+        // Initialiser la structure des étapes si nécessaire
+        if (!chapter.etapesState) {
+            chapter.etapesState = {};
+        }
+        
+        // Créer une clé unique pour l'étape (chapterId_etapeIndex)
+        const etapeKey = `${chapterId}_${etapeIndex}`;
+        
+        // Sauvegarder l'état (visited, completed, status, timestamp, etc.)
+        chapter.etapesState[etapeKey] = {
+            index: etapeIndex,
+            visited: state.visited !== undefined ? state.visited : true,
+            completed: state.completed !== undefined ? state.completed : false,
+            status: state.status || 'in_progress',
+            visitedAt: state.visitedAt || new Date().toISOString(),
+            completedAt: state.completedAt || null,
+            ...state  // Fusionner autres propriétés
+        };
+        
+        // Sauvegarder l'utilisateur mis à jour
+        this.updateUser(user);
+        
+        console.log(`📍 Étape ${etapeKey} marquée comme: ${chapter.etapesState[etapeKey].status}`);
+        return chapter.etapesState[etapeKey];
+    },
+
+    /**
+     * 8. Récupère l'état d'une étape
+     */
+    getEtapeState(chapterId, etapeIndex) {
+        const user = this.getUser();
+        
+        if (!user.niveaux) {
+            return null;
+        }
+        
+        // Trouver le niveau
+        for (const niveauId in user.niveaux) {
+            const chapter = user.niveaux[niveauId].chapters[chapterId];
+            if (chapter && chapter.etapesState) {
+                const etapeKey = `${chapterId}_${etapeIndex}`;
+                return chapter.etapesState[etapeKey] || null;
+            }
+        }
+        
+        return null;
     }
 };
 
