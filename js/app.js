@@ -1707,7 +1707,7 @@ const App = {
                     `}
                     
                     ${index < totalEtapes - 1 ? `
-                        <button class="btn btn--primary" onclick="App.afficherEtape('${chapitreId}', ${index + 1})">
+                        <button class="btn btn--primary" onclick="App.completerEtapeDirecte('${chapitreId}', ${index})">
                             Étape suivante →
                         </button>
                     ` : `
@@ -1748,6 +1748,23 @@ const App = {
         setTimeout(() => {
             this.remplirExercicesEtape(etape);
         }, 100);
+    },
+
+    /**
+     * Complète l'étape actuelle et avance à la suivante
+     * Utilisé par le bouton "Étape suivante"
+     */
+    completerEtapeDirecte(chapitreId, etapeIndex) {
+        // ✅ Marquer l'étape actuelle comme complétée
+        StorageManager.saveEtapeState(chapitreId, etapeIndex, {
+            visited: true,
+            completed: true,
+            status: 'completed'
+        });
+        console.log(`✅ Étape ${etapeIndex} marquée complétée`);
+        
+        // ✅ Avancer à l'étape suivante
+        this.afficherEtape(chapitreId, etapeIndex + 1);
     },
 
     /**
