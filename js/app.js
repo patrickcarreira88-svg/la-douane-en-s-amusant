@@ -1707,7 +1707,7 @@ const App = {
                     `}
                     
                     ${index < totalEtapes - 1 ? `
-                        <button class="btn btn--primary" onclick="App.completerEtapeDirecte('${chapitreId}', ${index})">
+                        <button class="btn btn--primary" onclick="App.nextEtape('${chapitreId}', ${index})">
                             Étape suivante →
                         </button>
                     ` : `
@@ -1752,16 +1752,12 @@ const App = {
 
     /**
      * Complète l'étape actuelle et avance à la suivante
-     * Utilisé par le bouton "Étape suivante"
+     * Utilise localStorage directement (bypass StorageManager)
      */
-    completerEtapeDirecte(chapitreId, etapeIndex) {
-        // ✅ Marquer l'étape actuelle comme complétée
-        StorageManager.saveEtapeState(chapitreId, etapeIndex, {
-            visited: true,
-            completed: true,
-            status: 'completed'
-        });
-        console.log(`✅ Étape ${etapeIndex} marquée complétée`);
+    nextEtape(chapitreId, etapeIndex) {
+        // ✅ DIRECT localStorage - clé simple et fiable
+        localStorage.setItem(`etape_${chapitreId}_${etapeIndex}_completed`, 'true');
+        console.log(`✅ Étape ${etapeIndex} marquée completed via localStorage`);
         
         // ✅ Avancer à l'étape suivante
         this.afficherEtape(chapitreId, etapeIndex + 1);
