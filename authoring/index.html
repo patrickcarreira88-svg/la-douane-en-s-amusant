@@ -1,69 +1,62 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🎨 Outil Auteur LMS - Créer Exercices</title>
-  <link rel="stylesheet" href="css/authoring.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Outil Auteur - Redirection</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .container {
+            text-align: center;
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        p {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        a {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: background 0.3s ease;
+        }
+        a:hover {
+            background: #764ba2;
+        }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <h1>🎨 Outil Auteur - LMS Brevet Fédéral</h1>
+    <div class="container">
+        <h1>✏️ Outil Auteur</h1>
+        <p>Redirection vers l'outil auteur universel...</p>
+        <a href="authoring-universal.html">Accéder à l'outil auteur</a>
+    </div>
     
-    <p style="color: #6b7280; font-size: 16px; line-height: 1.6;">
-      Bienvenue dans l'outil de création d'exercices. Sélectionnez le type d'exercice 
-      que vous souhaitez créer ci-dessous.
-    </p>
-
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-top: 30px;">
-      
-      <!-- QCM -->
-      <a href="create-qcm.html" style="text-decoration: none;">
-        <div style="padding: 25px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; color: white; text-align: center; cursor: pointer; transition: transform 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-          <div style="font-size: 40px; margin-bottom: 10px;">❓</div>
-          <h3 style="margin: 0; font-size: 18px;">QCM</h3>
-          <p style="margin: 5px 0 0 0; font-size: 13px; opacity: 0.9;">Questions à choix multiple</p>
-        </div>
-      </a>
-
-      <!-- Drag & Drop -->
-      <a href="create-dragdrop.html" style="text-decoration: none;">
-        <div style="padding: 25px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border-radius: 8px; color: white; text-align: center; cursor: pointer; transition: transform 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-          <div style="font-size: 40px; margin-bottom: 10px;">🎯</div>
-          <h3 style="margin: 0; font-size: 18px;">Drag & Drop</h3>
-          <p style="margin: 5px 0 0 0; font-size: 13px; opacity: 0.9;">Organiser les éléments</p>
-        </div>
-      </a>
-
-      <!-- Scénario -->
-      <a href="create-scenario.html" style="text-decoration: none;">
-        <div style="padding: 25px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border-radius: 8px; color: white; text-align: center; cursor: pointer; transition: transform 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-          <div style="font-size: 40px; margin-bottom: 10px;">🎬</div>
-          <h3 style="margin: 0; font-size: 18px;">Scénario</h3>
-          <p style="margin: 5px 0 0 0; font-size: 13px; opacity: 0.9;">Cas pratiques immersifs</p>
-        </div>
-      </a>
-
-    </div>
-
-    <div style="margin-top: 40px; padding: 20px; background: #eff6ff; border-left: 4px solid #3182ce; border-radius: 4px;">
-      <h3 style="margin-top: 0; color: #1e40af;">💡 Comment ça marche?</h3>
-      <ol style="color: #1e3a8a; line-height: 1.8;">
-        <li>Choisissez le type d'exercice</li>
-        <li>Remplissez le formulaire</li>
-        <li>Cliquez "Générer JSON"</li>
-        <li>Copiez le JSON généré</li>
-        <li>Collez-le dans <code>data/exercises/{type}.json</code></li>
-        <li>Rechargez l'app LMS</li>
-      </ol>
-    </div>
-
-    <div style="margin-top: 30px; padding: 20px; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 4px;">
-      <h3 style="margin-top: 0; color: #b45309;">⚙️ Retour à l'app</h3>
-      <p style="margin: 0; color: #92400e;">
-        <a href="../index.html" style="color: #1e40af; text-decoration: none; font-weight: 600;">← Retour à l'application LMS</a>
-      </p>
-    </div>
-  </div>
+    <script>
+        // Redirection automatique après 1 seconde
+        setTimeout(() => {
+            window.location.href = 'authoring-universal.html';
+        }, 1000);
+    </script>
 </body>
 </html>
