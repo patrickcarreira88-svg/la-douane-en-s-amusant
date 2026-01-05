@@ -69,12 +69,19 @@ cd la-douane-en-s-amusant
 │       ├── ExerciseLoader.js
 │       ├── ExerciseValidator.js
 │       └── ExerciseNormalizer.js
-├── authoring/              # Outils de création
-│   ├── index.html
-│   ├── create-qcm.html
-│   ├── create-dragdrop.html
-│   ├── create-scenario.html
-│   └── js/generator.js
+├── authoring/              # Outil auteur universel
+│   ├── index.html          # Page d'entrée
+│   ├── authoring-universal.html  # Outil auteur unique et unifié
+│   ├── css/
+│   │   └── authoring.css   # Styles de l'outil auteur
+│   ├── js/
+│   │   ├── generator.js    # Générateur d'exercices
+│   │   └── generator-v2.js # Version améliorée
+│   └── Legacy/             # Outils auteurs archivés
+│       ├── index.html
+│       ├── create-qcm.html
+│       ├── create-dragdrop.html
+│       └── create-scenario.html
 ├── assets/
 │   ├── images/             # Images du projet
 │   ├── svg/                # Graphiques vectoriels
@@ -172,9 +179,14 @@ Les exercices utilisent un format JSON standardisé:
 
 ### Ajouter un exercice
 
-1. Utiliser l'outil auteur (`authoring/`)
-2. Ou éditer directement le fichier JSON
+1. Utiliser l'outil auteur universel (`authoring/authoring-universal.html`)
+   - Interface unifiée pour créer tous les types d'exercices
+   - Support pour QCM, Drag & Drop, Scénarios, Matching, Flashcards
+   - Génération automatique du JSON
+2. Ou éditer directement le fichier JSON dans `data/exercises/`
 3. Valider le format avec `ExerciseValidator.js`
+
+**Note:** Les anciens outils auteurs (séparés par type) sont archivés dans `authoring/Legacy/`
 
 ## 📱 Responsive
 
