@@ -1499,8 +1499,7 @@ const App = {
      * Affiche un chapitre spécifique
      */
     afficherChapitre(chapitreId) {
-        // ✅ MAINTENANT: Afficher directement le contenu (chemin + jalon objectifs)
-        // Les objectifs apparaissent comme un jalon clickable dans le chemin
+        // ✅ Afficher directement le contenu (chemin SVG)
         this.afficherChapitreContenu(chapitreId);
     },
     
@@ -1608,126 +1607,337 @@ const App = {
         }
     },
     
-    afficherEtape(stepId, chapitreId) {
-        console.log(`📖 Affichage étape: ${stepId}`);
-        
-        // ✅ RÉINITIALISER l'index des exercices quand on change d'étape
-        if (window.currentEtapeId !== stepId) {
-            window.currentExerciceIndex = 0;
-            window.currentEtapeId = stepId;
-        }
-        
-        // ✅ DÉTECTION JALONS SPÉCIAUX (objectives, portfolio)
-        if (stepId.includes('objectives')) {
-            console.log(`🎯 Jalon spécial: Objectifs détecté`);
-            this.afficherModalObjectives(chapitreId);
-            return;
-        }
-        
-        if (stepId.includes('portfolio')) {
-            console.log(`🎯 Jalon spécial: Portfolio détecté`);
-            this.afficherPortfolioModal(chapitreId);
-            return;
-        }
-        
-        // Stocker l'ID de l'étape actuelle et du chapitre pour la validation
-        window.currentStepId = stepId;
-        window.currentChapitreId = chapitreId;
-        
-        // Trouver l'étape et le chapitre
-        let etape = null;
+    /**
+     * Affiche une étape (simple et fonctionnelle)
+     * @param {string} chapitreId - ID du chapitre
+     * @param {number|string} stepIndexOrId - Index de l'étape ou ID
+     */
+    afficherEtape(chapitreId, stepIndexOrId) {
+        // ✅ Chercher le chapitre dans TOUS les niveaux (pas juste CHAPITRES global)
         let chapitre = null;
-        CHAPITRES.forEach(ch => {
-            const found = ch.etapes.find(e => e.id === stepId);
-            if (found) {
-                etape = found;
-                chapitre = ch;
-            }
-        });
         
-        if (!etape) {
-            console.error(`❌ Étape ${stepId} non trouvée`);
-            return;
+        // D'abord chercher dans CHAPITRES (variable globale du niveau courant)
+        if (CHAPITRES && Array.isArray(CHAPITRES)) {
+            chapitre = CHAPITRES.find(ch => ch.id === chapitreId);
         }
         
-        // ✅ Vérifier si l'étape est verrouillée (étape précédente non complétée)
-        const etapeIndex = chapitre.etapes.findIndex(e => e.id === stepId);
-        if (etapeIndex > 0) {
-            const previousEtape = chapitre.etapes[etapeIndex - 1];
-            
-            // ✅ UTILISER getStepProgress() pour récupération sûre
-            const previousProgress = getStepProgress(previousEtape.id);
-            
-            // ✅ Bloquer l'accès si l'étape précédente n'est pas complétée
-            if (!previousProgress.completed) {
-                showErrorNotification(
-                    '⛔ Vous devez compléter l\'étape précédente d\'abord!\n' +
-                    `Complétez: "${previousEtape.titre}"`
-                );
+        // Si pas trouvé, chercher dans tous les niveaux (si chargés)
+        if (!chapitre && window.allNiveaux) {
+            for (let niveauId in window.allNiveaux) {
+                const chapitres = window.allNiveaux[niveauId];
+                if (Array.isArray(chapitres)) {
+                    chapitre = chapitres.find(ch => ch.id === chapitreId);
+                    if (chapitre) break;
+                }
+            }
+        }
+        
+        if (!chapitre) {
+            console.error(`❌ Chapitre ${chapitreId} non trouvé dans tous les niveaux`);
+            return;
+        }
+
+        // Déterminer l'index de l'étape
+        let index = 0;
+        if (typeof stepIndexOrId === 'number') {
+            index = stepIndexOrId;
+        } else if (typeof stepIndexOrId === 'string') {
+            // Si c'est un ID, chercher l'index
+            index = chapitre.etapes.findIndex(e => e.id === stepIndexOrId);
+            if (index === -1) {
+                console.error(`❌ Étape ${stepIndexOrId} non trouvée`);
                 return;
             }
         }
-        
-        // Générer le HTML de l'étape
+
+        const etape = chapitre.etapes[index];
+        if (!etape) {
+            console.error(`❌ Étape ${index} n'existe pas`);
+            return;
+        }
+
+        const totalEtapes = chapitre.etapes.length;
+        const progression = Math.round(((index + 1) / totalEtapes) * 100);
+
+        // ✅ Seulement refuse si étape > 0 ET étape précédente non complétée
+        if (index > 0 && !chapitre.etapes[index - 1].completed) {
+            alert('⛔ Complétez l\'étape précédente d\'abord!');
+            return;
+        }
+
+        // Construire le HTML
         let html = `
-            <h2>${etape.titre}</h2>
-            <p style="color: var(--color-text-light);">${etape.contenu}</p>
-            
-            <div style="display: flex; gap: var(--spacing-md); margin: var(--spacing-md) 0;">
-                <span>⏱️ ${etape.duree}</span>
-                <span>🎯 ${etape.points} points</span>
-            </div>
-            
-            <hr style="margin: var(--spacing-lg) 0;">
-            
-            <div id="exercice-container">
-                ${this.renderExercices(etape, etape.type)}
+            <div class="etape-view">
+                <button class="btn btn--secondary" onclick="App.afficherChapitreContenu('${chapitreId}')" style="margin-bottom: 20px;">
+                    ← Retour au chapitre
+                </button>
+
+                <div class="etape-header" style="background: linear-gradient(135deg, ${chapitre.couleur} 0%, rgba(${chapitre.couleur}, 0.7) 100%); padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <div style="flex: 1;">
+                        <h1 style="margin: 0 0 10px 0; font-size: 1.8em; color: var(--color-text);">${etape.emoji || '📖'} ${etape.titre}</h1>
+                        <p style="margin: 0; opacity: 0.9; color: var(--color-text-light);">${etape.contenu || ''}</p>
+                    </div>
+                    <div style="text-align: right; opacity: 0.9; white-space: nowrap; color: var(--color-text-light);">
+                        <div>⏱️ ${etape.duree || '-'}</div>
+                        <div>🎯 ${etape.points || 0} pts</div>
+                    </div>
+                </div>
+
+                <div class="etape-progress">
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${progression}%;"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 0.9em; color: var(--color-text-light);">
+                        <span>Étape ${index + 1} / ${totalEtapes}</span>
+                        <span>${progression}%</span>
+                    </div>
+                </div>
+
+                <div class="etape-content" id="etape-exercices">
+                    <!-- Exercices ici -->
+                </div>
+
+                <div class="etape-navigation" style="display: flex; gap: 12px; margin-top: 30px; justify-content: space-between;">
+                    ${index > 0 ? `
+                        <button class="btn btn--secondary" onclick="App.afficherEtape('${chapitreId}', ${index - 1})">
+                            ← Étape précédente
+                        </button>
+                    ` : `
+                        <div></div>
+                    `}
+                    
+                    ${index < totalEtapes - 1 ? `
+                        <button class="btn btn--primary" onclick="App.afficherEtape('${chapitreId}', ${index + 1})">
+                            Étape suivante →
+                        </button>
+                    ` : `
+                        <button class="btn btn--success" onclick="App.completerChapitre('${chapitreId}')" style="background: #2ECC71; border: none; color: white;">
+                            ✅ Terminer le chapitre
+                        </button>
+                    `}
+                </div>
             </div>
         `;
-        
-        // Injecter dans le modal
-        document.getElementById('etape-detail').innerHTML = html;
-        
-        // Afficher le modal
-        document.getElementById('etape-modal').classList.add('active');
-        
-        // ✅ ATTACHER LES ÉVÉNEMENTS MATCHING
+
+        // Injecter
+        document.getElementById('app-content').innerHTML = html;
+        console.log(`✅ Étape ${index + 1}/${totalEtapes} affichée: ${etape.titre}`);
+
+        // Remplir exercices
         setTimeout(() => {
-            this.attachMatchingEvents();
+            this.remplirExercicesEtape(etape);
         }, 100);
+    },
 
-        // ✅ ATTACHER LES ÉVÉNEMENTS QCM SCÉNARIO
+    /**
+     * Remplir les exercices de l'étape
+     */
+    remplirExercicesEtape(etape) {
+        const container = document.getElementById('etape-exercices');
+        if (!container) return;
+
+        if (!etape.exercices || etape.exercices.length === 0) {
+            container.innerHTML = '<p style="text-align: center; color: var(--color-text-light);">Aucun exercice pour cette étape.</p>';
+            return;
+        }
+
+        let html = '';
+        etape.exercices.forEach((exo, idx) => {
+            // ✅ Normaliser l'exercice pour gérer différents formats
+            const normalized = normalizeExercise(exo);
+            const type = normalized.type || 'unknown';
+            
+            // Générer HTML selon le type d'exercice normalisé
+            html += this.renderExerciceHTML(normalized, type);
+        });
+
+        container.innerHTML = html;
+        
+        // ✅ Attacher les event listeners après rendu
         setTimeout(() => {
-            document.querySelectorAll('.qcm-scenario-container').forEach(container => {
-                const containerId = container.id;
+            this.attachExerciceEvents(etape);
+        }, 100);
+    },
 
-                container.querySelectorAll('.option-label').forEach(label => {
-                    label.addEventListener('click', (e) => {
-                        App.selectQCMScenarioOption(label, containerId);
-                    });
-                });
+    /**
+     * Générer le HTML pour un exercice selon son type
+     */
+    renderExerciceHTML(exercice, type) {
+        const titre = exercice.titre || 'Exercice';
+        const description = exercice.description || '';
+        const baseStyle = 'margin-bottom: 20px; border-left: 4px solid var(--color-accent); padding: 15px; background: #f9f9f9; border-radius: 8px;';
+        
+        if (type === 'video') {
+            const videoUrl = exercice.content?.url || '';
+            const iframeUrl = this.convertToEmbed(videoUrl);
+            return `
+                <div style="${baseStyle}">
+                    <h4 style="margin: 0 0 10px 0; color: var(--color-primary);">${titre}</h4>
+                    <p style="color: var(--color-text-light); margin-bottom: 15px;">${description}</p>
+                    ${iframeUrl ? `
+                        <iframe width="100%" height="400" src="${iframeUrl}" title="${titre}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="border-radius: 4px;"></iframe>
+                    ` : `
+                        <a href="${videoUrl}" target="_blank" class="btn btn--primary">🎬 Regarder la vidéo</a>
+                    `}
+                </div>
+            `;
+        } 
+        else if (type === 'qcm') {
+            const q = exercice.content?.question || '';
+            const opts = exercice.content?.options || [];
+            let optionsHtml = '';
+            opts.forEach((o, idx) => {
+                const label = typeof o === 'string' ? o : o.label;
+                optionsHtml += `
+                    <label style="display: block; margin: 10px 0; padding: 10px; border: 1px solid var(--color-border); border-radius: 4px; cursor: pointer; transition: all 0.2s;">
+                        <input type="radio" name="qcm_${exercice.id}" value="${idx}" style="margin-right: 10px; cursor: pointer;">
+                        ${label}
+                    </label>
+                `;
             });
-        }, 100);
+            return `
+                <div style="${baseStyle}">
+                    <h4 style="margin: 0 0 10px 0; color: var(--color-primary);">${titre}</h4>
+                    <p style="font-weight: 500; margin-bottom: 15px;">${q}</p>
+                    <div style="margin-bottom: 15px;">
+                        ${optionsHtml}
+                    </div>
+                    <button class="btn btn--primary" onclick="App.validerQCM('${exercice.id}', '${(exercice.content?.explanation || '').replace(/'/g, "\\'")}')">
+                        ✓ Valider
+                    </button>
+                </div>
+            `;
+        }
+        else if (type === 'true_false') {
+            const items = exercice.content?.items || [];
+            let itemsHtml = '';
+            items.forEach((item, idx) => {
+                const statement = typeof item === 'string' ? item : item.statement;
+                itemsHtml += `
+                    <div style="margin: 12px 0; padding: 10px; border: 1px solid var(--color-border); border-radius: 4px;">
+                        <div style="margin-bottom: 8px; font-weight: 500;">${statement}</div>
+                        <div>
+                            <label style="margin-right: 15px; cursor: pointer;">
+                                <input type="radio" name="tf_${exercice.id}_${idx}" value="true" style="margin-right: 5px;">
+                                Vrai
+                            </label>
+                            <label style="cursor: pointer;">
+                                <input type="radio" name="tf_${exercice.id}_${idx}" value="false" style="margin-right: 5px;">
+                                Faux
+                            </label>
+                        </div>
+                    </div>
+                `;
+            });
+            return `
+                <div style="${baseStyle}">
+                    <h4 style="margin: 0 0 10px 0; color: var(--color-primary);">${titre}</h4>
+                    ${itemsHtml}
+                    <button class="btn btn--primary" onclick="App.validerExercice('${exercice.id}', 'true_false')">
+                        ✓ Valider
+                    </button>
+                </div>
+            `;
+        }
+        else if (type === 'drag_drop') {
+            return `
+                <div style="${baseStyle}">
+                    <h4 style="margin: 0 0 10px 0; color: var(--color-primary);">${titre}</h4>
+                    <p style="color: var(--color-text-light);">Exercice Drag & Drop - À implémentation interactive complète</p>
+                    <button class="btn btn--primary" onclick="App.afficherExerciceInteractif('${exercice.id}')">
+                        🎯 Lancer l'exercice
+                    </button>
+                </div>
+            `;
+        }
+        else if (type === 'matching') {
+            return `
+                <div style="${baseStyle}">
+                    <h4 style="margin: 0 0 10px 0; color: var(--color-primary);">${titre}</h4>
+                    <p style="color: var(--color-text-light);">Exercice Matching - À implémentation interactive complète</p>
+                    <button class="btn btn--primary" onclick="App.afficherExerciceInteractif('${exercice.id}')">
+                        🎯 Lancer l'exercice
+                    </button>
+                </div>
+            `;
+        }
+        else {
+            // Type inconnu ou autre
+            return `
+                <div style="${baseStyle}">
+                    <h4 style="margin: 0 0 10px 0; color: var(--color-primary);">${titre}</h4>
+                    <p>${description || 'Contenu non disponible'}</p>
+                </div>
+            `;
+        }
+    },
+
+    /**
+     * Attacher les event listeners aux exercices
+     */
+    attachExerciceEvents(etape) {
+        // À étendre selon les types d'exercices interactifs
+        // (Drag-drop, matching, etc.)
+    },
+
+    /**
+     * Afficher un exercice interactif (Drag-drop, Matching, etc.)
+     */
+    afficherExerciceInteractif(exerciceId) {
+        alert('🎯 Exercice interactif à implémenter: ' + exerciceId);
+        // TODO: Charger le module d'exercice interactif
+    },
+
+    /**
+     * Convertir URL vidéo YouTube en iframe embed
+     */
+    convertToEmbed(url) {
+        if (!url) return '';
         
-        // ✅ SI C'EST UNE VIDÉO, CHARGER LE LECTEUR APRÈS INJECTION DU HTML
-        if (etape.type === 'video' && etape.videoId) {
-            setTimeout(() => {
-                const container = document.querySelector(`[data-step-id="video-${etape.videoId}"]`);
-                if (container) {
-                    const videoElement = document.createElement('video-player');
-                    videoElement.setAttribute('video-id', etape.videoId);
-                    container.appendChild(videoElement);
-                    
-                    // Écouter complétude vidéo
-                    videoElement.addEventListener('video-completed', (e) => {
-                        console.log('✅ Vidéo complétée depuis modal:', etape.titre);
-                        App.validerExercice('video');
-                    });
-                }
-            }, 100);
+        // YouTube
+        const youtubeMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/);
+        if (youtubeMatch) {
+            return `https://www.youtube.com/embed/${youtubeMatch[1]}`;
         }
         
-        console.log(`✅ Étape affichée: ${etape.titre}`);
+        // Vimeo
+        const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+        if (vimeoMatch) {
+            return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+        }
+        
+        return '';
+    },
+
+    /**
+     * Valider QCM
+     */
+    validerQCM(exerciceId, explanation) {
+        const radio = document.querySelector(`input[name="qcm_${exerciceId}"]:checked`);
+        if (!radio) {
+            alert('⚠️ Sélectionnez une réponse');
+            return;
+        }
+        
+        alert(`✅ Merci!\n\n${explanation || 'Vous avez répondu.'}`);
+    },
+
+    /**
+     * Compléter un chapitre
+     */
+    completerChapitre(chapitreId) {
+        const chapitre = CHAPITRES.find(ch => ch.id === chapitreId);
+        if (!chapitre) return;
+
+        chapitre.etapes.forEach(e => { e.completed = true; });
+        chapitre.progression = 100;
+
+        if (window.StorageManager) {
+            StorageManager.updateChapterProgress(chapitreId, 100);
+        }
+
+        alert(`✅ Bravo! "${chapitre.titre}" terminé!`);
+        this.afficherChapitreContenu(chapitreId);
     },
 
     /**
@@ -3262,7 +3472,9 @@ ${content.summary}
                         e.stopPropagation();
                         const itemStepId = item.dataset.stepId;
                         if (itemStepId) {
-                            App.afficherEtape(itemStepId, chapitreId);
+                            // Extraire l'ID du chapitre de l'ID de l'étape (ex: "ch1_step1" → "ch1")
+                            const chapId = itemStepId.split('_')[0];
+                            App.afficherEtape(chapId);
                         }
                     });
                 });
@@ -4128,7 +4340,8 @@ ${content.summary}
                 
                 const etapeActuelle = chapitre.etapes[etapeIndex];
                 
-                if (etapeIndex > 0 && !chapitre.etapes[etapeIndex - 1].completed) {
+                // ✅ Seulement refuse si étape > 0 ET étape précédente non complétée
+                if (etapeIndex > 0 && chapitre.etapes[etapeIndex - 1] && !chapitre.etapes[etapeIndex - 1].completed) {
                     // Ajouter une animation visuelle au cadenas
                     const lockEmoji = el.querySelector('.step-emoji');
                     if (lockEmoji) {
@@ -4141,7 +4354,8 @@ ${content.summary}
                     return;
                 }
                 
-                App.afficherEtape(stepId, chapitreId);
+                // ✅ Si c'est la première étape, afficher directement. Sinon, afficher avec l'index
+                App.afficherEtape(chapitreId, etapeIndex);
             });
             
             // ✅ AJOUTER LE STYLE DE CURSEUR - GÉRER LES ÉTAPES VERROUILLÉES
@@ -4173,6 +4387,18 @@ ${content.summary}
         setTimeout(() => {
             loadChapterVideos(chapitreId);
         }, 100);
+    },
+
+    /**
+     * Affiche une étape spécifique d'un chapitre avec navigation
+     * @param {string} chapitreId - ID du chapitre
+     * @param {number} index - Index de l'étape (0-based)
+     */
+    /**
+     * Affiche les exercices d'une étape
+     */
+    afficherExercicesEtape() {
+        // Cette fonction est dépréciée - utiliser remplirExercicesEtape() à la place
     },
 
     // ═══════════════════════════════════════════════════════════
