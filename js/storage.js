@@ -15,7 +15,7 @@
 
 const StorageManager = {
     // Clé principale
-    APP_KEY: 'douane_lms_v2',
+    APP_KEY: 'douanelmsv2',
     
     /**
      * Initialise le storage avec données par défaut
@@ -363,13 +363,11 @@ const StorageManager = {
      * Réinitialise TOUTES les données (RGPD - Droit à l'oubli)
      */
     reset() {
-        if (confirm('⚠️ Voulez-vous vraiment réinitialiser toutes les données? Cette action est irréversible.')) {
-            localStorage.removeItem(this.APP_KEY);
-            this.setDefault();
-            console.log('🗑️ Toutes les données réinitialisées');
-            return true;
-        }
-        return false;
+        console.warn('🗑️ Réinitialisation complète des données demandée');
+        localStorage.removeItem(this.APP_KEY);
+        this.setDefault();
+        console.log('🗑️ Toutes les données réinitialisées');
+        return true;
     },
 
     // ================================================================

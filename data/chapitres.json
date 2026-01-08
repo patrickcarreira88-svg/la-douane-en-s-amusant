@@ -30,10 +30,10 @@
               "type": "video",
               "titre": "[EX 1] Vidéo: Histoire de la Douane suisse",
               "description": "Regardez la vidéo pour comprendre l'histoire de la douane",
-              "url": "https://www.youtube.com/watch?v=jNQXAC9IVRw",
               "content": {
+                "videoType": "youtube",
                 "url": "https://www.youtube.com/watch?v=jNQXAC9IVRw",
-                "description": "Première vidéo YouTube - Me at the Zoo (1ere video YouTube de l'histoire)"
+                "description": "Première vidéo YouTube - Me at the zoo (1ere video YouTube de l'histoire)"
               },
               "points": 10
             }
@@ -57,10 +57,22 @@
               "content": {
                 "question": "Combien de cantons compte la Suisse?",
                 "options": [
-                  { "label": "24 cantons", "correct": false },
-                  { "label": "26 cantons", "correct": true },
-                  { "label": "28 cantons", "correct": false },
-                  { "label": "30 cantons", "correct": false }
+                  {
+                    "label": "24 cantons",
+                    "correct": false
+                  },
+                  {
+                    "label": "26 cantons",
+                    "correct": true
+                  },
+                  {
+                    "label": "28 cantons",
+                    "correct": false
+                  },
+                  {
+                    "label": "30 cantons",
+                    "correct": false
+                  }
                 ],
                 "correctAnswer": 1,
                 "explanation": "La Suisse compte 26 cantons depuis 1975. Le 26ème canton, le Jura, a été créé en 1978."
@@ -86,8 +98,9 @@
               "type": "video",
               "titre": "[EX 3] Vidéo: Qu'est-ce qu'une marchandise commerciale?",
               "description": "Regardez la vidéo pour comprendre la différence entre marchandises commerciales et biens personnels",
-              "videoId": "video_101_marchandises",
               "content": {
+                "videoType": "local",
+                "url": "/assets/videos/Marchandise_Commerciale_-_35s.mp4",
                 "description": "Regardez la vidéo pour comprendre la différence entre marchandises commerciales et biens personnels"
               },
               "points": 10
@@ -112,6 +125,8 @@
               "titre": "[EX 4] Vidéo: Les 5 étapes du processus de dédouanement",
               "description": "Regardez la vidéo pour comprendre le flux complet du dédouanement à l'importation suisse",
               "content": {
+                "videoType": "local",
+                "url": "/assets/videos/Dédouanement_Suisse_Expliqué.mp4",
                 "description": "Regardez la vidéo pour comprendre le flux complet du dédouanement à l'importation suisse"
               },
               "points": 10
@@ -492,7 +507,8 @@
                 "url": "https://www.youtube.com/embed/dQw4w9WgXcQ",
                 "description": "Apprenez comment calculer les droits de douane applicables"
               },
-              "points": 10
+              "points": 10,
+              "url": "https://www.youtube.com/embed/dQw4w9WgXcQ"
             }
           ]
         },
@@ -620,7 +636,8 @@
                 "url": "https://www.youtube.com/embed/dQw4w9WgXcQ",
                 "description": "Suivez un cas pratique de dédouanement"
               },
-              "points": 10
+              "points": 10,
+              "url": "https://www.youtube.com/embed/dQw4w9WgXcQ"
             }
           ]
         },
@@ -884,7 +901,8 @@
                 "url": "https://www.youtube.com/embed/dQw4w9WgXcQ",
                 "description": "Comprendre les règles d'origine et leur importance"
               },
-              "points": 10
+              "points": 10,
+              "url": "https://www.youtube.com/embed/dQw4w9WgXcQ"
             }
           ]
         },
@@ -1012,7 +1030,8 @@
                 "url": "https://www.youtube.com/embed/dQw4w9WgXcQ",
                 "description": "Découvrez les méthodes de fraude et comment les douaniers les détectent"
               },
-              "points": 10
+              "points": 10,
+              "url": "https://www.youtube.com/embed/dQw4w9WgXcQ"
             }
           ]
         },

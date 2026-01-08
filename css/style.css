@@ -2570,3 +2570,308 @@ body {
         padding: var(--spacing-sm);
     }
 }
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* STYLES ACCUEIL NIVEAUX (N1, N2, N3, N4) */
+/* ═══════════════════════════════════════════════════════════════ */
+
+.niveaux-container {
+    padding: 40px;
+    background: var(--color-bg);
+    min-height: 100vh;
+}
+
+.niveaux-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.niveaux-header h1 {
+    font-size: 2.5em;
+    color: var(--color-primary);
+    margin-bottom: 10px;
+}
+
+.niveaux-header p {
+    font-size: 1.1em;
+    color: var(--color-text-light);
+}
+
+/* GRILLE DE NIVEAUX */
+.niveaux-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* CARTE DE NIVEAU */
+.niveau-card {
+    background: var(--color-surface);
+    border: 2px solid var(--color-accent-light);
+    border-radius: var(--radius-md);
+    padding: 24px;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+}
+
+.niveau-card:hover:not(.locked) {
+    transform: translateY(-8px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--color-accent);
+}
+
+.niveau-card.locked {
+    opacity: 0.6;
+    cursor: not-allowed;
+    border-color: var(--color-border);
+}
+
+.niveau-card.locked:hover {
+    transform: none;
+}
+
+.niveau-card h2 {
+    font-size: 1.5em;
+    color: var(--color-primary);
+    margin-bottom: 12px;
+}
+
+.niveau-card p {
+    color: var(--color-text-light);
+    font-size: 0.95em;
+    margin-bottom: 20px;
+    line-height: 1.5;
+}
+
+/* ANNEAU DE PROGRESSION */
+.progress-ring {
+    width: 120px;
+    height: 120px;
+    margin: 20px auto;
+    position: relative;
+}
+
+.progress-ring svg {
+    transform: rotate(-90deg);
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.05));
+}
+
+.progress-ring circle:first-of-type {
+    /* Cercle de fond */
+    fill: none;
+    stroke: var(--color-border);
+    stroke-width: 8;
+}
+
+.progress-ring circle:last-of-type {
+    /* Cercle de progression */
+    fill: none;
+    stroke: var(--color-primary);
+    stroke-width: 8;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.8s ease;
+    stroke-dasharray: 282.6;
+}
+
+.progress-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-weight: bold;
+    font-size: 1.2em;
+    color: var(--color-primary);
+}
+
+/* BOUTON NIVEAU */
+.btn-niveau {
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 12px 24px;
+    font-size: 0.95em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 10px;
+}
+
+.btn-niveau:hover:not(:disabled) {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(74, 63, 135, 0.3);
+}
+
+.btn-niveau:disabled,
+.btn-disabled {
+    background: var(--color-border);
+    color: var(--color-text-light);
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* TEXTE DE DÉBLOCAGE */
+.niveau-lock-text {
+    color: var(--color-accent);
+    font-size: 0.85em;
+    font-weight: 600;
+    margin-top: 10px;
+}
+
+.niveau-complete-badge {
+    display: inline-block;
+    background: var(--color-completed);
+    color: white;
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 0.8em;
+    font-weight: 600;
+    margin-top: 10px;
+}
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* RESPONSIVE - TABLETTE & MOBILE */
+/* ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+    .niveaux-container {
+        padding: 20px;
+    }
+
+    .niveaux-header h1 {
+        font-size: 1.8em;
+    }
+
+    .niveaux-header p {
+        font-size: 1em;
+    }
+
+    .niveaux-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .niveau-card {
+        padding: 20px;
+    }
+
+    .niveau-card h2 {
+        font-size: 1.3em;
+    }
+
+    .progress-ring {
+        width: 100px;
+        height: 100px;
+    }
+
+    .progress-text {
+        font-size: 1em;
+    }
+}
+
+@media (max-width: 480px) {
+    .niveaux-container {
+        padding: 12px;
+    }
+
+    .niveaux-header h1 {
+        font-size: 1.5em;
+        margin-bottom: 8px;
+    }
+
+    .niveaux-header p {
+        font-size: 0.9em;
+    }
+
+    .niveaux-grid {
+        gap: 12px;
+    }
+
+    .niveau-card {
+        padding: 16px;
+    }
+
+    .niveau-card h2 {
+        font-size: 1.1em;
+        margin-bottom: 8px;
+    }
+
+    .niveau-card p {
+        font-size: 0.85em;
+        margin-bottom: 12px;
+    }
+
+    .progress-ring {
+        width: 80px;
+        height: 80px;
+        margin: 12px auto;
+    }
+
+    .progress-ring circle:last-of-type {
+        stroke-width: 6;
+    }
+
+    .progress-text {
+        font-size: 0.9em;
+    }
+
+    .btn-niveau {
+        padding: 10px 16px;
+        font-size: 0.85em;
+    }
+}
+/* ═══════════════════════════════════════════════════════════════ */
+/* TUTORING HELP BUTTON */
+/* ═══════════════════════════════════════════════════════════════ */
+
+.tutoring-help-btn {
+    position: fixed;
+    bottom: 90px;
+    right: 20px;
+    z-index: 899;
+    
+    /* Style */
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #7c3aed, #6d28d9);
+    color: white;
+    border: none;
+    border-radius: 50px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4);
+    
+    /* Animation */
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* Responsive */
+    max-width: 90%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tutoring-help-btn:hover {
+    background: linear-gradient(135deg, #6d28d9, #5b21b6);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(124, 58, 237, 0.6);
+}
+
+.tutoring-help-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(124, 58, 237, 0.4);
+}
+
+/* Sur mobile */
+@media (max-width: 768px) {
+    .tutoring-help-btn {
+        padding: 10px 16px;
+        font-size: 14px;
+        bottom: 70px;
+        right: 10px;
+    }
+}

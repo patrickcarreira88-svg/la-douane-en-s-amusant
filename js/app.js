@@ -98,6 +98,31 @@ function isNiveauUnlocked(niveauId) {
 }
 
 /**
+ * Compte le nombre réel de chapitres pour un niveau
+ * Lit depuis les données JSON, pas depuis StorageManager
+ * 
+ * @async
+ * @param {string} niveauId - ID du niveau ('N1', 'N2', etc.)
+ * @returns {Promise<number>} Nombre de chapitres
+ */
+async function getChapitresCount(niveauId) {
+    try {
+        const response = await fetch('data/chapitres-N1N4.json');
+        if (!response.ok) throw new Error('Erreur chargement chapitres-N1N4.json');
+        
+        const data = await response.json();
+        const niveau = data.niveaux.find(n => n.id === niveauId);
+        const count = niveau?.chapitres?.length || 0;
+        
+        console.log(`📊 Chapitres ${niveauId}: ${count}`);
+        return count;
+    } catch (error) {
+        console.error(`❌ Erreur getChapitresCount(${niveauId}):`, error);
+        return 0;
+    }
+}
+
+/**
  * Obtient l'état d'un niveau avec complétude
  * 
  * @param {string} niveauId - ID du niveau
@@ -113,10 +138,13 @@ function getNiveauState(niveauId) {
             return { unlocked: false, completion: 0, chapitres: 0 };
         }
         
+        // ✅ NOUVEAU: Compter les chapitres depuis les données réelles (asynchrone)
+        // Pour maintenant, on retourne une valeur placeholder
+        // La mise à jour dynamique se fera via updateChapitresDisplay()
         return {
             unlocked: isNiveauUnlocked(niveauId),
             completion: niveau.completion || 0,
-            chapitres: Object.keys(niveau.chapters || {}).length
+            chapitres: niveau.chapitres || 0  // Sera mis à jour dynamiquement
         };
     } catch (error) {
         console.error(`❌ Erreur récupération état ${niveauId}:`, error);
@@ -138,6 +166,13 @@ async function afficherNiveaux() {
         if (!response.ok) throw new Error('Erreur chargement chapitres-N1N4.json');
         
         const data = await response.json();
+        
+        // 🌉 Sauvegarder les données pour les bridge functions
+        window.allNiveaux = {};
+        data.niveaux.forEach(niveau => {
+            window.allNiveaux[niveau.id] = niveau.chapitres || [];
+        });
+        window.niveauxData = data.niveaux;  // Aussi sauvegarder les données complètes
         
         // 2. Vérifier structure
         if (!data.niveaux || !Array.isArray(data.niveaux)) {
@@ -161,9 +196,14 @@ async function afficherNiveaux() {
             const description = niveauData?.description || 'Compétences essentielles';
             const couleur = niveauData?.couleur || 'E0AAFF';
             
+            // 🔧 FIX: Compter les chapitres RÉELS depuis les données, pas depuis StorageManager
+            const chapitresCount = niveauData?.chapitres?.length || 0;
+            
             // Calculer offset du progress ring (circumference = 2*π*r = 2*π*54 ≈ 339)
             const circumference = 2 * Math.PI * 54;
             const strokeDashoffset = circumference * (100 - state.completion) / 100;
+            
+            console.log(`📊 Niveau ${niveauId}: ${chapitresCount} chapitres (réels)`);
             
             // Générer HTML carte
             html += `
@@ -185,7 +225,7 @@ async function afficherNiveaux() {
         </svg>
         
         <div class="niveau-stats">
-            <p class="stat"><strong>${state.chapitres}</strong> chapitres</p>
+            <p class="stat"><strong>${chapitresCount}</strong> chapitres</p>
             <p class="stat"><strong>${state.completion}%</strong> complété</p>
         </div>
         
@@ -850,8 +890,13 @@ function normalizeExercise(exercice) {
     }
     
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // 6️⃣ FLASHCARDS: "cartes" → "content.cards"
+    // 6️⃣ FLASHCARDS: "cartes" → "content.cards" + type normalization
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // Normaliser le type: 'flashcard' → 'flashcards' (plural)
+    if (normalized.type === 'flashcard') {
+        normalized.type = 'flashcards';
+    }
+    
     if (normalized.type === 'flashcards' && normalized.cartes && !normalized.content) {
         normalized.content = {
             cards: normalized.cartes
@@ -904,6 +949,20 @@ function getChapitreObjectifs(chapitreId) {
     return [];
   }
   return chapitre.objectifs;
+}
+
+/**
+ * Calcule le total des points à partir de stepsPoints
+ * @param {Object} stepsPoints - Objet avec {stepId: points, ...}
+ * @returns {number} Somme totale des points
+ */
+function calculateTotalPoints(stepsPoints) {
+    if (!stepsPoints || typeof stepsPoints !== 'object') {
+        return 0;
+    }
+    return Object.values(stepsPoints).reduce((sum, points) => {
+        return sum + (parseInt(points) || 0);
+    }, 0);
 }
 
 /**
@@ -1496,6 +1555,45 @@ const App = {
     },
 
     /**
+     * Vérifier si un niveau est déverrouillé
+     * @param {string} niveauId - ID du niveau (N1, N2, N3, N4)
+     * @returns {boolean} true si déverrouillé
+     */
+    isNiveauUnlocked(niveauId) {
+        return isNiveauUnlocked(niveauId);
+    },
+
+    /**
+     * Calculer la progression d'un niveau
+     * @param {string} niveauId - ID du niveau (N1, N2, N3, N4)
+     * @returns {number} Pourcentage de complétion (0-100)
+     */
+    calculateNiveauCompletion(niveauId) {
+        try {
+            const userData = StorageManager.getUser();
+            if (!userData || !userData.niveaux || !userData.niveaux[niveauId]) {
+                return 0;
+            }
+            
+            const niveauData = userData.niveaux[niveauId];
+            const totalChapitres = niveauData.chapitres ? niveauData.chapitres.length : 0;
+            
+            if (totalChapitres === 0) {
+                return 0;
+            }
+            
+            const completedChapitres = niveauData.chapitres.filter(ch => ch.completed).length;
+            const completion = Math.round((completedChapitres / totalChapitres) * 100);
+            
+            console.log(`📊 Completion ${niveauId}: ${completion}% (${completedChapitres}/${totalChapitres})`);
+            return completion;
+        } catch (error) {
+            console.error(`❌ Erreur calculateNiveauCompletion(${niveauId}):`, error);
+            return 0;
+        }
+    },
+
+    /**
      * Affiche un chapitre spécifique
      */
     afficherChapitre(chapitreId) {
@@ -1511,8 +1609,7 @@ const App = {
         try {
             // 1. Vérifier déblocage
             if (!isNiveauUnlocked(niveauId)) {
-                console.warn(`❌ Niveau ${niveauId} verrouillé`);
-                alert(`❌ Le niveau ${niveauId} est verrouillé.\n\nDéblocage: Complétez le niveau précédent à 100%.`);
+                console.warn(`❌ Le niveau ${niveauId} est verrouillé - Déblocage: Complétez le niveau précédent à 100%.`);
                 return;
             }
             
@@ -1522,8 +1619,7 @@ const App = {
             CHAPITRES = await loadChapitres(niveauId);
             
             if (!CHAPITRES || CHAPITRES.length === 0) {
-                console.warn(`⚠️ Aucun chapitre pour ${niveauId}`);
-                alert(`⚠️ Le niveau ${niveauId} n'a pas encore de chapitres.`);
+                console.warn(`⚠️ Le niveau ${niveauId} n'a pas encore de chapitres.`);
                 return;
             }
             
@@ -1603,8 +1699,60 @@ const App = {
             
         } catch (error) {
             console.error(`❌ Erreur afficherNiveau(${niveauId}):`, error);
-            alert('Erreur lors du chargement du niveau');
         }
+    },
+    
+    /**
+     * Ajoute le bouton "Demander aide" aux exercices
+     * @param {string} chapitreId - ID du chapitre actuel
+     * @param {number} stepIndex - Index de l'étape actuelle
+     */
+    addTutoringHelpButton(chapitreId, stepIndex) {
+        // Ne créer qu'une seule fois
+        if (document.querySelector('.tutoring-help-btn')) {
+            document.querySelector('.tutoring-help-btn').remove();
+        }
+        
+        // Récupérer les infos
+        const chapitre = this.findChapitreById(chapitreId);
+        const etape = chapitre ? chapitre.etapes[stepIndex] : null;
+        const questionTitle = etape ? `${etape.titre}` : 'Aide sur cet exercice';
+        
+        // Créer le bouton
+        const button = document.createElement('button');
+        button.className = 'tutoring-help-btn';
+        button.innerHTML = '❓ Demander aide';
+        button.title = 'Cliquez pour demander de l\'aide sur cet exercice';
+        button.type = 'button';
+        
+        // Ajouter l'événement click
+        button.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            console.log('[App] Clic bouton aide - TutoringModule disponible?', typeof TutoringModule);
+            
+            // Essayer d'ouvrir via la fonction globale d'abord
+            if (typeof openTutoringModal !== 'undefined') {
+                console.log('[App] Ouverture via openTutoringModal()');
+                openTutoringModal();
+            } 
+            // Sinon essayer directement TutoringModule
+            else if (typeof TutoringModule !== 'undefined' && TutoringModule.showModal) {
+                console.log('[App] Ouverture via TutoringModule.showModal()');
+                TutoringModule.showModal();
+            } 
+            // Fallback: Message d'erreur
+            else {
+                console.error('[App] ❌ Impossible d\'ouvrir le modal - TutoringModule non disponible');
+                alert('Erreur: Module tutoring non chargé. Rechargez la page.');
+            }
+        };
+        
+        // Injecter le bouton dans le DOM
+        document.body.appendChild(button);
+        
+        console.log('[Tutoring] Bouton "Demander aide" créé pour', chapitreId, stepIndex);
     },
     
     /**
@@ -1613,24 +1761,8 @@ const App = {
      * @param {number|string} stepIndexOrId - Index de l'étape ou ID
      */
     afficherEtape(chapitreId, stepIndexOrId) {
-        // ✅ Chercher le chapitre dans TOUS les niveaux (pas juste CHAPITRES global)
-        let chapitre = null;
-        
-        // D'abord chercher dans CHAPITRES (variable globale du niveau courant)
-        if (CHAPITRES && Array.isArray(CHAPITRES)) {
-            chapitre = CHAPITRES.find(ch => ch.id === chapitreId);
-        }
-        
-        // Si pas trouvé, chercher dans tous les niveaux (si chargés)
-        if (!chapitre && window.allNiveaux) {
-            for (let niveauId in window.allNiveaux) {
-                const chapitres = window.allNiveaux[niveauId];
-                if (Array.isArray(chapitres)) {
-                    chapitre = chapitres.find(ch => ch.id === chapitreId);
-                    if (chapitre) break;
-                }
-            }
-        }
+        // 🌉 Utiliser la fonction bridge pour trouver le chapitre dans tous les niveaux
+        let chapitre = this.findChapitreById(chapitreId);
         
         if (!chapitre) {
             console.error(`❌ Chapitre ${chapitreId} non trouvé dans tous les niveaux`);
@@ -1661,9 +1793,41 @@ const App = {
 
         // ✅ Seulement refuse si étape > 0 ET étape précédente non complétée
         if (index > 0 && !chapitre.etapes[index - 1].completed) {
-            alert('⛔ Complétez l\'étape précédente d\'abord!');
+            console.warn('⛔ Complétez l\'étape précédente d\'abord!');
             return;
         }
+
+        // � NOUVEAU: Vérifier si l'étape est verrouillée
+        const etapeState = StorageManager.getEtapeState(chapitreId, index);
+        if (etapeState?.isLocked === true) {
+            console.warn(`🔒 Étape ${index} est verrouillée!`);
+            
+            const lockedHTML = `
+                <div class="etape-view">
+                    <button class="btn btn--secondary" onclick="App.afficherChapitreContenu('${chapitreId}')" style="margin-bottom: 20px;">
+                        ← Retour au chapitre
+                    </button>
+                    
+                    <div style="background: linear-gradient(135deg, #FF6B6B 0%, rgba(255, 107, 107, 0.7) 100%); padding: 40px; border-radius: 8px; text-align: center; color: white;">
+                        <div style="font-size: 4em; margin-bottom: 20px;">🔒</div>
+                        <h1 style="margin: 0 0 10px 0; font-size: 1.8em;">Étape verrouillée</h1>
+                        <p style="margin: 0; font-size: 1.1em; opacity: 0.9;">Complétez l'étape précédente pour accéder à celle-ci.</p>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('app-content').innerHTML = lockedHTML;
+            return;
+        }
+
+        // �🔧 FIX: Déterminer si l'étape a des exercices INTERACTIFS (QCM, DragDrop, etc.)
+        // Les vidéos et lectures simples ne bloquent PAS le bouton
+        const hasExercises = etape.exercices && etape.exercices.length > 0 && 
+                            etape.exercices.some(ex => 
+                                ['qcm', 'dragdrop', 'scenario', 'matching', 'truefalse', 'quiz', 'calculation', 'likert', 'fillblanks', 'flashcards'].includes(ex.type)
+                            );
+        const nextButtonDisabled = hasExercises ? 'disabled' : '';
+        const nextButtonClass = hasExercises ? 'style="opacity: 0.5; cursor: not-allowed;"' : '';
 
         // Construire le HTML
         let html = `
@@ -1707,8 +1871,8 @@ const App = {
                     `}
                     
                     ${index < totalEtapes - 1 ? `
-                        <button class="btn btn--primary" onclick="App.nextEtape('${chapitreId}', ${index})">
-                            Étape suivante →
+                        <button id="next-etape-btn" class="btn btn--primary" onclick="App.nextEtape('${chapitreId}', ${index})" ${nextButtonDisabled} ${nextButtonClass}>
+                            ${hasExercises ? '⏳ Complétez l\'exercice' : 'Étape suivante →'}
                         </button>
                     ` : `
                         <button class="btn btn--success" onclick="App.completerChapitre('${chapitreId}')" style="background: #2ECC71; border: none; color: white;">
@@ -1723,9 +1887,7 @@ const App = {
         document.getElementById('app-content').innerHTML = html;
         console.log(`✅ Étape ${index + 1}/${totalEtapes} affichée: ${etape.titre}`);
 
-        // ✅ Détecter si l'étape a des exercices
-        const hasExercises = etape.exercices && etape.exercices.length > 0;
-
+        // ✅ Sauvegarder l'état de l'étape selon si elle a des exercices
         if (!hasExercises) {
             // 🎬 Vidéo seule = auto-complète (passable immédiatement)
             StorageManager.saveEtapeState(chapitreId, index, {
@@ -1747,17 +1909,44 @@ const App = {
         // Remplir exercices
         setTimeout(() => {
             this.remplirExercicesEtape(etape);
+            
+            // ⭐ Ajouter le bouton "Demander aide"
+            this.addTutoringHelpButton(chapitreId, index);
         }, 100);
     },
 
     /**
      * Complète l'étape actuelle et avance à la suivante
-     * Utilise localStorage directement (bypass StorageManager)
+     * ✅ FIX: Utilise StorageManager + met à jour la propriété en mémoire
      */
     nextEtape(chapitreId, etapeIndex) {
-        // ✅ DIRECT localStorage - clé simple et fiable
-        localStorage.setItem(`etape_${chapitreId}_${etapeIndex}_completed`, 'true');
-        console.log(`✅ Étape ${etapeIndex} marquée completed via localStorage`);
+        // 🔧 BUG #1 FIX: Mettre à jour la propriété .completed en mémoire
+        let chapitre = null;
+        if (CHAPITRES && Array.isArray(CHAPITRES)) {
+            chapitre = CHAPITRES.find(ch => ch.id === chapitreId);
+        }
+        if (!chapitre && window.allNiveaux) {
+            for (let niveauId in window.allNiveaux) {
+                const chapitres = window.allNiveaux[niveauId];
+                if (Array.isArray(chapitres)) {
+                    chapitre = chapitres.find(ch => ch.id === chapitreId);
+                    if (chapitre) break;
+                }
+            }
+        }
+        
+        if (chapitre && chapitre.etapes[etapeIndex]) {
+            chapitre.etapes[etapeIndex].completed = true;
+            console.log(`✅ BUG #1 FIX: Propriété chapitre.etapes[${etapeIndex}].completed = true`);
+        }
+        
+        // 🔧 BUG #2 FIX: Utiliser StorageManager au lieu de localStorage direct
+        StorageManager.saveEtapeState(chapitreId, etapeIndex, {
+            visited: true,
+            completed: true,
+            status: 'completed'
+        });
+        console.log(`✅ BUG #2 FIX: Étape ${etapeIndex} sauvegardée via StorageManager`);
         
         // ✅ Avancer à l'étape suivante
         this.afficherEtape(chapitreId, etapeIndex + 1);
@@ -1779,6 +1968,20 @@ const App = {
         etape.exercices.forEach((exo, idx) => {
             // ✅ Normaliser l'exercice pour gérer différents formats
             const normalized = normalizeExercise(exo);
+            
+            // 🔧 FIX: Assurer que l'exercice a un ID unique
+            if (!normalized.id) {
+                normalized.id = etape.id + '_ex_' + idx;
+            }
+            
+            // 🔧 FIX: Hériter le videoId et videoPath de l'étape parent si absent
+            if (!normalized.videoId && etape.videoId) {
+                normalized.videoId = etape.videoId;
+            }
+            if (!normalized.videoPath && etape.videoPath) {
+                normalized.videoPath = etape.videoPath;
+            }
+            
             const type = normalized.type || 'unknown';
             
             // Générer HTML selon le type d'exercice normalisé
@@ -1803,16 +2006,68 @@ const App = {
         
         if (type === 'video') {
             const videoUrl = exercice.content?.url || '';
-            const iframeUrl = this.convertToEmbed(videoUrl);
+            const videoId = exercice.videoId || '';
+            const videoPath = exercice.videoPath || '/assets/videos';
+            
+            // 🔧 FIX: Gérer les vidéos locales (fichiers MP4) vs YouTube
+            let finalVideoUrl = videoUrl;
+            let isLocalVideo = false;
+            
+            if (!finalVideoUrl && videoId) {
+                // Chercher dans le manifest si c'est une vidéo locale
+                if (window.VIDEO_MANIFEST && window.VIDEO_MANIFEST[videoId]) {
+                    const videoData = window.VIDEO_MANIFEST[videoId];
+                    const sourceUrl = videoData.sources['720p'] || videoData.sources['480p'] || videoData.sources['360p'];
+                    // Les sources dans le manifest utilisent ../ pour remonter d'un niveau
+                    finalVideoUrl = sourceUrl.replace('../', '/assets/videos/');
+                    isLocalVideo = true;
+                } else {
+                    finalVideoUrl = `${videoPath}/${videoId}`;
+                }
+            }
+            
+            const iframeUrl = this.convertToEmbed(finalVideoUrl);
+            
+            // Pour les vidéos locales, utiliser <video> tag
+            if (isLocalVideo) {
+                return `
+                    <div style="${baseStyle}">
+                        <h4 style="margin: 0 0 10px 0; color: var(--color-primary);">${titre}</h4>
+                        <p style="color: var(--color-text-light); margin-bottom: 15px;">${description}</p>
+                        <video width="100%" height="400" controls style="border-radius: 4px; background: #000;">
+                            <source src="${finalVideoUrl}" type="video/mp4">
+                            Votre navigateur ne supporte pas le tag vidéo.
+                        </video>
+                    </div>
+                `;
+            }
+            
+            // Pour les URLs YouTube, utiliser iframe
+            if (iframeUrl) {
+                return `
+                    <div style="${baseStyle}">
+                        <h4 style="margin: 0 0 10px 0; color: var(--color-primary);">${titre}</h4>
+                        <p style="color: var(--color-text-light); margin-bottom: 15px;">${description}</p>
+                        <iframe width="100%" height="400" src="${iframeUrl}" title="${titre}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="border-radius: 4px;"></iframe>
+                    </div>
+                `;
+            }
+            
+            // Fallback si vidéo manquante
+            if (!finalVideoUrl) {
+                return `
+                    <div style="${baseStyle}">
+                        <h4 style="margin: 0 0 10px 0; color: var(--color-primary);">${titre}</h4>
+                        <p style="color: var(--color-error); margin-bottom: 15px;">❌ URL vidéo manquante pour: ${videoId}</p>
+                    </div>
+                `;
+            }
+            
             return `
                 <div style="${baseStyle}">
                     <h4 style="margin: 0 0 10px 0; color: var(--color-primary);">${titre}</h4>
                     <p style="color: var(--color-text-light); margin-bottom: 15px;">${description}</p>
-                    ${iframeUrl ? `
-                        <iframe width="100%" height="400" src="${iframeUrl}" title="${titre}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="border-radius: 4px;"></iframe>
-                    ` : `
-                        <a href="${videoUrl}" target="_blank" class="btn btn--primary">🎬 Regarder la vidéo</a>
-                    `}
+                    <a href="${finalVideoUrl}" target="_blank" class="btn btn--primary">🎬 Regarder la vidéo</a>
                 </div>
             `;
         } 
@@ -1836,7 +2091,7 @@ const App = {
                     <div style="margin-bottom: 15px;">
                         ${optionsHtml}
                     </div>
-                    <button class="btn btn--primary" onclick="App.validerQCM('${exercice.id}', '${(exercice.content?.explanation || '').replace(/'/g, "\\'")}')">
+                    <button class="btn btn--primary" onclick="App.validerQCM('${exercice.id}')">
                         ✓ Valider
                     </button>
                 </div>
@@ -1895,6 +2150,157 @@ const App = {
                 </div>
             `;
         }
+        else if (type === 'flashcards') {
+            // Extraire les cartes du format unifié
+            const cards = exercice.content?.cards || exercice.cartes || [];
+            
+            if (!cards || cards.length === 0) {
+                return `
+                    <div style="${baseStyle}">
+                        <h4 style="margin: 0 0 10px 0; color: var(--color-primary);">${titre}</h4>
+                        <p style="color: var(--color-error);">❌ Aucune flashcard trouvée</p>
+                    </div>
+                `;
+            }
+            
+            let cardsHtml = '';
+            cards.forEach((carte, index) => {
+                const recto = carte.recto || carte.question || '';
+                const verso = carte.verso || carte.answer || '';
+
+                cardsHtml += `
+                    <div class="flashcard-wrapper" style="
+                        margin: 20px 0;
+                        height: 220px;
+                        cursor: pointer;
+                    " data-index="${index}">
+                        <div class="flashcard-inner" style="
+                            position: relative;
+                            width: 100%;
+                            height: 100%;
+                            transition: transform 0.6s;
+                            transform-style: preserve-3d;
+                        ">
+                            <!-- RECTO (Face avant) -->
+                            <div class="flashcard-recto" style="
+                                position: absolute;
+                                width: 100%;
+                                height: 100%;
+                                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                color: white;
+                                padding: 30px;
+                                border-radius: 12px;
+                                display: flex;
+                                flex-direction: column;
+                                align-items: center;
+                                justify-content: center;
+                                text-align: center;
+                                font-size: 18px;
+                                font-weight: 600;
+                                box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+                                backface-visibility: hidden;
+                                -webkit-backface-visibility: hidden;
+                            ">
+                                <span style="font-size: 14px; opacity: 0.8; margin-bottom: 10px;">❓ QUESTION</span>
+                                <span>${recto}</span>
+                                <span style="font-size: 12px; opacity: 0.7; margin-top: 15px;">(Cliquer pour répondre)</span>
+                            </div>
+                            
+                            <!-- VERSO (Face arrière) -->
+                            <div class="flashcard-verso" style="
+                                position: absolute;
+                                width: 100%;
+                                height: 100%;
+                                background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+                                color: white;
+                                padding: 30px;
+                                border-radius: 12px;
+                                display: flex;
+                                flex-direction: column;
+                                align-items: center;
+                                justify-content: center;
+                                text-align: center;
+                                font-size: 18px;
+                                font-weight: 600;
+                                box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+                                transform: rotateY(180deg);
+                                backface-visibility: hidden;
+                                -webkit-backface-visibility: hidden;
+                            ">
+                                <span style="font-size: 14px; opacity: 0.8; margin-bottom: 10px;">✅ RÉPONSE</span>
+                                <span>${verso}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            return `
+                <div style="${baseStyle}">
+                    <h4 style="margin: 0 0 10px 0; color: var(--color-primary);">${titre}</h4>
+                    <p style="color: var(--color-text-light); margin-bottom: 15px;">${description}</p>
+                    <p style="color: var(--color-text-light); font-size: 14px; margin-bottom: 15px;">
+                        Cliquez sur une carte pour voir la réponse (${cards.length} cartes)
+                    </p>
+                    <div id="flashcard-container" style="perspective: 1000px;">
+                        ${cardsHtml}
+                    </div>
+                    <button class="btn btn--primary" style="width: 100%; margin-top: 20px;" onclick="App.validerExercice('${exercice.id}', 'flashcards')">
+                        ✅ J'ai maîtrisé ces cartes
+                    </button>
+                </div>
+            `;
+        }
+        else if (type === 'quiz') {
+            // Extraire les questions du format unifié
+            const questions = exercice.content?.questions || exercice.questions || [];
+            
+            if (!questions || questions.length === 0) {
+                return `
+                    <div style="${baseStyle}">
+                        <h4 style="margin: 0 0 10px 0; color: var(--color-primary);">${titre}</h4>
+                        <p style="color: var(--color-error);">❌ Aucune question trouvée</p>
+                    </div>
+                `;
+            }
+            
+            let questionsHtml = '';
+            questions.forEach((question, qIndex) => {
+                questionsHtml += `
+                    <div style="margin-bottom: 20px; padding: 15px; background: white; border-radius: 8px;">
+                        <h5 style="margin: 0 0 15px 0; font-size: 16px; color: var(--color-primary);">Q${qIndex + 1}: ${question.question}</h5>
+                        <div style="display: flex; flex-direction: column; gap: 10px;">
+                `;
+                
+                const options = question.options || question.choix || [];
+                options.forEach((option, optIndex) => {
+                    const optionText = typeof option === 'string' ? option : (option.label || option.texte || option.text || '');
+                    const isCorrect = optIndex === question.correctAnswer || option.correct;
+                    
+                    questionsHtml += `
+                        <label style="display: flex; align-items: center; cursor: pointer; padding: 8px; border-radius: 4px; transition: background 0.2s;">
+                            <input type="radio" name="q${question.id || qIndex}" value="${optIndex}" data-correct="${isCorrect}" style="cursor: pointer; margin-right: 10px;">
+                            <span>${optionText}</span>
+                        </label>
+                    `;
+                });
+                
+                questionsHtml += `
+                        </div>
+                    </div>
+                `;
+            });
+            
+            return `
+                <div style="${baseStyle}">
+                    <h4 style="margin: 0 0 10px 0; color: var(--color-primary);">${titre}</h4>
+                    <p style="color: var(--color-text-light); margin-bottom: 15px;">${description}</p>
+                    ${questionsHtml}
+                    <button class="btn btn--primary" style="width: 100%; margin-top: 20px;" onclick="App.validerQuiz('${exercice.id}')">Soumettre le quiz</button>
+                    <div id="quiz-feedback-${exercice.id}" style="margin-top: 15px; padding: 15px; border-radius: 8px; display: none;"></div>
+                </div>
+            `;
+        }
         else {
             // Type inconnu ou autre
             return `
@@ -1910,15 +2316,53 @@ const App = {
      * Attacher les event listeners aux exercices
      */
     attachExerciceEvents(etape) {
-        // À étendre selon les types d'exercices interactifs
-        // (Drag-drop, matching, etc.)
+        // Attacher les événements pour les flashcards
+        document.querySelectorAll('.flashcard-wrapper').forEach(wrapper => {
+            const inner = wrapper.querySelector('.flashcard-inner');
+            let isFlipped = false;
+            
+            // Clic pour retourner la carte
+            wrapper.addEventListener('click', function(e) {
+                e.preventDefault();
+                isFlipped = !isFlipped;
+                inner.style.transform = isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)';
+            });
+            
+            // Hover pour feedback visuel
+            wrapper.addEventListener('mouseover', function() {
+                this.style.boxShadow = '0 12px 24px rgba(0,0,0,0.3)';
+                this.style.transform = 'translateY(-5px)';
+            });
+            
+            wrapper.addEventListener('mouseout', function() {
+                this.style.boxShadow = 'none';
+                this.style.transform = 'translateY(0)';
+            });
+            
+            // Support tactile pour mobile
+            let touchStartX = 0;
+            wrapper.addEventListener('touchstart', function(e) {
+                touchStartX = e.touches[0].clientX;
+            });
+            
+            wrapper.addEventListener('touchend', function(e) {
+                const touchEndX = e.changedTouches[0].clientX;
+                const diff = Math.abs(touchEndX - touchStartX);
+                
+                // Si déplacement minimal, considérer comme un clic
+                if (diff < 20) {
+                    isFlipped = !isFlipped;
+                    inner.style.transform = isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)';
+                }
+            });
+        });
     },
 
     /**
      * Afficher un exercice interactif (Drag-drop, Matching, etc.)
      */
     afficherExerciceInteractif(exerciceId) {
-        alert('🎯 Exercice interactif à implémenter: ' + exerciceId);
+        console.info('🎯 Exercice interactif à implémenter: ' + exerciceId);
         // TODO: Charger le module d'exercice interactif
     },
 
@@ -1946,14 +2390,28 @@ const App = {
     /**
      * Valider QCM
      */
-    validerQCM(exerciceId, explanation) {
+    validerQCM(exerciceId) {
+        console.log(`🔍 Cherchant réponse pour QCM ID: ${exerciceId}`);
+        console.log(`📍 Sélecteur: input[name="qcm_${exerciceId}"]:checked`);
+        
+        // 🔧 DEBUG: Afficher tous les inputs disponibles
+        const allInputs = document.querySelectorAll('input[type="radio"]');
+        console.log(`📊 Inputs radio trouvés: ${allInputs.length}`);
+        allInputs.forEach(input => {
+            console.log(`  - name="${input.name}", value="${input.value}", checked=${input.checked}`);
+        });
+        
         const radio = document.querySelector(`input[name="qcm_${exerciceId}"]:checked`);
         if (!radio) {
-            alert('⚠️ Sélectionnez une réponse');
+            console.warn(`⚠️ Sélectionnez une réponse`);
             return;
         }
         
-        alert(`✅ Merci!\n\n${explanation || 'Vous avez répondu.'}`);
+        console.log(`✅ Réponse trouvée: value=${radio.value}`);
+        console.log(`✅ Merci! Vous avez répondu.`);
+        
+        // 🔧 FIX: Activer le bouton "Étape suivante"
+        this.activerBoutonEtapeSuivante();
     },
 
     /**
@@ -1970,7 +2428,7 @@ const App = {
             StorageManager.updateChapterProgress(chapitreId, 100);
         }
 
-        alert(`✅ Bravo! "${chapitre.titre}" terminé!`);
+        console.log(`✅ Bravo! "${chapitre.titre}" terminé!`);
         this.afficherChapitreContenu(chapitreId);
     },
 
@@ -2076,17 +2534,18 @@ const App = {
         const nextIndex = window.currentExerciceIndex + 1;
         
         if (nextIndex < totalExercices) {
+            // Il y a un exercice suivant
             window.currentExerciceIndex = nextIndex;
             // Réafficher l'étape avec le nouvel exercice
-            this.afficherEtape(stepId, chapitreId);
+            this.afficherEtape(chapitreId, stepId);
         } else {
-            // Tous les exercices complétés - marquer l'étape comme complète et revenir aux étapes
-            const stepProgress = {
-                completed: true,
-                timestamp: new Date().toISOString(),
-                score: 100
-            };
-            localStorage.setItem(`step_${stepId}`, JSON.stringify(stepProgress));
+            // C'est le dernier exercice - Tous les exercices complétés
+            console.log(`✅ Dernier exercice complété - Marquant l'étape ${stepId} comme complétée`);
+            
+            // Chercher l'index de l'étape
+            const etapeIndex = chapitre.etapes.findIndex(e => e.id === stepId);
+            
+            // IMPORTANT: Utiliser marquerEtapeComplete pour mettre à jour la progression
             this.marquerEtapeComplete(chapitreId, stepId);
             
             const maxPoints = etape?.points || 10;
@@ -2187,13 +2646,15 @@ const App = {
      * Rendu VIDEO (Support à la fois YouTube et lecteur local)
      */
     renderExerciceVideo(exercice, etape = null) {
-        // ✅ DÉTECTION YOUTUBE - Gérer les différents formats d'URL YouTube
-        // Chercher l'URL au niveau racine OU dans content
-        const videoUrl = exercice.url || exercice.videoUrl || exercice.content?.url;
+        // ✅ NOUVELLE STRUCTURE UNIFIÉE avec videoType dans content
+        const content = exercice.content;
+        const videoType = content?.videoType;
+        const videoUrl = content?.url || exercice.url || exercice.videoUrl;
         
-        console.log(`📹 renderExerciceVideo - videoUrl: ${videoUrl}`, exercice);
+        console.log(`📹 renderExerciceVideo - Type: ${videoType}, URL: ${videoUrl}`, exercice);
         
-        if (videoUrl && (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be'))) {
+        // ✅ GESTION VIDÉOS YOUTUBE (videoType: "youtube")
+        if (videoType === 'youtube' || (videoUrl && (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be')))) {
             let embedUrl = videoUrl;
             
             // ✅ CONVERSION DES FORMATS YOUTUBE
@@ -2231,7 +2692,29 @@ const App = {
             `;
         }
         
-        // Si c'est une vidéo locale avec notre VideoPlayer
+        // ✅ GESTION VIDÉOS LOCALES (videoType: "local")
+        if (videoType === 'local' && videoUrl) {
+            // Utiliser l'URL directement pour HTML5 video
+            const containerId = `video-container-${exercice.id}`;
+            
+            return `
+                <div class="video-section">
+                    <h3>🎬 ${exercice.titre}</h3>
+                    <p style="color: var(--color-text-light); margin-bottom: 20px;">${exercice.description}</p>
+                    
+                    <div id="${containerId}" style="width: 100%; margin-bottom: var(--spacing-md); background: #000; border-radius: 8px; overflow: hidden;">
+                        <video style="width: 100%; height: auto; display: block;" controls preload="metadata">
+                            <source src="${videoUrl}" type="video/mp4">
+                            Votre navigateur ne supporte pas la lecture vidéo HTML5.
+                        </video>
+                    </div>
+                    
+                    <button class="btn btn--primary" style="margin-top: var(--spacing-md); width: 100%;" onclick="App.validerExercice('video')">✅ J'ai regardé la vidéo</button>
+                </div>
+            `;
+        }
+        
+        // Si c'est une vidéo locale avec notre VideoPlayer (ancien format avec videoId)
         const videoId = etape?.videoId || exercice.videoId;
         if (videoId) {
             // Générer un container ID unique pour le VideoPlayer
@@ -2259,7 +2742,7 @@ const App = {
      * Rendu QCM - Sécurisé (pas d'exposition réponses en HTML)
      */
     renderExerciceQCM(exercice) {
-        const qcmId = 'qcm_' + Math.random().toString(36).substr(2, 9);
+        const qcmId = Math.random().toString(36).substr(2, 9);
         
         // ✅ Extraire les données du format JSON
         const content = exercice.content;
@@ -2287,7 +2770,7 @@ const App = {
             const optionText = typeof option === 'string' ? option : option.label;
             html += `
                 <label style="display: flex; align-items: center; padding: var(--spacing-md); border: 2px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer; transition: all 0.2s;">
-                    <input type="radio" name="qcm_${qcmId}" value="${index}" style="margin-right: var(--spacing-md);" class="qcm-input">
+                    <input type="radio" name="${qcmId}" value="${index}" style="margin-right: var(--spacing-md);" class="qcm-input">
                     <span>${optionText}</span>
                 </label>
             `;
@@ -2499,6 +2982,15 @@ const App = {
     renderExerciceFlashcards(exercice) {
         // Extraire les cartes du format unifié
         const cards = exercice.content?.cards || exercice.cartes || [];
+        
+        console.log('🎴 renderExerciceFlashcards DEBUG:', {
+            exerciceId: exercice.id,
+            hasContent: !!exercice.content,
+            hasCards: !!exercice.content?.cards,
+            cardsLength: cards.length,
+            cards: cards,
+            fullExercice: exercice
+        });
         
         if (!cards || cards.length === 0) {
             return '<p>❌ Aucune flashcard trouvée</p>';
@@ -2793,6 +3285,9 @@ ${content.summary}
                 const maxPoints = etape?.points || 10;
                 StorageManager.addPointsToStep(window.currentStepId, maxPoints, maxPoints);
                 App.updateHeader();
+                
+                // 🔧 FIX: Activer le bouton "Étape suivante"
+                App.activerBoutonEtapeSuivante();
             }
 
             setTimeout(() => {
@@ -3173,6 +3668,9 @@ ${content.summary}
                 const result = StorageManager.addPointsToStep(window.currentStepId, maxPoints, maxPoints);
                 this.updateHeader();
 
+                // 🔧 FIX: Activer le bouton "Étape suivante"
+                this.activerBoutonEtapeSuivante();
+
                 setTimeout(() => {
                     showSuccessNotification('🎉 Excellent!', 'Vous avez réussi l\'exercice d\'association!');
                     this.fermerModal();
@@ -3197,6 +3695,20 @@ ${content.summary}
     },
 
     /**
+     * 🔧 FIX: Active le bouton "Étape suivante" après validation d'un exercice
+     */
+    activerBoutonEtapeSuivante() {
+        const btn = document.getElementById('next-etape-btn');
+        if (btn) {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
+            btn.textContent = 'Étape suivante →';
+            console.log(`✅ Bouton "Étape suivante" activé`);
+        }
+    },
+
+    /**
      * Valide un exercice simple (vidéo, lecture, flashcards)
      */
     validerExercice(type) {
@@ -3216,6 +3728,9 @@ ${content.summary}
             this.updateHeader();
             console.log(`✅ ${result.message} (${result.totalForStep}/${result.maxPoints} points)`);
         }
+        
+        // 🔧 FIX: Activer le bouton "Étape suivante"
+        this.activerBoutonEtapeSuivante();
         
         showSuccessNotification('🎉 Bravo!', 'Vous avez complété cet exercice!', '🎉', 2000);
         
@@ -3427,6 +3942,9 @@ ${content.summary}
         if (isPassed && window.currentStepId && window.currentChapitreId) {
             this.marquerEtapeComplete(window.currentChapitreId, window.currentStepId);
             this.addPoints(earnedPoints, `QCM Scénario réussi (${percentage}%)`);
+            
+            // 🔧 FIX: Activer le bouton "Étape suivante"
+            this.activerBoutonEtapeSuivante();
 
             setTimeout(() => {
                 showSuccessNotification('🎉 Bravo!', `Vous avez réussi avec ${percentage}%!`);
@@ -3438,18 +3956,286 @@ ${content.summary}
     },
 
     /**
+     * 🌉 BRIDGE FUNCTION 1️⃣: Trouver un chapitre par son ID dans tous les niveaux
+     */
+    findChapitreById(chapId) {
+        // D'abord chercher dans CHAPITRES (niveau actuel)
+        if (CHAPITRES && Array.isArray(CHAPITRES)) {
+            const found = CHAPITRES.find(ch => ch.id === chapId);
+            if (found) return found;
+        }
+        
+        // Sinon chercher dans tous les niveaux chargés
+        if (window.allNiveaux) {
+            for (let niveauId in window.allNiveaux) {
+                const chapitres = window.allNiveaux[niveauId];
+                if (Array.isArray(chapitres)) {
+                    const found = chapitres.find(ch => ch.id === chapId);
+                    if (found) return found;
+                }
+            }
+        }
+        
+        return null;
+    },
+
+    /**
+     * 🌉 BRIDGE FUNCTION 2️⃣: Obtenir tous les chapitres d'un niveau
+     */
+    getChapitresForNiveau(niveauId) {
+        // Normaliser l'ID en majuscule (N1, N2, N3, N4)
+        const normalizedId = niveauId.toUpperCase();
+        
+        // D'abord vérifier si c'est le niveau actuel et CHAPITRES est chargé
+        if (window.currentNiveauId === normalizedId && CHAPITRES && Array.isArray(CHAPITRES) && CHAPITRES.length > 0) {
+            return CHAPITRES;
+        }
+        
+        // Sinon chercher dans allNiveaux (chargé par afficherNiveaux)
+        if (window.allNiveaux && window.allNiveaux[normalizedId]) {
+            return window.allNiveaux[normalizedId];
+        }
+        
+        // Chercher dans window.niveauxData si allNiveaux n'est pas disponible
+        if (window.niveauxData) {
+            const niveauData = window.niveauxData.find(n => n.id === normalizedId);
+            if (niveauData && niveauData.chapitres) {
+                return niveauData.chapitres;
+            }
+        }
+        
+        console.warn(`⚠️ Chapitres pour ${normalizedId} non trouvés`);
+        return [];
+    },
+
+    /**
+     * 🌉 BRIDGE FUNCTION 3️⃣: Calculer la progression globale d'un niveau
+     */
+    calculateNiveauProgress(niveauId) {
+        const chapitres = this.getChapitresForNiveau(niveauId);
+        
+        if (!chapitres || chapitres.length === 0) {
+            console.warn(`⚠️ Aucun chapitre trouvé pour le niveau ${niveauId}`);
+            return 0;
+        }
+        
+        // Compter les étapes complétées et totales
+        let totalCompleted = 0;
+        let totalSteps = 0;
+        
+        chapitres.forEach(chapitre => {
+            if (chapitre.etapes && Array.isArray(chapitre.etapes)) {
+                totalSteps += chapitre.etapes.length;
+                totalCompleted += chapitre.etapes.filter(e => e.completed === true).length;
+            }
+        });
+        
+        const progress = totalSteps > 0 ? Math.round((totalCompleted / totalSteps) * 100) : 0;
+        
+        console.log(`📊 Niveau ${niveauId}: ${totalCompleted}/${totalSteps} étapes = ${progress}%`);
+        return progress;
+    },
+
+    /**
+     * 🌉 BRIDGE FUNCTION 4️⃣: Mettre à jour l'affichage de la progression du niveau
+     */
+    updateNiveauProgressDisplay(niveauId) {
+        // Normaliser l'ID en majuscule (N1, N2, N3, N4)
+        const normalizedId = niveauId.toUpperCase();
+        
+        const progress = this.calculateNiveauProgress(normalizedId);
+        
+        // Trouver l'élément de barre de progression pour ce niveau
+        const niveauElement = document.querySelector(`[data-niveau-id="${normalizedId}"]`);
+        if (!niveauElement) {
+            console.warn(`⚠️ Élément niveau ${normalizedId} non trouvé dans le DOM`);
+            return;
+        }
+        
+        // Mettre à jour la barre de progression (cercle SVG ou autre)
+        const progressBar = niveauElement.querySelector('.progress-bar');
+        const progressFill = niveauElement.querySelector('.progress-fill');
+        const progressText = niveauElement.querySelector('.progress-text');
+        
+        if (progressFill) {
+            progressFill.style.width = progress + '%';
+            console.log(`✅ Barre progression ${normalizedId}: ${progress}%`);
+        }
+        
+        if (progressText) {
+            progressText.textContent = progress + '% complété';
+            console.log(`✅ Texte progression ${normalizedId}: ${progress}% complété`);
+        }
+        
+        // Aussi chercher un SVG de cercle (pour le cercle du niveau)
+        const svgCircle = niveauElement.querySelector('.niveau-progress-circle');
+        if (svgCircle) {
+            // Le cercle SVG a généralement un attribut stroke-dashoffset
+            // qui dépend du pourcentage
+            const circumference = 2 * Math.PI * 45; // Si rayon = 45
+            const offset = circumference - (progress / 100) * circumference;
+            svgCircle.style.strokeDashoffset = offset;
+            
+            const percentText = niveauElement.querySelector('.niveau-progress-percent');
+            if (percentText) {
+                percentText.textContent = progress + '%';
+            }
+            
+            console.log(`✅ Cercle ${niveauId}: ${progress}%`);
+        }
+    },
+
+    /**
+     * Calcule la progression d'un chapitre (0-100%)
+     * AMÉLIORÉ: Utilise findChapitreById pour chercher dans tous les niveaux
+     */
+    calculateChapterProgress(chapitreId) {
+        // Utiliser la fonction bridge pour trouver le chapitre
+        const chapitre = this.findChapitreById(chapitreId);
+        
+        if (!chapitre || !chapitre.etapes || chapitre.etapes.length === 0) {
+            return 0;
+        }
+        
+        const completedCount = chapitre.etapes.filter(e => e.completed === true).length;
+        const total = chapitre.etapes.length;
+        const progress = Math.round((completedCount / total) * 100);
+        
+        console.log(`📊 Progression ${chapitreId}: ${completedCount}/${total} = ${progress}%`);
+        return progress;
+    },
+
+    /**
+     * Met à jour la barre de progression visuelle d'un chapitre
+     */
+    updateChapterProgressBar(chapitreId) {
+        const progress = this.calculateChapterProgress(chapitreId);
+        const chapitre = CHAPITRES.find(ch => ch.id === chapitreId);
+        
+        if (!chapitre) return;
+        
+        // Mettre à jour la propriété du chapitre
+        chapitre.progression = progress;
+        
+        // Mettre à jour le DOM si visible
+        const progressFill = document.querySelector(`[data-chapter-id="${chapitreId}"] .progress-fill`);
+        if (progressFill) {
+            progressFill.style.width = progress + '%';
+            progressFill.style.backgroundColor = chapitre.couleur || '#667eea';
+        }
+        
+        const progressText = document.querySelector(`[data-chapter-id="${chapitreId}"] .progress-text`);
+        if (progressText) {
+            progressText.textContent = progress + '% complété';
+        }
+        
+        console.log(`✅ Progress bar mise à jour pour ${chapitreId}: ${progress}%`);
+    },
+
+    /**
+     * 🔓 NOUVEAU: Initialise le déverrouillage des étapes
+     * - Première étape: toujours accessible
+     * - Autres étapes: verrouillées jusqu'à complètion de la précédente
+     */
+    initChapitreProgress(chapitreId) {
+        const chapitre = CHAPITRES.find(ch => ch.id === chapitreId);
+        
+        if (!chapitre || !chapitre.etapes) {
+            console.warn(`⚠️ Chapitre ${chapitreId} non trouvé pour initialiser les locks`);
+            return;
+        }
+        
+        console.log(`🔓 Initialisation des locks pour ${chapitreId}...`);
+        
+        chapitre.etapes.forEach((etape, idx) => {
+            const isFirstStep = idx === 0;
+            
+            // Initialiser les états de chaque étape
+            const etapeState = {
+                isLocked: !isFirstStep,     // Seule la première est accessible
+                isAccessible: isFirstStep,
+                visited: isFirstStep ? true : false
+            };
+            
+            // Sauvegarder dans StorageManager
+            StorageManager.saveEtapeState(chapitreId, idx, etapeState);
+            
+            console.log(`  ✅ Étape ${idx} (${etape.id}): ${isFirstStep ? '🔓 Déverrouillée' : '🔒 Verrouillée'}`);
+        });
+        
+        console.log(`✅ Déverrouillage initialisé pour ${chapitreId}`);
+    },
+
+    /**
+     * ✅ CALCULE la progression du chapitre depuis localStorage
+     * FIX V2: Les clés localStorage utilisent UNIQUEMENT le stepId
+     */
+    calculateChapterCompletionFromStorage(chapId) {
+        console.log(`🔍 Calculant progression pour ${chapId}...`);
+        
+        const chapitre = CHAPITRES?.find(c => c.id === chapId);
+        if (!chapitre) {
+            console.error(`❌ Chapitre ${chapId} non trouvé`);
+            return 0;
+        }
+
+        let stepsCompleted = 0;
+        const totalSteps = chapitre.etapes ? chapitre.etapes.length : 0;
+        
+        if (!chapitre.etapes || totalSteps === 0) {
+            console.warn(`⚠️ Chapitre ${chapId} a 0 étapes`);
+            return 0;
+        }
+
+        chapitre.etapes.forEach(etape => {
+            // CRUCIAL: Extraire le stepId SANS le chapitre.id au début
+            const stepId = etape.id.replace(`${chapId}_`, '');
+            
+            // Construire la clé localStorage CORRECTE
+            const stepKey = `step_${chapId}_${stepId}`;
+            
+            console.log(`  Cherchant: ${stepKey} (etape.id=${etape.id})`);
+            
+            const stepData = localStorage.getItem(stepKey);
+            
+            if (stepData) {
+                try {
+                    const parsed = JSON.parse(stepData);
+                    if (parsed.completed === true) {
+                        stepsCompleted++;
+                        console.log(`    ✅ Trouvée et complétée`);
+                    } else {
+                        console.log(`    ⏳ Pas complétée (${parsed.completed})`);
+                    }
+                } catch (e) {
+                    console.error(`    ❌ Erreur parsing ${stepKey}:`, e);
+                }
+            } else {
+                console.log(`    ⏳ Pas trouvée dans localStorage`);
+            }
+        });
+
+        const completion = totalSteps > 0 ? (stepsCompleted / totalSteps) * 100 : 0;
+        
+        console.log(`📊 ${chapId}: ${stepsCompleted}/${totalSteps} = ${completion.toFixed(1)}%`);
+        
+        return completion;
+    },
+
+    /**
      * Marque une étape comme complétée - Améliorée avec SVG re-render
      */
     marquerEtapeComplete(chapitreId, stepId) {
         console.log(`✅ Marquer complète: ${stepId} du chapitre ${chapitreId}`);
         
-        const chapitre = CHAPITRES.find(ch => ch.id === chapitreId);
+        // 🌉 Utiliser la fonction bridge pour trouver le chapitre
+        const chapitre = this.findChapitreById(chapitreId);
         const etape = chapitre?.etapes.find(e => e.id === stepId);
         
         if (etape) {
             etape.completed = true;
             
-            // 1️⃣ Sauvegarder dans localStorage
+            // 1️⃣ Sauvegarder dans localStorage (ancien système)
             const stepProgress = {
                 completed: true,
                 timestamp: new Date().toISOString(),
@@ -3457,9 +4243,33 @@ ${content.summary}
             };
             localStorage.setItem(`step_${stepId}`, JSON.stringify(stepProgress));
             
+            // 🔧 NOUVEAU: Sauvegarder via StorageManager avec status 'completed'
+            // Chercher l'index de l'étape
+            const etapeIndex = chapitre.etapes.findIndex(e => e.id === stepId);
+            StorageManager.saveEtapeState(chapitreId, etapeIndex, {
+                visited: true,
+                completed: true,
+                status: 'completed',
+                completedAt: new Date().toISOString()
+            });
+            console.log(`✅ StorageManager: Étape ${stepId} marquée COMPLETED`);
+            
             // Calculer la progression du chapitre
             const completedCount = chapitre.etapes.filter(e => e.completed).length;
             chapitre.progression = Math.round((completedCount / chapitre.etapes.length) * 100);
+            
+            // 🔄 NOUVEAU: Mettre à jour la barre de progression visuelle
+            this.updateChapterProgressBar(chapitreId);
+            
+            // 📊 NOUVEAU: Tracker les points de l'étape
+            const points = etape.points || 10;
+            const data = JSON.parse(localStorage.getItem('douanelmsv2'));
+            if (data && data.stepsPoints) {
+                data.stepsPoints[stepId] = points;
+                data.user.totalPoints = calculateTotalPoints(data.stepsPoints);
+                localStorage.setItem('douanelmsv2', JSON.stringify(data));
+                console.log(`📊 Points mis à jour: +${points}pts (Total: ${data.user.totalPoints}pts)`);
+            }
             
             // 2️⃣ Sauvegarder dans le localStorage
             const chaptersProgress = StorageManager.getChaptersProgress();
@@ -3476,8 +4286,41 @@ ${content.summary}
             }
             StorageManager.update('chaptersProgress', chaptersProgress);
             
+            // ➕ NOUVEAU: Recalculer la progression depuis les données persistées
+            // Cela garantit que la progression est toujours synchronisée avec les étapes réelles
+            const recalculatedCompletion = this.calculateChapterCompletionFromStorage(chapitreId);
             console.log(`✅ Étape ${stepId} marquée comme complétée`);
-            console.log(`📊 Progression du chapitre: ${chapitre.progression}%`);
+            console.log(`📊 Progression du chapitre: ${chapitre.progression}% (calculé: ${recalculatedCompletion}%)`);
+            
+            // ➕ SYNCHRONISER: Forcer la progression mise à jour dans StorageManager
+            StorageManager.updateChapterProgress(chapitreId, {
+                completion: recalculatedCompletion,
+                stepsCompleted: chaptersProgress[chapitreId].stepsCompleted
+            });
+            console.log(`✅ Synchronisation StorageManager: ${chapitreId} = ${recalculatedCompletion}%`);
+
+            // 🔓 NOUVEAU: Déverrouiller l'étape suivante si elle existe
+            const currentIndex = etapeIndex;
+            if (currentIndex + 1 < chapitre.etapes.length) {
+                const nextEtape = chapitre.etapes[currentIndex + 1];
+                
+                StorageManager.saveEtapeState(chapitreId, currentIndex + 1, {
+                    isLocked: false,        // Déverrouiller
+                    isAccessible: true
+                });
+                
+                console.log(`🔓 Étape suivante déverrouillée: ${nextEtape.id}`);
+            } else {
+                console.log(`✨ Dernière étape complétée!`);
+            }
+
+            // 🌉 NOUVEAU: Mettre à jour la progression du NIVEAU
+            // Trouver le niveauId en cherchant dans allNiveaux ou en utilisant currentNiveauId
+            const niveauId = window.currentNiveauId;
+            if (niveauId) {
+                this.updateNiveauProgressDisplay(niveauId);
+                console.log(`🌟 Progression du niveau ${niveauId} mise à jour`);
+            }
 
             // 3️⃣ ✅ NOUVEAU : RE-GÉNÉRER LE SVG avec les nouveaux états
             const pathContainer = document.querySelector(
@@ -3555,7 +4398,7 @@ ${content.summary}
         }
 
         const selectedInput = document.querySelector(
-            `input[name="qcm_${qcmId}"]:checked`
+            `input[name="${qcmId}"]:checked`
         );
 
         if (!selectedInput) {
@@ -3598,6 +4441,9 @@ ${content.summary}
                 console.log(`✅ ${result.message} (${result.totalForStep}/${result.maxPoints} points)`);
             }
 
+            // 🔧 FIX: Activer le bouton "Étape suivante"
+            this.activerBoutonEtapeSuivante();
+
             showSuccessNotification('✅ Excellent!', `Bonne réponse!`, '✅', 1500);
         } else {
             feedback.innerHTML = `
@@ -3621,46 +4467,6 @@ ${content.summary}
     /**
      * Valide un QCM (ancienne version - mantenue pour compatibilité)
      */
-    validerQCM(stepId) {
-        const reponse = document.querySelector('input[name="qcm"]:checked');
-        if (!reponse) {
-            showSuccessNotification('⚠️ Attention', 'Veuillez sélectionner une réponse!', '⚠️', 2000);
-            return;
-        }
-        
-        const isCorrect = reponse.dataset.correct === 'true';
-        const feedback = document.getElementById('feedback');
-        
-        if (isCorrect) {
-            feedback.innerHTML = '<p style="color: var(--color-success); font-weight: bold;">✅ Excellente réponse!</p>';
-            feedback.style.display = 'block';
-            
-            // Marquer l'étape comme complétée
-            if (window.currentStepId && window.currentChapitreId) {
-                const chapitre = CHAPITRES.find(ch => ch.id === window.currentChapitreId);
-                const etape = chapitre?.etapes.find(e => e.id === window.currentStepId);
-                const maxPoints = etape?.points || 10;
-                
-                this.marquerEtapeComplete(window.currentChapitreId, window.currentStepId);
-                
-                // QCM avec une seule réponse = 100% si correct
-                const result = StorageManager.addPointsToStep(window.currentStepId, maxPoints, maxPoints);
-                this.updateHeader();
-                console.log(`✅ ${result.message} (${result.totalForStep}/${result.maxPoints} points)`);
-            }
-            
-            setTimeout(() => {
-                showSuccessNotification('✅ Excellent!', `Bonne réponse!`, '✅', 2000);
-                App.fermerModal();
-                App.rafraichirAffichage();
-            }, 1000);
-        } else {
-            feedback.innerHTML = '<p style="color: var(--color-error); font-weight: bold;">❌ Mauvaise réponse, réessayez!</p>';
-            feedback.style.display = 'block';
-            reponse.checked = false;
-        }
-    },
-
     /**
      * Valide un exercice Vrai/Faux - Affiche la correction et permet de recommencer
      */
@@ -3768,6 +4574,9 @@ ${content.summary}
             const maxPoints = etape?.points || 10;
             StorageManager.addPointsToStep(window.currentStepId, maxPoints, maxPoints);
             this.updateHeader();
+            
+            // 🔧 FIX: Activer le bouton "Étape suivante"
+            this.activerBoutonEtapeSuivante();
             
             showSuccessNotification('✅ Excellent!', 'Exercice complété!', '✅', 1500);
         } else if (!isAllCorrect) {
@@ -3902,6 +4711,9 @@ ${content.summary}
             StorageManager.addPointsToStep(window.currentStepId, maxPoints, maxPoints);
             this.updateHeader();
             
+            // 🔧 FIX: Activer le bouton "Étape suivante"
+            this.activerBoutonEtapeSuivante();
+            
             showSuccessNotification('✅ Excellent!', 'Drag-Drop complété!', '✅', 1500);
         } else if (!isAllCorrect) {
             showSuccessNotification('⚠️ À relire', 'L\'ordre n\'est pas correct', '📚', 1500);
@@ -3984,6 +4796,9 @@ ${content.summary}
             const maxPoints = etape?.points || 10;
             StorageManager.addPointsToStep(window.currentStepId, maxPoints, maxPoints);
             this.updateHeader();
+            
+            // 🔧 FIX: Activer le bouton "Étape suivante"
+            this.activerBoutonEtapeSuivante();
         }
         
         showSuccessNotification('✅ Merci!', 'Auto-évaluation enregistrée!', '✅', 1500);
@@ -3992,7 +4807,10 @@ ${content.summary}
     /**
      * Valide un quiz
      */
-    validerQuiz() {
+    validerQuiz(exerciceId = null) {
+        // Déterminer quel feedback utiliser
+        const feedbackId = exerciceId ? `quiz-feedback-${exerciceId}` : 'quiz-feedback';
+        
         // Trouver toutes les questions avec leurs réponses
         const allInputs = document.querySelectorAll('input[data-correct]');
         let totalQuestions = 0;
@@ -4014,7 +4832,7 @@ ${content.summary}
         });
         
         // Afficher les réponses correctes
-        const feedback = document.getElementById('quiz-feedback');
+        const feedback = document.getElementById(feedbackId);
         let feedbackHtml = `
             <div style="background: ${correctAnswers === totalQuestions ? '#d4edda' : '#fff3cd'}; border: 1px solid ${correctAnswers === totalQuestions ? '#c3e6cb' : '#ffeaa7'}; padding: var(--spacing-md); border-radius: var(--radius-md);">
                 <h4 style="margin-top: 0; color: ${correctAnswers === totalQuestions ? '#155724' : '#856404'};">
@@ -4062,10 +4880,19 @@ ${content.summary}
         feedback.style.display = 'block';
         
         // Désactiver le bouton et les inputs
-        document.querySelector('button[onclick="App.validerQuiz()"]').disabled = true;
+        const submitBtn = document.querySelector(`button[onclick="App.validerQuiz('${exerciceId}')"]`) || 
+                         document.querySelector('button[onclick="App.validerQuiz()"]');
+        if (submitBtn) submitBtn.disabled = true;
         allInputs.forEach(input => input.disabled = true);
         
         console.log(`Quiz soumis: ${correctAnswers}/${totalQuestions}`);
+        
+        // 🔧 DEBUG: Afficher l'état AVANT
+        const chapitre = CHAPITRES.find(ch => ch.id === window.currentChapitreId);
+        const etape = chapitre?.etapes.find(e => e.id === window.currentStepId);
+        const etapeIndex = chapitre?.etapes.findIndex(e => e.id === window.currentStepId);
+        const stateBefore = StorageManager.getEtapeState(window.currentChapitreId, etapeIndex);
+        console.log(`🔍 AVANT validation - État étape: ${stateBefore?.status || 'undefined'}`);
         
         // Marquer l'étape comme complétée si au moins 50% sont correctes
         if (correctAnswers >= Math.ceil(totalQuestions / 2)) {
@@ -4083,6 +4910,14 @@ ${content.summary}
                 const result = StorageManager.addPointsToStep(window.currentStepId, pointsEarned, maxPoints);
                 App.updateHeader();
                 console.log(`✅ ${result.message} (${result.totalForStep}/${result.maxPoints} points)`);
+                
+                // 🔧 FIX: Activer le bouton "Étape suivante"
+                App.activerBoutonEtapeSuivante();
+                
+                // 🔧 DEBUG: Afficher l'état APRÈS
+                const stateAfter = StorageManager.getEtapeState(window.currentChapitreId, etapeIndex);
+                console.log(`✅ APRÈS validation - État étape: ${stateAfter?.status || 'undefined'}`);
+                console.log(`✅ ÉTAPE ${window.currentStepId} COMPLÉTÉE avec ${correctAnswers}/${totalQuestions} bonnes réponses`);
 
             }
             
@@ -4253,7 +5088,7 @@ ${content.summary}
 
         // Validation
         if (!nom || !prenom || !matricule) {
-            alert('⚠️ Veuillez remplir tous les champs');
+            console.warn('⚠️ Veuillez remplir tous les champs');
             return;
         }
 
@@ -4295,6 +5130,11 @@ ${content.summary}
     afficherChapitreContenu(chapitreId) {
         const chapitre = CHAPITRES.find(ch => ch.id === chapitreId);
         if (!chapitre) return;
+        
+        // 🔄 Recalculer la progression au moment de l'affichage
+        const progress = this.calculateChapterProgress(chapitreId);
+        chapitre.progression = progress;
+        console.log(`📊 Affichage du chapitre ${chapitreId}: ${progress}% complété`);
         
         // ✅ PASSER LE CHAPITRE À generatePathSVG POUR AJOUTER LES OBJECTIFS
         const svg = generatePathSVG(chapitre.etapes, chapitre);
@@ -4440,165 +5280,288 @@ ${content.summary}
     // ═══════════════════════════════════════════════════════════
     
     renderAccueil() {
-        // Calculer progression globale
-        const totalEtapes = CHAPITRES.reduce((sum, ch) => sum + ch.etapes.length, 0);
-        const completedEtapes = CHAPITRES.reduce((sum, ch) => sum + ch.etapes.filter(e => e.completed).length, 0);
-        const progressionGlobale = Math.round((completedEtapes / totalEtapes) * 100);
-        
-        // Trouver le dernier chapitre actif pour bouton "Continuer"
-        const chapitreActif = CHAPITRES.find(ch => {
-            const hasCompleted = ch.etapes.some(e => e.completed);
-            const hasIncomplete = ch.etapes.some(e => !e.completed);
-            return hasCompleted && hasIncomplete;
-        }) || CHAPITRES.find(ch => !ch.etapes.every(e => e.completed));
-        
+        // Affichage des 4 niveaux (N1, N2, N3, N4)
+        const niveaux = [
+            { 
+                id: 'N1', 
+                titre: 'Niveau 1: Les Fondamentaux', 
+                description: 'Découvrez les bases de la douane et du dédouanement. Concepts essentiels pour votre formation.' 
+            },
+            { 
+                id: 'N2', 
+                titre: 'Niveau 2: Procédures Avancées', 
+                description: 'Maîtrisez les procédures douanières avancées. Prérequis: Niveau 1 complété.' 
+            },
+            { 
+                id: 'N3', 
+                titre: 'Niveau 3: Cas Complexes', 
+                description: 'Résolvez des cas complexes et des situations réelles. Prérequis: Niveau 2 complété.' 
+            },
+            { 
+                id: 'N4', 
+                titre: 'Niveau 4: Certification', 
+                description: 'Test final et certification. Prérequis: Niveau 3 complété.' 
+            }
+        ];
+
         let html = `
             <div class="page active">
-                <!-- SECTION NIVEAUX (chargée dynamiquement) -->
-                <div id="niveaux-container-accueil" class="niveaux-section-accueil">
-                    <div style="text-align: center; padding: 40px 20px;">
-                        <p>⏳ Chargement des niveaux...</p>
-                    </div>
-                </div>
-
-            <div class="page active">
                 <!-- HEADER ACCUEIL -->
-                <div class="accueil-header">
+                <div class="accueil-header" style="margin-bottom: 40px;">
                     <div class="accueil-welcome">
                         <h1>Bienvenue sur la plateforme!</h1>
                         <p class="accueil-subtitle">Formation continue Douane - Et si on jouait? 🎓</p>
                     </div>
-                    
-                    <!-- PROGRESSION GLOBALE -->
-                    <div class="accueil-progress-section">
-                        <h3>Votre progression globale</h3>
-                        <div class="progress-bar progress-large">
-                            <div class="progress-fill" style="width: ${progressionGlobale}%;"></div>
-                        </div>
-                        <div class="progress-stats">
-                            <span>${completedEtapes}/${totalEtapes} étapes complétées</span>
-                            <span class="progress-percent">${progressionGlobale}%</span>
-                        </div>
-                    </div>
-                    
-                    <!-- BOUTON CONTINUER -->
-                    ${chapitreActif ? `
-                    <div class="accueil-action">
-                        <button class="btn btn--primary btn--large" onclick="App.afficherChapitre('${chapitreActif.id}')">
-                            ▶ Continuer: ${chapitreActif.titre}
-                        </button>
-                        <p class="accueil-action-subtitle">Reprenez là où vous vous étiez arrêté</p>
-                    </div>
-                    ` : `
-                    <div class="accueil-action">
-                        <button class="btn btn--primary btn--large" onclick="App.afficherChapitre('${CHAPITRES[0].id}')">
-                            ▶ Commencer la formation
-                        </button>
-                        <p class="accueil-action-subtitle">Démarrez votre première étape</p>
-                    </div>
-                    `}
                 </div>
-                
-                <!-- CHAPITRES EN COURS -->
+
+                <!-- GRILLE DES NIVEAUX -->
                 <div class="accueil-content">
-                    <h2>Mes Chapitres</h2>
-                    <div class="chapitres-grid accueil-chapitres">
+                    <h2 style="margin-bottom: 30px;">Parcours de Formation</h2>
+                    <div class="niveaux-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px; margin-bottom: 40px;">
         `;
-        
-        // Boucle sur tous les chapitres
-        CHAPITRES.forEach(chapitre => {
-            const completed = chapitre.etapes.filter(e => e.completed).length;
-            const total = chapitre.etapes.length;
-            const percent = Math.round((completed / total) * 100);
-            
-            // Déterminer le statut
-            let statut = 'verrouille';
-            let statutIcon = '🔒';
-            let statutColor = '#95A5A6';
-            
-            if (percent === 100) {
-                statut = 'complete';
-                statutIcon = '✅';
-                statutColor = '#2ECC71';
-            } else if (completed > 0) {
-                statut = 'en_cours';
-                statutIcon = '⚡';
-                statutColor = '#F39C12';
-            }
-            
+
+        niveaux.forEach((niveau, index) => {
+            const isUnlocked = App.isNiveauUnlocked(niveau.id);
+            const completion = App.calculateNiveauCompletion(niveau.id);
+            const circumference = 2 * Math.PI * 45; // radius = 45
+            const strokeDashoffset = circumference - (completion / 100) * circumference;
+
+            const opacityClass = isUnlocked ? 'opacity-100' : 'opacity-60';
+            const cursorStyle = isUnlocked ? 'cursor: pointer;' : 'cursor: not-allowed;';
+            const buttonDisabled = isUnlocked ? '' : 'disabled';
+            const buttonClass = isUnlocked ? 'btn--primary' : 'btn--secondary';
+
             html += `
-                <div class="chapitre-card-accueil" 
-                     style="border-left: 5px solid ${chapitre.couleur};"
-                     onclick="App.afficherChapitre('${chapitre.id}')"
-                     data-chapitre-id="${chapitre.id}">
-                    <div class="chapitre-card-header">
-                        <div class="chapitre-card-title">
-                            <h3>${chapitre.emoji} ${chapitre.titre}</h3>
-                            <span class="chapitre-status" style="background: ${statutColor}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; margin-left: 8px;">
-                                ${statutIcon} ${statut === 'complete' ? 'Complété' : statut === 'en_cours' ? 'En cours' : 'Verrouillé'}
-                            </span>
+                <div class="niveau-card" style="
+                    background: white;
+                    border-radius: 12px;
+                    padding: 25px;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                    transition: all 0.3s ease;
+                    ${cursorStyle}
+                    opacity: ${isUnlocked ? '1' : '0.6'};
+                    ${isUnlocked ? 'border-top: 4px solid #667eea;' : 'border-top: 4px solid #ccc;'}
+                ">
+                    <!-- Titre et description -->
+                    <div style="margin-bottom: 20px;">
+                        <h3 style="margin: 0 0 8px 0; color: #333; font-size: 18px;">${niveau.titre}</h3>
+                        <p style="margin: 0; color: #666; font-size: 14px; line-height: 1.5;">${niveau.description}</p>
+                    </div>
+
+                    <!-- Progress Ring SVG -->
+                    <div style="display: flex; justify-content: center; margin: 25px 0;">
+                        <svg width="120" height="120" style="transform: rotate(-90deg);">
+                            <!-- Cercle de fond -->
+                            <circle cx="60" cy="60" r="45" fill="none" stroke="#e0e0e0" stroke-width="8"/>
+                            <!-- Cercle de progression -->
+                            <circle 
+                                cx="60" cy="60" r="45" 
+                                fill="none" 
+                                stroke="${isUnlocked ? '#667eea' : '#999'}" 
+                                stroke-width="8"
+                                stroke-dasharray="${circumference}"
+                                stroke-dashoffset="${strokeDashoffset}"
+                                stroke-linecap="round"
+                                style="transition: stroke-dashoffset 0.5s ease;"
+                            />
+                        </svg>
+                        <div style="position: absolute; display: flex; align-items: center; justify-content: center; width: 120px; height: 120px;">
+                            <span style="font-size: 24px; font-weight: bold; color: ${isUnlocked ? '#667eea' : '#999'};">${completion}%</span>
                         </div>
                     </div>
-                    
-                    <p class="chapitre-card-description">${chapitre.description}</p>
-                    
-                    <div class="progress-bar progress-small">
-                        <div class="progress-fill" style="width: ${percent}%; background-color: ${chapitre.couleur};"></div>
+
+                    <!-- Stats -->
+                    <div style="text-align: center; margin-bottom: 20px; padding: 10px 0; border-top: 1px solid #eee; border-bottom: 1px solid #eee;">
+                        <p style="margin: 0; font-size: 13px; color: #999;">${isUnlocked ? '✅ Déverrouillé' : '🔒 Verrouillé'}</p>
                     </div>
-                    <div class="progress-text-small">${percent}% (${completed}/${total})</div>
+
+                    <!-- Bouton -->
+                    <button 
+                        class="btn ${buttonClass}" 
+                        onclick="${isUnlocked ? `App.afficherNiveau('${niveau.id}')` : 'return false;'}"
+                        ${buttonDisabled}
+                        style="width: 100%; padding: 12px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; transition: all 0.3s ease; ${buttonDisabled ? 'opacity: 0.5; cursor: not-allowed;' : ''}"
+                    >
+                        ${isUnlocked ? '▶ Continuer' : '🔒 Verrouillé'}
+                    </button>
                 </div>
             `;
         });
-        
+
         html += `
                     </div>
-                    
+
                     <!-- STATS RAPIDES -->
-                    <div class="accueil-stats">
-                        <div class="stat-card">
-                            <div class="stat-icon">⭐</div>
-                            <div class="stat-content">
-                                <div class="stat-value">${StorageManager.getUser().totalPoints}</div>
-                                <div class="stat-label">Points gagnés</div>
-                            </div>
+                    <div class="accueil-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 40px;">
+                        <div class="stat-card" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); text-align: center;">
+                            <div class="stat-icon" style="font-size: 32px; margin-bottom: 10px;">⭐</div>
+                            <div class="stat-value" style="font-size: 24px; font-weight: bold; color: #667eea;">${StorageManager.getUser().totalPoints}</div>
+                            <div class="stat-label" style="font-size: 13px; color: #999; margin-top: 5px;">Points gagnés</div>
                         </div>
-                        <div class="stat-card">
-                            <div class="stat-icon">🏆</div>
-                            <div class="stat-content">
-                                <div class="stat-value">${CHAPITRES.filter(ch => ch.etapes.every(e => e.completed)).length}</div>
-                                <div class="stat-label">Chapitres maîtrisés</div>
-                            </div>
+                        <div class="stat-card" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); text-align: center;">
+                            <div class="stat-icon" style="font-size: 32px; margin-bottom: 10px;">🏆</div>
+                            <div class="stat-value" style="font-size: 24px; font-weight: bold; color: #667eea;">${niveaux.filter(n => App.isNiveauUnlocked(n.id)).length}</div>
+                            <div class="stat-label" style="font-size: 13px; color: #999; margin-top: 5px;">Niveaux déverrouillés</div>
                         </div>
-                        <div class="stat-card">
-                            <div class="stat-icon">📚</div>
-                            <div class="stat-content">
-                                <div class="stat-value">${CHAPITRES.length}</div>
-                                <div class="stat-label">Chapitres total</div>
-                            </div>
+                        <div class="stat-card" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); text-align: center;">
+                            <div class="stat-icon" style="font-size: 32px; margin-bottom: 10px;">📚</div>
+                            <div class="stat-value" style="font-size: 24px; font-weight: bold; color: #667eea;">${niveaux.length}</div>
+                            <div class="stat-label" style="font-size: 13px; color: #999; margin-top: 5px;">Niveaux total</div>
                         </div>
                     </div>
-                    
-                    <!-- À PROPOS -->
-                    <section id="about" style="margin-top: 40px; padding: 20px; background: #f0f0f0; border-radius: 8px;">
-                        <h2>📋 À propos</h2>
-                        <p><strong>Version:</strong> 2.1 (Décembre 2025)</p>
-                        <p><strong>Plateforme:</strong> GitHub Pages</p>
-                        <p><strong>Durée de formation:</strong> 15-20 heures</p>
-                        <p><strong>Documentation:</strong></p>
-                        <ul style="margin: 10px 0 0 20px;">
-                            <li><a href="https://github.com/patrickcarreira88-svg/la-douane-en-s-amusant" target="_blank" style="color: #0066cc; text-decoration: none;">📍 Code source (GitHub)</a></li>
-                            <li><a href="docs/GUIDE_UTILISATEUR.md" target="_blank" style="color: #0066cc; text-decoration: none;">📖 Guide utilisateur</a></li>
-                            <li><a href="docs/GUIDE_AUTEUR.md" target="_blank" style="color: #0066cc; text-decoration: none;">✍️ Guide auteur</a></li>
-                            <li><a href="docs/GUIDE_ADMIN.md" target="_blank" style="color: #0066cc; text-decoration: none;">🔧 Guide admin</a></li>
-                        </ul>
-                    </section>
                 </div>
             </div>
         `;
         
         return html;
     },
-    
+
+    /**
+     * Vérifie si un niveau est déverrouillé
+     * N1 toujours déverrouillé
+     * N2+ si niveau précédent = 100%
+     */
+    isNiveauUnlocked(niveauId) {
+        if (niveauId === 'N1') return true;
+        
+        const levelMap = { 'N2': 'N1', 'N3': 'N2', 'N4': 'N3' };
+        const previousNiveau = levelMap[niveauId];
+        
+        if (!previousNiveau) return false;
+        
+        const previousCompletion = this.calculateNiveauCompletion(previousNiveau);
+        const isUnlocked = previousCompletion === 100;
+        
+        console.log(`🔓 ${niveauId} ${isUnlocked ? 'déverrouillé' : 'verrouillé'} (${previousNiveau}: ${previousCompletion}%)`);
+        return isUnlocked;
+    },
+
+    /**
+     * Calcule la progression d'un niveau
+     * Basé sur les étapes complétées du niveau
+     */
+    calculateNiveauCompletion(niveauId) {
+        try {
+            // Obtenir les données du niveau depuis le fichier JSON
+            const userData = StorageManager.getUser();
+            if (!userData || !userData.niveaux || !userData.niveaux[niveauId]) {
+                console.log(`📊 ${niveauId}: Aucune donnée utilisateur, completion = 0%`);
+                return 0;
+            }
+
+            const niveauData = userData.niveaux[niveauId];
+            const stepsCompleted = niveauData.stepsCompleted ? Object.keys(niveauData.stepsCompleted).filter(k => niveauData.stepsCompleted[k]).length : 0;
+            const totalSteps = niveauData.totalSteps || 1;
+
+            const completion = totalSteps > 0 ? Math.round((stepsCompleted / totalSteps) * 100) : 0;
+            console.log(`📊 ${niveauId}: ${completion}% (${stepsCompleted}/${totalSteps} étapes)`);
+            return completion;
+        } catch (error) {
+            console.error(`❌ Erreur calculateNiveauCompletion(${niveauId}):`, error);
+            return 0;
+        }
+    },
+
+    /**
+     * Affiche les chapitres d'un niveau
+     * Avec vérification de déblocage
+     */
+    async afficherNiveau(niveauId) {
+        // Vérifier déblocage
+        if (!this.isNiveauUnlocked(niveauId)) {
+            alert(`🔒 Niveau ${niveauId} verrouillé!\nComplétez le niveau précédent à 100% pour débloquer.`);
+            return;
+        }
+
+        // Charger les chapitres du niveau
+        try {
+            CHAPITRES = await loadChapitres(niveauId);
+            
+            if (!CHAPITRES || CHAPITRES.length === 0) {
+                alert(`Aucun chapitre trouvé pour le niveau ${niveauId}`);
+                return;
+            }
+
+            // Générer HTML des chapitres
+            let html = `
+                <div class="page active">
+                    <div class="page-title" style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <span>📚</span>
+                            <h2>Chapitres - ${niveauId}</h2>
+                        </div>
+                        <button class="btn btn--secondary" onclick="App.afficherAccueil()">◀ Retour</button>
+                    </div>
+
+                    <div class="chapitres-list">
+            `;
+
+            // Ajouter chaque chapitre
+            CHAPITRES.forEach(chapitre => {
+                const completed = chapitre.etapes.filter(e => e.completed).length;
+                const total = chapitre.etapes.length;
+                const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+                html += `
+                    <div class="chapitre-item" onclick="App.afficherChapitre('${chapitre.id}')" style="cursor: pointer; padding: 15px; margin: 10px 0; background: #f9f9f9; border-radius: 8px; border-left: 4px solid ${chapitre.couleur || '#667eea'};">
+                        <h3>${chapitre.emoji || '📖'} ${chapitre.titre}</h3>
+                        <p>${chapitre.description}</p>
+                        <div class="progress-bar" style="margin-top: 10px;">
+                            <div class="progress-fill" style="width: ${percent}%; background-color: ${chapitre.couleur || '#667eea'};"></div>
+                        </div>
+                        <span style="font-size: 12px; color: #999;">${percent}% (${completed}/${total})</span>
+                    </div>
+                `;
+            });
+
+            html += `
+                    </div>
+                </div>
+            `;
+
+            // Mettre à jour le DOM
+            const appContent = document.getElementById('app-content');
+            if (appContent) {
+                appContent.innerHTML = html;
+            }
+
+            console.log(`📚 Affichage ${CHAPITRES.length} chapitres du niveau ${niveauId}`);
+        } catch (error) {
+            console.error(`❌ Erreur afficherNiveau(${niveauId}):`, error);
+            alert(`Erreur lors du chargement du niveau ${niveauId}`);
+        }
+    },
+
+    /**
+     * Affiche la page d'accueil
+     */
+    afficherAccueil() {
+        this.loadPage('accueil');
+    },
+
+    /**
+     * Retourne SEULEMENT les chapitres qui ont une progression > 0%
+     * Filtre CHAPITRES basé sur StorageManager.getChaptersProgress()
+     * @returns {Array} Chapitres commencés
+     */
+    getChapitrresCommences() {
+        if (!CHAPITRES || CHAPITRES.length === 0) {
+            return [];
+        }
+
+        const chaptersProgress = StorageManager.getChaptersProgress();
+        
+        // Filtrer les chapitres qui ont au moins 1% de progression
+        const commences = CHAPITRES.filter(chapitre => {
+            const progress = chaptersProgress[chapitre.id];
+            // Un chapitre est "commencé" s'il a completion > 0
+            return progress && progress.completion && progress.completion > 0;
+        });
+
+        console.log(`📚 ${commences.length}/${CHAPITRES.length} chapitres commencés`, commences.map(c => `${c.id}:${chaptersProgress[c.id]?.completion || 0}%`).join(', '));
+        return commences;
+    },
+
     renderChapitres() {
         if (!CHAPITRES || CHAPITRES.length === 0) {
             return `
@@ -4608,6 +5571,30 @@ ${content.summary}
                         <h2>Mes Chapitres</h2>
                     </div>
                     <div class="loading">Chargement des chapitres...</div>
+                </div>
+            `;
+        }
+
+        // Récupérer SEULEMENT les chapitres commencés (progression > 0%)
+        const chapitresCommences = this.getChapitrresCommences();
+
+        // SI aucun chapitre n'a de progression
+        if (chapitresCommences.length === 0) {
+            return `
+                <div class="page active">
+                    <div class="page-title">
+                        <span>📚</span>
+                        <h2>Mes Chapitres</h2>
+                    </div>
+                    
+                    <div class="container">
+                        <div class="empty-state">
+                            <div class="empty-icon">🚀</div>
+                            <h3>Aucun chapitre commencé</h3>
+                            <p>Allez à l'accueil pour débuter votre apprentissage et sélectionner un niveau.</p>
+                            <button class="btn btn--primary" onclick="App.afficherAccueil()">◀ Aller à l'accueil</button>
+                        </div>
+                    </div>
                 </div>
             `;
         }
@@ -4622,12 +5609,16 @@ ${content.summary}
                 <div class="container">
                     <div class="chapitres-list">
         `;
+
+        const chaptersProgress = StorageManager.getChaptersProgress();
         
-        // Afficher tous les chapitres
-        CHAPITRES.forEach(chapitre => {
-            const completed = chapitre.etapes.filter(e => e.completed).length;
+        // Afficher SEULEMENT les chapitres commencés
+        chapitresCommences.forEach(chapitre => {
+            const progress = chaptersProgress[chapitre.id];
+            const completion = progress && progress.completion ? progress.completion : 0;
+            const stepsCompleted = progress && progress.stepsCompleted ? progress.stepsCompleted.length : 0;
             const total = chapitre.etapes.length;
-            const percent = Math.round((completed / total) * 100);
+            const percent = total > 0 ? Math.round(completion) : 0;
             
             html += `
                 <div class="chapitre-card" onclick="App.afficherChapitre('${chapitre.id}')" data-chapitre-id="${chapitre.id}">
@@ -4639,7 +5630,7 @@ ${content.summary}
                         <div class="progress-bar">
                             <div class="progress-fill" style="width: ${percent}%; background-color: ${chapitre.couleur};"></div>
                         </div>
-                        <span class="progress-text">${percent}% (${completed}/${total} étapes)</span>
+                        <span class="progress-text">${percent}% (${stepsCompleted}/${total} étapes)</span>
                     </div>
                 </div>
             `;
@@ -5079,7 +6070,7 @@ ${content.summary}
     },
     
     supprimerJournalEntree(index) {
-        if (!confirm('Êtes-vous sûr de vouloir supprimer cette entrée?')) return;
+        console.log('🗑️ Suppression entrée journal à l\'index:', index);
         
         const journal = JSON.parse(localStorage.getItem('journal_apprentissage') || '[]');
         journal.splice(index, 1);
@@ -5168,9 +6159,7 @@ ${content.summary}
                     }
                     
                     // Confirmation
-                    if (!confirm('Êtes-vous sûr? Cela remplacera TOUTES vos données actuelles.')) {
-                        return;
-                    }
+                    console.warn('📥 Import données - Remplacement de TOUTES les données actuelles');
                     
                     // Restaurer données
                     localStorage.setItem('user_douanes_formation', JSON.stringify(sauvegarde));
@@ -5193,12 +6182,7 @@ ${content.summary}
     },
     
     reinitialiserDonnees() {
-        if (!confirm('⚠️ ATTENTION: Cette action est IRRÉVERSIBLE. Tous vos données seront supprimées!')) {
-            return;
-        }
-        if (!confirm('Êtes-vous vraiment sûr?')) {
-            return;
-        }
+        console.error('🔥 SUPPRESSION COMPLÈTE: Toutes les données seront supprimées!');
         
         // Supprimer toutes les clés localStorage
         localStorage.clear();
@@ -5218,8 +6202,46 @@ ${content.summary}
 // ═══════════════════════════════════════════════════════════════
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // FIX: Handle "null" STRING in localStorage
+    const douanelmsv2Raw = localStorage.getItem('douanelmsv2');
+    if (douanelmsv2Raw === 'null') {
+        console.warn('⚠️ Found corrupted "null" STRING');
+        const validData = {
+            user: {
+                id: 'user_' + Date.now(),
+                name: 'Apprenant',
+                totalPoints: 0,
+                level: 1,
+                badges: []
+            },
+            stepsPoints: {},
+            chaptersProgress: {},
+            lastUpdated: new Date().toISOString()
+        };
+        localStorage.setItem('douanelmsv2', JSON.stringify(validData));
+        console.log('✅ localStorage fixed');
+    }
+    
     // Initialiser le StorageManager
     StorageManager.init();
+    
+    // 🔍 Restaurer les données du localStorage avec validation
+    const savedData = localStorage.getItem('douanelmsv2');
+    if (savedData && savedData !== 'null') {
+        try {
+            const data = JSON.parse(savedData);
+            console.log('✅ localStorage "douanelmsv2" restauré avec succès');
+            console.log('📦 Données chargées:', {
+                user: data.user,
+                chaptersProgress: Object.keys(data.chaptersProgress || {}).length + ' chapitres',
+                stepsPoints: Object.keys(data.stepsPoints || {}).length + ' étapes'
+            });
+        } catch (e) {
+            console.error('❌ localStorage corromptu - Réinitialisation:', e);
+            localStorage.removeItem('douanelmsv2');
+            StorageManager.setDefault();
+        }
+    }
     
     // Vérifier et mettre à jour les jours consécutifs
     const user = StorageManager.getUser();
@@ -5245,6 +6267,41 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Mettre à jour alias
     window.CHAPTERS = CHAPITRES;
     console.log('✅ CHAPITRES et CHAPTERS alias initialisés');
+    
+    // 🌉 PRÉ-CHARGER LES DONNÉES POUR LES BRIDGE FUNCTIONS
+    try {
+        const response = await fetch('data/chapitres-N1N4.json');
+        if (response.ok) {
+            const data = await response.json();
+            window.allNiveaux = {};
+            data.niveaux.forEach(niveau => {
+                window.allNiveaux[niveau.id] = niveau.chapitres || [];
+            });
+            window.niveauxData = data.niveaux;
+            console.log('🌉 Bridge functions data pré-chargées:', Object.keys(window.allNiveaux));
+            console.log('🌉 window.allNiveaux:', window.allNiveaux);
+            console.log('🌉 window.niveauxData:', window.niveauxData);
+        } else {
+            console.warn('⚠️ Erreur pré-chargement: response.ok =', response.ok, 'status =', response.status);
+        }
+    } catch (error) {
+        console.warn('⚠️ Erreur pré-chargement bridge data:', error);
+    }
+    
+    // 🔧 Charger le manifest vidéo pour les vidéos locales
+    try {
+        const videoManifestResponse = await fetch('assets/videos/101ab/video-manifest.json');
+        if (videoManifestResponse.ok) {
+            const manifestData = await videoManifestResponse.json();
+            window.VIDEO_MANIFEST = {};
+            manifestData.videos.forEach(video => {
+                window.VIDEO_MANIFEST[video.id] = video;
+            });
+            console.log('✅ VIDEO_MANIFEST chargé');
+        }
+    } catch (e) {
+        console.warn('⚠️ Impossible de charger video-manifest.json', e);
+    }
     
     // Charger la progression sauvegardée
     const chaptersProgress = StorageManager.getChaptersProgress();
@@ -5430,4 +6487,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     
     App.init();
+    
+    // Initialize Tutoring Module
+    if (typeof TutoringModule !== 'undefined') {
+        TutoringModule.init();
+    }
 });

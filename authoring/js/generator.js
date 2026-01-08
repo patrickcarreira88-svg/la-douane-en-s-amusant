@@ -140,7 +140,7 @@ function copyToClipboard() {
   const jsonText = document.getElementById('jsonText');
   
   if (!jsonText) {
-    alert('❌ Aucun JSON à copier');
+    console.error('❌ Aucun JSON à copier');
     return;
   }
 
