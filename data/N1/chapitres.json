@@ -95,6 +95,15 @@
           "type": "apprentissage",
           "createdAt": "2026-01-11T16:32:59.146Z",
           "exercices": []
+        },
+        {
+          "id": "N1_ch1_step10",
+          "titre": "TEST",
+          "description": "",
+          "ordre": 10,
+          "type": "apprentissage",
+          "createdAt": "2026-01-11T16:34:44.242Z",
+          "exercices": []
         }
       ],
       "badge": {
