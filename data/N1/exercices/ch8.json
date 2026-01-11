@@ -53,9 +53,9 @@
       "titre": "Que Savez vous",
       "points": 10,
       "content": {
-        "statement": "",
+        "statement": "Cette appli est merveilleuse !",
         "correctAnswer": true,
-        "explanation": ""
+        "explanation": "Aucun doute"
       },
       "createdAt": "2026-01-11T20:16:40.761Z"
     }
