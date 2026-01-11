@@ -435,7 +435,17 @@
       "description": "",
       "ordre": 8,
       "createdAt": "2026-01-11T19:33:31.808Z",
-      "etapes": []
+      "etapes": [
+        {
+          "id": "N1_ch8_step01",
+          "titre": "test 2",
+          "description": "kjghf",
+          "ordre": 1,
+          "type": "apprentissage",
+          "createdAt": "2026-01-11T20:54:35.573Z",
+          "exercices": []
+        }
+      ]
     }
   ]
 }
