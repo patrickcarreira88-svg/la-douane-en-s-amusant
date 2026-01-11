@@ -92,9 +92,9 @@
       "titre": "Que Savez vous",
       "points": 10,
       "content": {
-        "statement": "",
+        "statement": "oui ou non",
         "correctAnswer": true,
-        "explanation": ""
+        "explanation": "ok"
       },
       "createdAt": "2026-01-11T20:50:47.437Z"
     }
