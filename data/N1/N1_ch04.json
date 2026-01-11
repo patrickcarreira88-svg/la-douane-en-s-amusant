@@ -6,7 +6,7 @@
     "description": "Chapitre de test",
     "ordre": 4,
     "createdAt": "2026-01-11T11:43:48.962Z",
-    "lastModified": "2026-01-11T11:43:55.171Z"
+    "lastModified": "2026-01-11T11:43:57.891Z"
   },
   "etapes": [
     {
@@ -22,12 +22,12 @@
           "id": "N1_ch04_step01_ex001",
           "etapeId": "N1_ch04_step01",
           "type": "qcm",
-          "titre": "QCM Test 20260111_124348",
-          "points": 10,
+          "titre": "QCM Modifie",
+          "points": 15,
           "content": {
             "correctAnswer": 0,
-            "question": "Quelle est la capitale de la France?",
-            "explanation": "Paris est la capitale de la France",
+            "question": "Quelle est la capitale de la France? (MODIFIE)",
+            "explanation": "Paris est toujours la capitale!",
             "options": [
               {
                 "correct": true,
@@ -40,11 +40,15 @@
               {
                 "correct": false,
                 "label": "Berlin"
+              },
+              {
+                "correct": false,
+                "label": "Madrid"
               }
             ]
           },
           "createdAt": "2026-01-11T11:43:51.823Z",
-          "lastModified": "2026-01-11T11:43:51.823Z"
+          "lastModified": "2026-01-11T11:43:57.891Z"
         },
         {
           "id": "N1_ch04_step01_ex002",
