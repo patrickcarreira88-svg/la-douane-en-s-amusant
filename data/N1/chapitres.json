@@ -434,7 +434,18 @@
       "titre": "TEST",
       "description": "",
       "ordre": 8,
-      "createdAt": "2026-01-11T19:33:31.808Z"
+      "createdAt": "2026-01-11T19:33:31.808Z",
+      "etapes": [
+        {
+          "id": "N1_ch8_step01",
+          "titre": "TEST",
+          "description": "",
+          "ordre": 1,
+          "type": "entrainement",
+          "createdAt": "2026-01-11T19:36:46.252Z",
+          "exercices": []
+        }
+      ]
     }
   ]
 }
