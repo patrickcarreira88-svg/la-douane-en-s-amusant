@@ -71,6 +71,19 @@
         "explanation": "la preuve"
       },
       "createdAt": "2026-01-11T20:29:09.828Z"
+    },
+    {
+      "id": "N1_ch8_step01_ex005",
+      "etapeId": "N1_ch8_step01",
+      "type": "vrai-faux",
+      "titre": "Que Savez vous",
+      "points": 10,
+      "content": {
+        "statement": "",
+        "correctAnswer": true,
+        "explanation": ""
+      },
+      "createdAt": "2026-01-11T20:41:38.270Z"
     }
   ]
 }
