@@ -1,0 +1,53 @@
+{
+  "chapitre": {
+    "id": "N1_ch03",
+    "niveauId": "N1",
+    "titre": "Test Chapitre 20260111_124243",
+    "description": "Chapitre de test",
+    "ordre": 3,
+    "createdAt": "2026-01-11T11:42:43.973Z",
+    "lastModified": "2026-01-11T11:42:43.973Z"
+  },
+  "etapes": [
+    {
+      "id": "N1_ch03_step01",
+      "chapterId": "N1_ch03",
+      "titre": "Diagnostic",
+      "description": "Étape de diagnostic initial",
+      "ordre": 1,
+      "type": "diagnostic",
+      "createdAt": "2026-01-11T11:42:43.973Z",
+      "exercices": []
+    },
+    {
+      "id": "N1_ch03_step02",
+      "chapterId": "N1_ch03",
+      "titre": "Apprentissage",
+      "description": "Étape d'apprentissage et contenus",
+      "ordre": 2,
+      "type": "apprentissage",
+      "createdAt": "2026-01-11T11:42:43.973Z",
+      "exercices": []
+    },
+    {
+      "id": "N1_ch03_step03",
+      "chapterId": "N1_ch03",
+      "titre": "Entraînement",
+      "description": "Étape d'entraînement et pratique",
+      "ordre": 3,
+      "type": "entrainement",
+      "createdAt": "2026-01-11T11:42:43.973Z",
+      "exercices": []
+    },
+    {
+      "id": "N1_ch03_step04",
+      "chapterId": "N1_ch03",
+      "titre": "Évaluation",
+      "description": "Étape d'évaluation et validation",
+      "ordre": 4,
+      "type": "evaluation",
+      "createdAt": "2026-01-11T11:42:43.973Z",
+      "exercices": []
+    }
+  ]
+}
