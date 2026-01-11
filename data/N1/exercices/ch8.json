@@ -97,6 +97,19 @@
         "explanation": "ok"
       },
       "createdAt": "2026-01-11T20:50:47.437Z"
+    },
+    {
+      "id": "N1_ch8_step01_ex007",
+      "etapeId": "N1_ch8_step01",
+      "type": "vrai-faux",
+      "titre": "Que Savez vous",
+      "points": 10,
+      "content": {
+        "statement": "",
+        "correctAnswer": true,
+        "explanation": ""
+      },
+      "createdAt": "2026-01-11T20:54:57.255Z"
     }
   ]
 }
