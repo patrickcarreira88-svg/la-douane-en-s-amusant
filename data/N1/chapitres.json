@@ -104,6 +104,15 @@
           "type": "apprentissage",
           "createdAt": "2026-01-11T16:34:44.242Z",
           "exercices": []
+        },
+        {
+          "id": "N1_ch1_step11",
+          "titre": "TEST1",
+          "description": "",
+          "ordre": 11,
+          "type": "diagnostic",
+          "createdAt": "2026-01-11T17:16:36.521Z",
+          "exercices": []
         }
       ],
       "badge": {
