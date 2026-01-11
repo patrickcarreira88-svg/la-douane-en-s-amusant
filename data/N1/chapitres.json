@@ -427,6 +427,14 @@
       "objectifs": [],
       "etapes": [],
       "createdAt": "2026-01-11T16:05:00.000Z"
+    },
+    {
+      "id": "ch8",
+      "niveauId": "N1",
+      "titre": "TEST",
+      "description": "test",
+      "ordre": 8,
+      "createdAt": "2026-01-11T21:02:55.348Z"
     }
   ]
 }
