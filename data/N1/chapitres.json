@@ -368,19 +368,37 @@
       }
     },
     {
-      "id": "N1_ch06",
-      "niveauId": "N1",
+      "id": "ch6",
+      "numero": 6,
       "titre": "Techniques d'apprentissage",
       "description": "",
-      "ordre": 6,
+      "couleur": "FBBF24",
+      "emoji": "📚",
+      "progression": 0,
+      "objectifs": [],
+      "etapes": [
+        {
+          "id": "N1_ch6_step01",
+          "titre": "Objectifs",
+          "description": "",
+          "ordre": 1,
+          "type": "objectives",
+          "createdAt": "2026-01-11T16:00:54.938Z",
+          "exercices": []
+        }
+      ],
       "createdAt": "2026-01-11T15:52:00.264Z"
     },
     {
-      "id": "N1_ch07",
-      "niveauId": "N1",
+      "id": "ch7",
+      "numero": 7,
       "titre": "Techniques d'apprentissage",
       "description": "",
-      "ordre": 7,
+      "couleur": "FBBF24",
+      "emoji": "📚",
+      "progression": 0,
+      "objectifs": [],
+      "etapes": [],
       "createdAt": "2026-01-11T15:53:44.263Z"
     }
   ]
