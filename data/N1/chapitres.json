@@ -86,6 +86,15 @@
           "type": "objectives",
           "createdAt": "2026-01-11T15:38:07.650Z",
           "exercices": []
+        },
+        {
+          "id": "N1_ch1_step09",
+          "titre": "TEST",
+          "description": "",
+          "ordre": 9,
+          "type": "apprentissage",
+          "createdAt": "2026-01-11T16:32:59.146Z",
+          "exercices": []
         }
       ],
       "badge": {
@@ -233,7 +242,7 @@
     },
     {
       "id": "ch4",
-      "numero": 5,
+      "numero": 4,
       "titre": "Commerce International",
       "description": "Échanges commerciaux et douane",
       "couleur": "93C5FD",
@@ -301,7 +310,7 @@
     },
     {
       "id": "ch5",
-      "numero": 6,
+      "numero": 5,
       "titre": "Douane et Sécurité",
       "description": "Risques, fraude et contrôles",
       "couleur": "86EFAC",
@@ -388,6 +397,18 @@
         }
       ],
       "createdAt": "2026-01-11T15:52:00.264Z"
+    },
+    {
+      "id": "ch7",
+      "numero": 7,
+      "titre": "Perfectionnement Douanier",
+      "description": "Cas pratiques avancés et spécialisations",
+      "couleur": "F87171",
+      "emoji": "🎓",
+      "progression": 0,
+      "objectifs": [],
+      "etapes": [],
+      "createdAt": "2026-01-11T16:05:00.000Z"
     }
   ]
 }
