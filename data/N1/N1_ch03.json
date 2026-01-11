@@ -6,7 +6,7 @@
     "description": "Chapitre de test",
     "ordre": 3,
     "createdAt": "2026-01-11T11:42:43.973Z",
-    "lastModified": "2026-01-11T11:42:46.673Z"
+    "lastModified": "2026-01-11T11:42:49.061Z"
   },
   "etapes": [
     {
@@ -45,6 +45,20 @@
           },
           "createdAt": "2026-01-11T11:42:46.673Z",
           "lastModified": "2026-01-11T11:42:46.673Z"
+        },
+        {
+          "id": "N1_ch03_step01_ex002",
+          "etapeId": "N1_ch03_step01",
+          "type": "vrai-faux",
+          "titre": "VF Test",
+          "points": 5,
+          "content": {
+            "correctAnswer": true,
+            "statement": "Paris est la capitale de la France",
+            "explanation": "Correct!"
+          },
+          "createdAt": "2026-01-11T11:42:49.061Z",
+          "lastModified": "2026-01-11T11:42:49.061Z"
         }
       ]
     },
