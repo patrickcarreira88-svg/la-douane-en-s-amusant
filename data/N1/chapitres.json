@@ -444,6 +444,15 @@
           "type": "entrainement",
           "createdAt": "2026-01-11T19:36:46.252Z",
           "exercices": []
+        },
+        {
+          "id": "N1_ch8_step02",
+          "titre": "test 2",
+          "description": "test 2",
+          "ordre": 2,
+          "type": "apprentissage",
+          "createdAt": "2026-01-11T20:50:27.820Z",
+          "exercices": []
         }
       ]
     }
