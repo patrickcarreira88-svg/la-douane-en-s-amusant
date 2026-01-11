@@ -83,7 +83,7 @@
           "titre": "Objectifs",
           "description": "Les objectifs pédagogiques de la leçon",
           "ordre": 8,
-          "type": "diagnostic",
+          "type": "objectives",
           "createdAt": "2026-01-11T15:38:07.650Z",
           "exercices": []
         }
