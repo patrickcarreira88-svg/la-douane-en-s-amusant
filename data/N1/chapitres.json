@@ -435,17 +435,7 @@
       "description": "",
       "ordre": 8,
       "createdAt": "2026-01-11T19:33:31.808Z",
-      "etapes": [
-        {
-          "id": "N1_ch8_step02",
-          "titre": "test 2",
-          "description": "test 2",
-          "ordre": 2,
-          "type": "apprentissage",
-          "createdAt": "2026-01-11T20:50:27.820Z",
-          "exercices": []
-        }
-      ]
+      "etapes": []
     }
   ]
 }
