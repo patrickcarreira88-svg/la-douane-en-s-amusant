@@ -687,36 +687,14 @@ app.get('/api/etape/:etapeId', (req, res) => {
     try {
         const etapeId = req.params.etapeId;
         
-        // Extraire chapterId: format peut être "ch1_step1" ou "N1_ch1_step1"
-        const match = etapeId.match(/^(?:N\d_)?(ch\d+)_step\d+$/) || etapeId.match(/^(N\d_ch\d+)_step\d+$/);
+        // Extraire chapterId - Format: N1_ch1_step01
+        const match = etapeId.match(/^(N\d)_(ch\d+)_step\d+$/);
         if (!match) {
             return res.status(400).json({ success: false, error: 'Format etapeId invalide' });
         }
         
-        let chapterId, niveauId;
-        if (etapeId.includes('_ch')) {
-            // Format: N1_ch1_step1
-            const parts = etapeId.split('_');
-            niveauId = parts[0];
-            chapterId = parts[0] + '_' + parts[1];
-        } else {
-            // Format: ch1_step1 - besoin de trouver le niveau
-            const chapId = etapeId.split('_')[0];
-            for (const level of ['N1', 'N2', 'N3', 'N4']) {
-                const path1 = path.join(DATA_DIR, level, 'chapitres.json');
-                if (fs.existsSync(path1)) {
-                    const data = JSON.parse(fs.readFileSync(path1, 'utf8'));
-                    if (data.chapitres.find(c => c.id === chapId)) {
-                        niveauId = level;
-                        chapterId = chapId;
-                        break;
-                    }
-                }
-            }
-            if (!niveauId) {
-                return res.status(404).json({ success: false, error: 'Chapitre non trouvé' });
-            }
-        }
+        const niveauId = match[1];    // 'N1'
+        const chapterId = match[2];   // 'ch1' (JSON stores as 'ch1' not 'N1_ch1')
         
         const chapitresPath = path.join(DATA_DIR, niveauId, 'chapitres.json');
         if (!fs.existsSync(chapitresPath)) {
@@ -752,35 +730,16 @@ app.put('/api/etape/:etapeId', (req, res) => {
         const etapeId = req.params.etapeId;
         const { titre, description, type } = req.body;
         
-        // Extraire chapterId
+        // Extraire chapterId - Format: N1_ch1_step01
         let chapterId, niveauId;
-        const match1 = etapeId.match(/^(?:N\d_)?(ch\d+)_step\d+$/);
-        const match2 = etapeId.match(/^(N\d_ch\d+)_step\d+$/);
+        const match = etapeId.match(/^(N\d)_(ch\d+)_step\d+$/);
         
-        if (!match1 && !match2) {
+        if (!match) {
             return res.status(400).json({ success: false, error: 'Format etapeId invalide' });
         }
         
-        if (match2) {
-            niveauId = match2[1].split('_')[0];
-            chapterId = match2[1];
-        } else {
-            chapterId = etapeId.split('_step')[0];
-            // Trouver niveau
-            for (const level of ['N1', 'N2', 'N3', 'N4']) {
-                const path1 = path.join(DATA_DIR, level, 'chapitres.json');
-                if (fs.existsSync(path1)) {
-                    const data = JSON.parse(fs.readFileSync(path1, 'utf8'));
-                    if (data.chapitres.find(c => c.id === chapterId)) {
-                        niveauId = level;
-                        break;
-                    }
-                }
-            }
-            if (!niveauId) {
-                return res.status(404).json({ success: false, error: 'Chapitre non trouvé' });
-            }
-        }
+        niveauId = match[1];    // 'N1'
+        chapterId = match[2];   // 'ch1' (JSON stores as 'ch1' not 'N1_ch1')
         
         const chapitresPath = path.join(DATA_DIR, niveauId, 'chapitres.json');
         const chapitresData = JSON.parse(fs.readFileSync(chapitresPath, 'utf8'));
@@ -828,34 +787,16 @@ app.delete('/api/etape/:etapeId', (req, res) => {
     try {
         const etapeId = req.params.etapeId;
         
-        // Extraire chapterId
+        // Extraire chapterId - Format: N1_ch1_step01
         let chapterId, niveauId;
-        const match1 = etapeId.match(/^(?:N\d_)?(ch\d+)_step\d+$/);
-        const match2 = etapeId.match(/^(N\d_ch\d+)_step\d+$/);
+        const match = etapeId.match(/^(N\d)_(ch\d+)_step\d+$/);
         
-        if (!match1 && !match2) {
+        if (!match) {
             return res.status(400).json({ success: false, error: 'Format etapeId invalide' });
         }
         
-        if (match2) {
-            niveauId = match2[1].split('_')[0];
-            chapterId = match2[1];
-        } else {
-            chapterId = etapeId.split('_step')[0];
-            for (const level of ['N1', 'N2', 'N3', 'N4']) {
-                const path1 = path.join(DATA_DIR, level, 'chapitres.json');
-                if (fs.existsSync(path1)) {
-                    const data = JSON.parse(fs.readFileSync(path1, 'utf8'));
-                    if (data.chapitres.find(c => c.id === chapterId)) {
-                        niveauId = level;
-                        break;
-                    }
-                }
-            }
-            if (!niveauId) {
-                return res.status(404).json({ success: false, error: 'Chapitre non trouvé' });
-            }
-        }
+        niveauId = match[1];    // 'N1'
+        chapterId = match[2];   // 'ch1' (JSON stores as 'ch1' not 'N1_ch1')
         
         const chapitresPath = path.join(DATA_DIR, niveauId, 'chapitres.json');
         const chapitresData = JSON.parse(fs.readFileSync(chapitresPath, 'utf8'));
@@ -901,29 +842,16 @@ app.post('/api/etape/:etapeId/reorder', (req, res) => {
             return res.status(400).json({ success: false, error: 'newPosition requis' });
         }
         
-        // Extraire chapterId
+        // Extraire chapterId - Format: N1_ch1_step01
         let chapterId, niveauId;
-        const match2 = etapeId.match(/^(N\d_ch\d+)_step\d+$/);
-        if (match2) {
-            niveauId = match2[1].split('_')[0];
-            chapterId = match2[1];
-        } else {
-            const parts = etapeId.split('_step');
-            chapterId = parts[0];
-            for (const level of ['N1', 'N2', 'N3', 'N4']) {
-                const path1 = path.join(DATA_DIR, level, 'chapitres.json');
-                if (fs.existsSync(path1)) {
-                    const data = JSON.parse(fs.readFileSync(path1, 'utf8'));
-                    if (data.chapitres.find(c => c.id === chapterId)) {
-                        niveauId = level;
-                        break;
-                    }
-                }
-            }
-            if (!niveauId) {
-                return res.status(404).json({ success: false, error: 'Chapitre non trouvé' });
-            }
+        const match = etapeId.match(/^(N\d)_(ch\d+)_step\d+$/);
+        
+        if (!match) {
+            return res.status(400).json({ success: false, error: 'Format etapeId invalide' });
         }
+        
+        niveauId = match[1];    // 'N1'
+        chapterId = match[2];   // 'ch1' (JSON stores as 'ch1' not 'N1_ch1')
         
         const chapitresPath = path.join(DATA_DIR, niveauId, 'chapitres.json');
         const chapitresData = JSON.parse(fs.readFileSync(chapitresPath, 'utf8'));
@@ -985,14 +913,13 @@ app.post('/api/etape/:etapeId/exercice', (req, res) => {
         }
         
         // Extraire chapterId et niveau
-        const match = etapeId.match(/^(N\d_ch\d+)_step\d+$/);
+        const match = etapeId.match(/^(N\d)_(ch\d+)_step\d+$/);
         if (!match) {
             return res.status(400).json({ success: false, error: 'Format etapeId invalide' });
         }
         
-        const chapterId = match[1];
-        const niveauMatch = chapterId.match(/^(N\d)_/);
-        const niveauId = niveauMatch[1];
+        const niveauId = match[1];    // 'N1'
+        const chapterId = match[2];   // 'ch1' (JSON stores as ch1.json, not N1_ch1.json)
         
         // Charger exercices.json pour ce chapitre
         const exercicesPath = path.join(DATA_DIR, niveauId, 'exercices', `${chapterId}.json`);
@@ -1052,14 +979,13 @@ app.post('/api/etape/:etapeId/exercice', (req, res) => {
 app.get('/api/exercice/:exerciceId', (req, res) => {
     try {
         const exerciceId = req.params.exerciceId;
-        const match = exerciceId.match(/^(N\d_ch\d+)_step\d+_ex\d+$/);
+        const match = exerciceId.match(/^(N\d)_(ch\d+)_step\d+_ex\d+$/);
         if (!match) {
             return res.status(400).json({ success: false, error: 'Format exerciceId invalide' });
         }
         
-        const chapterId = match[1];
-        const niveauMatch = chapterId.match(/^(N\d)_/);
-        const niveauId = niveauMatch[1];
+        const niveauId = match[1];   // 'N1'
+        const chapterId = match[2];  // 'ch8' (files are ch8.json, not N1_ch8.json)
         
         const exercicesPath = path.join(DATA_DIR, niveauId, 'exercices', `${chapterId}.json`);
         
@@ -1085,16 +1011,15 @@ app.get('/api/exercice/:exerciceId', (req, res) => {
 app.put('/api/exercice/:exerciceId', (req, res) => {
     try {
         const exerciceId = req.params.exerciceId;
-        const { titre, points, content } = req.body;
+        const { titre, type, points, content } = req.body;
         
-        const match = exerciceId.match(/^(N\d_ch\d+)_step\d+_ex\d+$/);
+        const match = exerciceId.match(/^(N\d)_(ch\d+)_step\d+_ex\d+$/);
         if (!match) {
             return res.status(400).json({ success: false, error: 'Format exerciceId invalide' });
         }
         
-        const chapterId = match[1];
-        const niveauMatch = chapterId.match(/^(N\d)_/);
-        const niveauId = niveauMatch[1];
+        const niveauId = match[1];   // 'N1'
+        const chapterId = match[2];  // 'ch8' (files are ch8.json, not N1_ch8.json)
         
         const exercicesPath = path.join(DATA_DIR, niveauId, 'exercices', `${chapterId}.json`);
         
@@ -1110,6 +1035,7 @@ app.put('/api/exercice/:exerciceId', (req, res) => {
         }
         
         if (titre) exercicesData.exercices[exIndex].titre = titre;
+        if (type) exercicesData.exercices[exIndex].type = type;
         if (points !== undefined) exercicesData.exercices[exIndex].points = points;
         if (content) exercicesData.exercices[exIndex].content = content;
         
@@ -1142,14 +1068,13 @@ app.delete('/api/exercice/:exerciceId', (req, res) => {
     try {
         const exerciceId = req.params.exerciceId;
         
-        const match = exerciceId.match(/^(N\d_ch\d+)_step\d+_ex\d+$/);
+        const match = exerciceId.match(/^(N\d)_(ch\d+)_step\d+_ex\d+$/);
         if (!match) {
             return res.status(400).json({ success: false, error: 'Format exerciceId invalide' });
         }
         
-        const chapterId = match[1];
-        const niveauMatch = chapterId.match(/^(N\d)_/);
-        const niveauId = niveauMatch[1];
+        const niveauId = match[1];   // 'N1'
+        const chapterId = match[2];  // 'ch8' (files are ch8.json, not N1_ch8.json)
         
         const exercicesPath = path.join(DATA_DIR, niveauId, 'exercices', `${chapterId}.json`);
         

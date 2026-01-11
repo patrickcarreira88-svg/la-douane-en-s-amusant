@@ -639,6 +639,9 @@
                                 <button type="button" class="btn btn-danger" onclick="deleteExercice()">
                                     🗑️ Supprimer
                                 </button>
+                                <button type="button" class="btn btn-secondary" onclick="window.location.href='http://localhost:5000'">
+                                    🎓 Aller au LMS
+                                </button>
                             </div>
                         </form>
                     </div>
@@ -1076,7 +1079,8 @@
         }
 
         function displayEtape() {
-            updateBreadcrumb(`📖 ${state.chapitre.titre} > ⚡ ${state.etape.titre}`);
+            const chapTitre = state.chapitre?.titre || 'Chapitre';
+            updateBreadcrumb(`📖 ${chapTitre} > ⚡ ${state.etape.titre}`);
             
             document.getElementById('etape-titre').value = state.etape.titre;
             document.getElementById('etape-type').value = state.etape.type;
@@ -1218,6 +1222,7 @@
                     setTimeout(() => {
                         loadChapitre(state.chapterId);
                         loadEtape(data.etape.id);
+                        showCreateExerciceModal();
                     }, 1000);
                 } else {
                     showAlert('❌ Erreur: ' + data.error, 'error');
@@ -1252,7 +1257,9 @@
         }
 
         function displayExercice() {
-            updateBreadcrumb(`📖 ${state.chapitre.titre} > ⚡ ${state.etape.titre} > ✏️ ${state.exercice.titre}`);
+            const chapTitre = state.chapitre?.titre || 'Chapitre';
+            const etapeTitre = state.etape?.titre || 'Étape';
+            updateBreadcrumb(`📖 ${chapTitre} > ⚡ ${etapeTitre} > ✏️ ${state.exercice.titre}`);
             
             document.getElementById('exercice-titre').value = state.exercice.titre;
             document.getElementById('exercice-type').value = state.exercice.type;
@@ -1504,7 +1511,10 @@
                 
                 if (data.success) {
                     state.exercice = data.exercice;
-                    showAlert('✅ Exercice sauvegardé', 'success');
+                    showAlert('✅ Exercice sauvegardé → Redirection vers LMS...', 'success');
+                    setTimeout(() => {
+                        window.location.href = 'http://localhost:5000';
+                    }, 1500);
                 } else {
                     showAlert('❌ Erreur: ' + data.error, 'error');
                 }
@@ -1576,7 +1586,7 @@
                 return;
             }
             
-            // Pour QCM, initialiser avec structure minimale
+            // Initialiser avec structure minimale selon le type
             let content = {};
             
             if (type === 'qcm') {
@@ -1588,6 +1598,40 @@
                     ],
                     correctAnswer: 0,
                     explanation: ''
+                };
+            } else if (type === 'vrai-faux') {
+                content = {
+                    statement: '',
+                    correctAnswer: true,
+                    explanation: ''
+                };
+            } else if (type === 'flashcards') {
+                content = {
+                    cards: [
+                        { recto: 'Recto 1', verso: 'Verso 1' },
+                        { recto: 'Recto 2', verso: 'Verso 2' }
+                    ]
+                };
+            } else if (type === 'video') {
+                content = {
+                    url: '',
+                    transcript: ''
+                };
+            } else if (type === 'lecture') {
+                content = {
+                    markdown: '# Titre\n\nContenu de la lecture...'
+                };
+            } else if (type === 'dragdrop') {
+                content = {
+                    instruction: 'Glissez les éléments dans le bon ordre',
+                    items: ['Élément 1', 'Élément 2', 'Élément 3']
+                };
+            } else if (type === 'scenario') {
+                content = {
+                    scenario: 'Description du scénario...',
+                    questions: [
+                        { question: 'Question 1?', options: ['A', 'B', 'C'], correct: 0 }
+                    ]
                 };
             }
             
@@ -1603,10 +1647,11 @@
                 if (data.success) {
                     showAlert('✅ Exercice créé avec succès', 'success');
                     closeModal('modal-create-exercice');
-                    setTimeout(() => {
-                        loadEtape(state.etapeId);
-                        loadExercice(data.exercice.id);
-                    }, 1000);
+                    // Attendre que loadEtape termine avant loadExercice
+                    setTimeout(async () => {
+                        await loadEtape(state.etapeId);
+                        await loadExercice(data.exercice.id);
+                    }, 500);
                 } else {
                     showAlert('❌ Erreur: ' + data.error, 'error');
                 }
@@ -1678,6 +1723,11 @@
             if (!state.etapeId) {
                 showAlert('⚠️ Sélectionnez d\'abord une étape', 'info');
             } else {
+                // Réinitialiser le formulaire de création
+                document.getElementById('new-exercice-titre').value = '';
+                document.getElementById('new-exercice-type').value = '';
+                document.getElementById('new-exercice-points').value = '10';
+                
                 showModal('modal-create-exercice');
             }
         }

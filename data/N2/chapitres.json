@@ -16,76 +16,76 @@
       ],
       "etapes": [
         {
-          "id": "101BT_01_diagnostic",
-          "numero": 1,
+          "id": "N2_101BT_step01",
           "titre": "📋 Pré-test",
           "type": "exercise_group",
           "duree": "8 min",
           "points": 50,
-          "exercices": []
+          "exercices": [],
+          "ordre": 1
         },
         {
-          "id": "101BT_02_videos",
-          "numero": 2,
+          "id": "N2_101BT_step02",
           "titre": "🎬 Révision Vidéos",
           "type": "exercise_group",
           "duree": "10 min",
           "points": 75,
-          "exercices": []
+          "exercices": [],
+          "ordre": 2
         },
         {
-          "id": "101BT_03_cas_simples",
-          "numero": 3,
+          "id": "N2_101BT_step03",
           "titre": "📦 Cas Simples",
           "type": "exercise_group",
           "duree": "12 min",
           "points": 75,
-          "exercices": []
+          "exercices": [],
+          "ordre": 3
         },
         {
-          "id": "101BT_04_processus_guide",
-          "numero": 4,
+          "id": "N2_101BT_step04",
           "titre": "⚙️ Cas Guidé",
           "type": "exercise_group",
           "duree": "12 min",
           "points": 100,
-          "exercices": []
+          "exercices": [],
+          "ordre": 4
         },
         {
-          "id": "101BT_05_documents",
-          "numero": 5,
+          "id": "N2_101BT_step05",
           "titre": "📄 Documents",
           "type": "exercise_group",
           "duree": "12 min",
           "points": 75,
-          "exercices": []
+          "exercices": [],
+          "ordre": 5
         },
         {
-          "id": "101BT_06_cas_complexes",
-          "numero": 6,
+          "id": "N2_101BT_step06",
           "titre": "🔴 Cas Complexes",
           "type": "exercise_group",
           "duree": "12 min",
           "points": 100,
-          "exercices": []
+          "exercices": [],
+          "ordre": 6
         },
         {
-          "id": "101BT_07_revision",
-          "numero": 7,
+          "id": "N2_101BT_step07",
           "titre": "🔄 Révision",
           "type": "exercise_group",
           "duree": "10 min",
           "points": 75,
-          "exercices": []
+          "exercices": [],
+          "ordre": 7
         },
         {
-          "id": "101BT_08_portfolio",
-          "numero": 8,
+          "id": "N2_101BT_step08",
           "titre": "🎖️ Portfolio",
           "type": "portfolio_swipe",
           "duree": "5 min",
           "points": 25,
-          "exercices": []
+          "exercices": [],
+          "ordre": 8
         }
       ],
       "badge": {

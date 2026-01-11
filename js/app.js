@@ -3065,6 +3065,17 @@ const App = {
         // 🔴 TOUJOURS lire de StorageManager (source de vérité)
         let state = StorageManager.getEtapeState(chapitreId, stepIndex);
         
+        // ✅ Si state est null, initialiser avec un objet vide
+        if (!state) {
+            state = {
+                visited: false,
+                completed: false,
+                status: 'not_started',
+                score: 0,
+                pointsAwarded: false
+            };
+        }
+        
         // Garder le MEILLEUR score
         if (!state.score || score > state.score) {
             state.score = score;
@@ -4436,12 +4447,15 @@ const App = {
                 return this.renderExerciceVideo(exercice, etape);
             case 'qcm':
                 return this.renderExerciceQCM(exercice);
+            case 'vrai-faux':
             case 'true_false':
                 return this.renderExerciceVraisFaux(exercice);
+            case 'dragdrop':
             case 'drag_drop':
                 return this.renderExerciceDragDrop(exercice);
             case 'matching':
                 return this.renderExerciceMatching(exercice);
+            case 'scenario':
             case 'qcm_scenario':
                 return this.renderExerciceQCMScenario(exercice);
             case 'likert_scale':
@@ -4614,19 +4628,40 @@ const App = {
 
     /**
      * Rendu VRAI/FAUX
+     * Supporte deux formats:
+     * 1. Format multi-items: content.items = [{statement, answer}, ...]
+     * 2. Format single (authoring-tool): content.statement + content.correctAnswer
      */
     renderExerciceVraisFaux(exercice) {
         const vrfId = 'vf_' + Math.random().toString(36).substr(2, 9);
         const content = exercice.content;
         
-        if (!content || !content.items || !Array.isArray(content.items)) {
+        // ✅ SUPPORT FORMAT SINGLE (authoring-tool)
+        // Convertit content.statement en format items pour un rendu uniforme
+        let items = [];
+        
+        if (content && content.items && Array.isArray(content.items)) {
+            // Format multi-items (ancien format)
+            items = content.items;
+        } else if (content && content.statement !== undefined) {
+            // Format single (authoring-tool)
+            items = [{
+                statement: content.statement || '',
+                answer: content.correctAnswer === true || content.correctAnswer === 'true'
+            }];
+        } else {
             return '<p>❌ Format Vrai/Faux invalide</p>';
+        }
+        
+        if (items.length === 0) {
+            return '<p>❌ Aucune affirmation dans cet exercice</p>';
         }
         
         // ✅ Stocker les données pour la validation
         window.VRF_DATA = window.VRF_DATA || {};
         window.VRF_DATA[vrfId] = {
-            items: content.items
+            items: items,
+            explanation: content.explanation || ''
         };
         
         let html = `
@@ -4635,11 +4670,11 @@ const App = {
                 <div style="margin-top: var(--spacing-md);">
         `;
         
-        content.items.forEach((item, index) => {
+        items.forEach((item, index) => {
             const itemId = `${vrfId}_${index}`;
             html += `
                 <div style="margin-bottom: var(--spacing-lg); padding-bottom: var(--spacing-lg); border-bottom: 1px solid var(--color-border);">
-                    <p style="margin-bottom: var(--spacing-md); font-weight: 500;">${index + 1}. ${item.statement}</p>
+                    <p style="margin-bottom: var(--spacing-md); font-weight: 500;">${items.length > 1 ? (index + 1) + '. ' : ''}${item.statement}</p>
                     <div style="display: flex; gap: var(--spacing-md);">
                         <label style="display: flex; align-items: center; padding: var(--spacing-sm) var(--spacing-md); border: 2px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer;">
                             <input type="radio" name="${itemId}" value="true" style="margin-right: var(--spacing-sm);" class="vf-input">
@@ -4656,7 +4691,7 @@ const App = {
         
         html += `
                 </div>
-                <button class="btn btn--primary" style="margin-top: var(--spacing-md); width: 100%;" onclick="App.validerVraisFaux('${vrfId}', ${content.items.length})">Soumettre</button>
+                <button class="btn btn--primary" style="margin-top: var(--spacing-md); width: 100%;" onclick="App.validerVraisFaux('${vrfId}', ${items.length})">Soumettre</button>
                 <div id="feedback_${vrfId}" style="margin-top: var(--spacing-md); display: none;"></div>
             </div>
         `;
@@ -4678,23 +4713,32 @@ const App = {
             return '<p>❌ Format Drag-Drop invalide</p>';
         }
         
+        // Normaliser les items (string simple ou objet)
+        const normalizedItems = content.items.map((item, idx) => {
+            if (typeof item === 'string') {
+                return { id: idx, text: item, correctPosition: idx };
+            }
+            return item;
+        });
+        
         let html = `
             <div id="${dragId}" class="drag-container" style="background: var(--color-surface); padding: var(--spacing-md); border-radius: var(--radius-md);">
                 <h3>🎯 ${exercice.titre || 'Ordonner les éléments'}</h3>
-                <p style="color: var(--color-text-light); margin-bottom: var(--spacing-md);">Drag and drop pour ordonner correctement</p>
+                <p style="color: var(--color-text-light); margin-bottom: var(--spacing-md);">${content.instruction || 'Drag and drop pour ordonner correctement'}</p>
                 <div class="drag-items" style="display: flex; flex-direction: column; gap: var(--spacing-md); min-height: 100px; border: 2px dashed var(--color-border); padding: var(--spacing-md); border-radius: var(--radius-md);">
         `;
         
         // ✅ Stocker les données
         window.DRAG_DATA = window.DRAG_DATA || {};
         window.DRAG_DATA[dragId] = {
-            items: content.items,
-            correctOrder: content.items.map((item, idx) => item.correctPosition !== undefined ? item.correctPosition : idx),
-            currentOrder: content.items.map((_, idx) => idx),
+            items: normalizedItems,
+            correctOrder: normalizedItems.map((item, idx) => item.correctPosition !== undefined ? item.correctPosition : idx),
+            currentOrder: normalizedItems.map((_, idx) => idx),
             exerciseId: exercice.id
         };
         
-        content.items.forEach((item, index) => {
+        normalizedItems.forEach((item, index) => {
+            const itemText = item.text || item.label || item;
             html += `
                 <div class="drag-item" 
                      data-item-id="${item.id || index}"
@@ -4712,7 +4756,7 @@ const App = {
                         transition: all 0.2s ease;
                         border-left: 4px solid transparent;
                      ">
-                    <span style="font-weight: 600;">${item.label || item}</span>
+                    <span style="font-weight: 600;">${itemText}</span>
                 </div>
             `;
         });
@@ -4788,8 +4832,8 @@ const App = {
      * Rendu LECTURE
      */
     renderExerciceLecture(exercice) {
-        // Extraire le texte du format unifié
-        const lectureText = exercice.content?.text || exercice.texte || '';
+        // Extraire le texte du format unifié (supporte markdown et text)
+        const lectureText = exercice.content?.markdown || exercice.content?.text || exercice.texte || '';
         
         return `
             <div style="background: var(--color-surface); padding: var(--spacing-md); border-radius: var(--radius-md);">
@@ -5256,11 +5300,39 @@ ${content.summary}
 
     /**
      * RENDU QCM SCÉNARIO - Afficher scénario + questions
+     * Supporte format ancien (exercice.scenario) et nouveau (content.scenario)
      */
     renderExerciceQCMScenario(exercice) {
-        if (!exercice.scenario || !exercice.questions || exercice.questions.length === 0) {
+        // Supporter les deux formats
+        const scenario = exercice.content?.scenario || exercice.scenario;
+        const questions = exercice.content?.questions || exercice.questions;
+        
+        if (!scenario || !questions || questions.length === 0) {
             return `<p>❌ Scénario ou questions manquants</p>`;
         }
+        
+        // Adapter format simplifié (authoring-tool) vers format complet
+        const normalizedScenario = typeof scenario === 'string' 
+            ? { title: exercice.titre || 'Scénario', description: scenario }
+            : scenario;
+        
+        const normalizedQuestions = questions.map((q, idx) => {
+            // Si format simplifié {question, options: ['A','B','C'], correct: 0}
+            if (Array.isArray(q.options) && typeof q.options[0] === 'string') {
+                return {
+                    id: `q${idx}`,
+                    question: q.question,
+                    points: q.points || 10,
+                    options: q.options.map((opt, optIdx) => ({
+                        id: `opt${optIdx}`,
+                        text: opt,
+                        correct: optIdx === q.correct,
+                        explanation: ''
+                    }))
+                };
+            }
+            return q;
+        });
 
         const containerId = `qcm-scenario-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -5268,15 +5340,15 @@ ${content.summary}
             <div class="qcm-scenario-container" id="${containerId}">
                 
                 <!-- SCÉNARIO -->
-                <div class="scenario-panel" style="background-color: ${exercice.scenario.background_color || '#f5f5f5'};">
+                <div class="scenario-panel" style="background-color: ${normalizedScenario.background_color || '#f5f5f5'};">
                     <div class="scenario-header">
                         <h3 class="scenario-title">
-                            <span class="scenario-icon">${exercice.scenario.icon || '📋'}</span>
-                            ${exercice.scenario.title}
+                            <span class="scenario-icon">${normalizedScenario.icon || '📋'}</span>
+                            ${normalizedScenario.title || exercice.titre}
                         </h3>
                     </div>
                     <div class="scenario-description">
-                        ${exercice.scenario.description.replace(/\n/g, '<br>')}
+                        ${(normalizedScenario.description || '').replace(/\\n/g, '<br>')}
                     </div>
                 </div>
 
@@ -5285,12 +5357,12 @@ ${content.summary}
         `;
 
         // Créer chaque question
-        exercice.questions.forEach((question, qIdx) => {
+        normalizedQuestions.forEach((question, qIdx) => {
             html += `
                 <div class="qcm-scenario-question-card" data-question-id="${question.id}">
                     <div class="question-header">
-                        <h4 class="question-number">Question ${qIdx + 1}/${exercice.questions.length}</h4>
-                        <span class="question-points" data-points="${question.points}">${question.points} pts</span>
+                        <h4 class="question-number">Question ${qIdx + 1}/${normalizedQuestions.length}</h4>
+                        <span class="question-points" data-points="${question.points || 10}">${question.points || 10} pts</span>
                     </div>
 
                     <p class="question-text">${question.question}</p>
@@ -5308,7 +5380,7 @@ ${content.summary}
                                id="${optionId}"
                                value="${option.id}"
                                class="option-input"
-                               data-explanation="${option.explanation}">
+                               data-explanation="${option.explanation || ''}">
                         <span class="option-text">${option.text}</span>
                     </label>
                 `;
@@ -6722,12 +6794,28 @@ ${content.summary}
         
         // Boutons d'action
         if (isAllCorrect) {
+            // Afficher l'explication si présente
+            if (vrfData?.explanation) {
+                html += `
+                    <div style="margin-top: var(--spacing-md); padding: var(--spacing-md); background: #e3f2fd; border-radius: var(--radius-md); border-left: 4px solid #2196f3;">
+                        <strong>💡 Explication:</strong> ${vrfData.explanation}
+                    </div>
+                `;
+            }
             html += `
                 <button class="btn btn--primary" style="margin-top: var(--spacing-md); width: 100%;" onclick="App.allerExerciceSuivant()">
                     ➡️ Exercice Suivant
                 </button>
             `;
         } else {
+            // Afficher l'explication même si incorrect pour aider l'apprenant
+            if (vrfData?.explanation) {
+                html += `
+                    <div style="margin-top: var(--spacing-md); padding: var(--spacing-md); background: #fff3cd; border-radius: var(--radius-md); border-left: 4px solid #ffc107;">
+                        <strong>💡 Indice:</strong> ${vrfData.explanation}
+                    </div>
+                `;
+            }
             html += `
                 <button class="btn btn--secondary" style="margin-top: var(--spacing-md); width: 100%;" onclick="App.recommencerVraisFaux('${vrfId}', ${totalItems})">
                     🔄 Recommencer cet exercice
