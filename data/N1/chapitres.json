@@ -366,6 +366,14 @@
         "emoji": "🛡️",
         "description": "Sécurité douanière maîtrisée!"
       }
+    },
+    {
+      "id": "N1_ch06",
+      "niveauId": "N1",
+      "titre": "Techniques d'apprentissage",
+      "description": "",
+      "ordre": 6,
+      "createdAt": "2026-01-11T15:52:00.264Z"
     }
   ]
 }
