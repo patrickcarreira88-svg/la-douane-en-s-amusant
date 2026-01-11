@@ -16,76 +16,76 @@
       ],
       "etapes": [
         {
-          "id": "ch1_step1",
-          "numero": 1,
+          "id": "N1_ch1_step01",
           "titre": "Histoire de la Douane suisse",
           "type": "exercise_group",
           "duree": "3 min",
           "points": 10,
-          "exercices": []
+          "exercices": [],
+          "ordre": 1
         },
         {
-          "id": "ch1_step2",
-          "numero": 2,
+          "id": "N1_ch1_step02",
           "titre": "Organisation actuelle",
           "type": "exercise_group",
           "duree": "5 min",
           "points": 10,
-          "exercices": []
+          "exercices": [],
+          "ordre": 2
         },
         {
-          "id": "ch1_video1",
-          "numero": 3,
+          "id": "N1_ch1_step03",
           "titre": "Qu'est-ce qu'une marchandise commerciale?",
           "type": "exercise_group",
           "duree": "35 sec",
           "points": 10,
-          "exercices": []
+          "exercices": [],
+          "ordre": 3
         },
         {
-          "id": "ch1_video2",
-          "numero": 4,
+          "id": "N1_ch1_step04",
           "titre": "Les 5 étapes du processus de dédouanement",
           "type": "exercise_group",
           "duree": "55 sec",
           "points": 10,
-          "exercices": []
+          "exercices": [],
+          "ordre": 4
         },
         {
-          "id": "ch1_step3",
-          "numero": 5,
+          "id": "N1_ch1_step05",
           "titre": "Rôles et responsabilités",
           "type": "exercise_group",
           "duree": "7 min",
           "points": 10,
-          "exercices": []
+          "exercices": [],
+          "ordre": 5
         },
         {
-          "id": "ch1_step4",
-          "numero": 6,
+          "id": "N1_ch1_step06",
           "titre": "Les 3 domaines douaniers",
           "type": "exercise_group",
           "duree": "10 min",
           "points": 10,
+          "exercices": [],
+          "ordre": 6
+        },
+        {
+          "id": "N1_ch1_step07",
+          "titre": "Objectifs",
+          "description": "Les objectifs pédagogiques de la leçon",
+          "ordre": 7,
+          "type": "objectives",
+          "createdAt": "2026-01-11T15:38:07.650Z",
           "exercices": []
         },
         {
-          "id": "ch1_step5",
-          "numero": 8,
+          "id": "N1_ch1_step08",
           "titre": "Quiz: Maîtrise les bases?",
           "type": "exercise_group",
           "duree": "10 min",
           "points": 20,
-          "exercices": []
-        },
-        {
-          "id": "ch1_step08",
-          "titre": "Objectifs",
-          "description": "Les objectifs pédagogiques de la leçon",
-          "ordre": 8,
-          "type": "objectives",
-          "createdAt": "2026-01-11T15:38:07.650Z",
-          "exercices": []
+          "exercices": [],
+          "ordre": 8
         },
         {
           "id": "N1_ch1_step09",
@@ -138,49 +138,49 @@
       ],
       "etapes": [
         {
-          "id": "ch2_step1",
-          "numero": 1,
+          "id": "N1_ch2_step01",
           "titre": "Sources du droit douanier",
           "type": "exercise_group",
           "duree": "8 min",
           "points": 10,
-          "exercices": []
+          "exercices": [],
+          "ordre": 1
         },
         {
-          "id": "ch2_step2",
-          "numero": 2,
+          "id": "N1_ch2_step02",
           "titre": "Traités internationaux",
           "type": "exercise_group",
           "duree": "6 min",
           "points": 10,
-          "exercices": []
+          "exercices": [],
+          "ordre": 2
         },
         {
-          "id": "ch2_step3",
-          "numero": 3,
+          "id": "N1_ch2_step03",
           "titre": "Classification tarifaire",
           "type": "exercise_group",
           "duree": "15 min",
           "points": 10,
-          "exercices": []
+          "exercices": [],
+          "ordre": 3
         },
         {
-          "id": "ch2_step4",
-          "numero": 4,
+          "id": "N1_ch2_step04",
           "titre": "Droits et taxes",
           "type": "exercise_group",
           "duree": "5 min",
           "points": 10,
-          "exercices": []
+          "exercices": [],
+          "ordre": 4
         },
         {
-          "id": "ch2_step5",
-          "numero": 5,
+          "id": "N1_ch2_step05",
           "titre": "Quiz Législation",
           "type": "exercise_group",
           "duree": "15 min",
           "points": 20,
-          "exercices": []
+          "exercices": [],
+          "ordre": 5
         }
       ],
       "badge": {
@@ -206,49 +206,49 @@
       ],
       "etapes": [
         {
-          "id": "ch3_step1",
-          "numero": 1,
+          "id": "N1_ch3_step01",
           "titre": "Déclaration en douane",
           "type": "exercise_group",
           "duree": "8 min",
           "points": 10,
-          "exercices": []
+          "exercices": [],
+          "ordre": 1
         },
         {
-          "id": "ch3_step2",
-          "numero": 2,
+          "id": "N1_ch3_step02",
           "titre": "Dédouanement simple",
           "type": "exercise_group",
           "duree": "6 min",
           "points": 10,
-          "exercices": []
+          "exercices": [],
+          "ordre": 2
         },
         {
-          "id": "ch3_step3",
-          "numero": 3,
+          "id": "N1_ch3_step03",
           "titre": "Contrôle et vérification",
           "type": "exercise_group",
           "duree": "10 min",
           "points": 10,
-          "exercices": []
+          "exercices": [],
+          "ordre": 3
         },
         {
-          "id": "ch3_step4",
-          "numero": 4,
+          "id": "N1_ch3_step04",
           "titre": "Recours et contestation",
           "type": "exercise_group",
           "duree": "12 min",
           "points": 10,
-          "exercices": []
+          "exercices": [],
+          "ordre": 4
         },
         {
-          "id": "ch3_step5",
-          "numero": 5,
+          "id": "N1_ch3_step05",
           "titre": "Quiz Procédures",
           "type": "exercise_group",
           "duree": "15 min",
           "points": 20,
-          "exercices": []
+          "exercices": [],
+          "ordre": 5
         }
       ],
       "badge": {
@@ -274,49 +274,49 @@
       ],
       "etapes": [
         {
-          "id": "ch4_step1",
-          "numero": 1,
+          "id": "N1_ch4_step01",
           "titre": "Incoterms et conditions",
           "type": "exercise_group",
           "duree": "10 min",
           "points": 10,
-          "exercices": []
+          "exercices": [],
+          "ordre": 1
         },
         {
-          "id": "ch4_step2",
-          "numero": 2,
+          "id": "N1_ch4_step02",
           "titre": "Documents commerciaux",
           "type": "exercise_group",
           "duree": "12 min",
           "points": 10,
-          "exercices": []
+          "exercices": [],
+          "ordre": 2
         },
         {
-          "id": "ch4_step3",
-          "numero": 3,
+          "id": "N1_ch4_step03",
           "titre": "Évaluation douanière",
           "type": "exercise_group",
           "duree": "10 min",
           "points": 10,
-          "exercices": []
+          "exercices": [],
+          "ordre": 3
         },
         {
-          "id": "ch4_step4",
-          "numero": 4,
+          "id": "N1_ch4_step04",
           "titre": "Origines des marchandises",
           "type": "exercise_group",
           "duree": "7 min",
           "points": 10,
-          "exercices": []
+          "exercices": [],
+          "ordre": 4
         },
         {
-          "id": "ch4_step5",
-          "numero": 5,
+          "id": "N1_ch4_step05",
           "titre": "Quiz Commerce Int.",
           "type": "exercise_group",
           "duree": "15 min",
           "points": 20,
-          "exercices": []
+          "exercices": [],
+          "ordre": 5
         }
       ],
       "badge": {
@@ -342,49 +342,49 @@
       ],
       "etapes": [
         {
-          "id": "ch5_step1",
-          "numero": 1,
+          "id": "N1_ch5_step01",
           "titre": "Analyse de risque",
           "type": "exercise_group",
           "duree": "9 min",
           "points": 10,
-          "exercices": []
+          "exercices": [],
+          "ordre": 1
         },
         {
-          "id": "ch5_step2",
-          "numero": 2,
+          "id": "N1_ch5_step02",
           "titre": "Lutte contre la fraude",
           "type": "exercise_group",
           "duree": "8 min",
           "points": 10,
-          "exercices": []
+          "exercices": [],
+          "ordre": 2
         },
         {
-          "id": "ch5_step3",
-          "numero": 3,
+          "id": "N1_ch5_step03",
           "titre": "Marchandises prohibées",
           "type": "exercise_group",
           "duree": "14 min",
           "points": 10,
-          "exercices": []
+          "exercices": [],
+          "ordre": 3
         },
         {
-          "id": "ch5_step4",
-          "numero": 4,
+          "id": "N1_ch5_step04",
           "titre": "Prévention du blanchiment",
           "type": "exercise_group",
           "duree": "10 min",
           "points": 10,
-          "exercices": []
+          "exercices": [],
+          "ordre": 4
         },
         {
-          "id": "ch5_step5",
-          "numero": 5,
+          "id": "N1_ch5_step05",
           "titre": "Quiz Sécurité",
           "type": "exercise_group",
           "duree": "15 min",
           "points": 20,
-          "exercices": []
+          "exercices": [],
+          "ordre": 5
         }
       ],
       "badge": {
@@ -427,6 +427,14 @@
       "objectifs": [],
       "etapes": [],
       "createdAt": "2026-01-11T16:05:00.000Z"
+    },
+    {
+      "id": "ch8",
+      "niveauId": "N1",
+      "titre": "TEST",
+      "description": "",
+      "ordre": 8,
+      "createdAt": "2026-01-11T19:33:31.808Z"
     }
   ]
 }
