@@ -45,7 +45,9 @@
                   },
                   "points": 10
                 }
-              ]
+              ],
+              "consultation": true,
+              "validation": false
             },
             {
               "id": "ch1_step2",
@@ -87,7 +89,9 @@
                   },
                   "points": 10
                 }
-              ]
+              ],
+              "consultation": false,
+              "validation": true
             },
             {
               "id": "ch1_video1",
@@ -112,7 +116,9 @@
                   },
                   "points": 10
                 }
-              ]
+              ],
+              "consultation": true,
+              "validation": false
             },
             {
               "id": "ch1_video2",
@@ -131,12 +137,15 @@
                   "type": "video",
                   "titre": "[EX 4] Vidéo: Les 5 étapes du processus de dédouanement",
                   "description": "Regardez la vidéo pour comprendre le flux complet du dédouanement à l'importation suisse",
+                  "videoId": "video_101_processus",
                   "content": {
                     "description": "Regardez la vidéo pour comprendre le flux complet du dédouanement à l'importation suisse"
                   },
                   "points": 10
                 }
-              ]
+              ],
+              "consultation": true,
+              "validation": false
             },
             {
               "id": "ch1_step3",
@@ -158,7 +167,9 @@
                   },
                   "points": 10
                 }
-              ]
+              ],
+              "consultation": true,
+              "validation": false
             },
             {
               "id": "ch1_step4",
@@ -196,7 +207,9 @@
                   },
                   "points": 10
                 }
-              ]
+              ],
+              "consultation": true,
+              "validation": false
             },
             {
               "id": "ch1_step5",
@@ -256,7 +269,9 @@
                   },
                   "points": 20
                 }
-              ]
+              ],
+              "consultation": false,
+              "validation": true
             }
           ],
           "badge": {
@@ -301,7 +316,9 @@
               "contenu": "Diagnostic 101.AB",
               "completed": false,
               "points": 50,
-              "exercices": []
+              "exercices": [],
+              "consultation": true,
+              "validation": false
             },
             {
               "id": "101BT_02_videos",
@@ -312,7 +329,9 @@
               "contenu": "Révisions vidéos",
               "completed": false,
               "points": 75,
-              "exercices": []
+              "exercices": [],
+              "consultation": true,
+              "validation": false
             },
             {
               "id": "101BT_03_cas_simples",
@@ -323,7 +342,9 @@
               "contenu": "Cas simples",
               "completed": false,
               "points": 75,
-              "exercices": []
+              "exercices": [],
+              "consultation": true,
+              "validation": false
             },
             {
               "id": "101BT_04_processus_guide",
@@ -334,7 +355,9 @@
               "contenu": "Cas guidé",
               "completed": false,
               "points": 100,
-              "exercices": []
+              "exercices": [],
+              "consultation": true,
+              "validation": false
             },
             {
               "id": "101BT_05_documents",
@@ -345,7 +368,9 @@
               "contenu": "Documents",
               "completed": false,
               "points": 75,
-              "exercices": []
+              "exercices": [],
+              "consultation": true,
+              "validation": false
             },
             {
               "id": "101BT_06_cas_complexes",
@@ -356,7 +381,9 @@
               "contenu": "Cas complexes",
               "completed": false,
               "points": 100,
-              "exercices": []
+              "exercices": [],
+              "consultation": true,
+              "validation": false
             },
             {
               "id": "101BT_07_revision",
@@ -367,7 +394,9 @@
               "contenu": "Révision globale",
               "completed": false,
               "points": 75,
-              "exercices": []
+              "exercices": [],
+              "consultation": true,
+              "validation": false
             },
             {
               "id": "101BT_08_portfolio",
@@ -378,7 +407,9 @@
               "contenu": "Portfolio et ancrage",
               "completed": false,
               "points": 25,
-              "exercices": []
+              "exercices": [],
+              "consultation": true,
+              "validation": false
             }
           ],
           "badge": {
@@ -423,7 +454,9 @@
                   },
                   "points": 10
                 }
-              ]
+              ],
+              "consultation": true,
+              "validation": false
             },
             {
               "id": "ch2_step2",
@@ -453,7 +486,9 @@
                   },
                   "points": 10
                 }
-              ]
+              ],
+              "consultation": false,
+              "validation": true
             },
             {
               "id": "ch2_step3",
@@ -491,7 +526,9 @@
                   },
                   "points": 10
                 }
-              ]
+              ],
+              "consultation": true,
+              "validation": false
             },
             {
               "id": "ch2_step4",
@@ -514,7 +551,9 @@
                   },
                   "points": 10
                 }
-              ]
+              ],
+              "consultation": true,
+              "validation": false
             },
             {
               "id": "ch2_step5",
@@ -574,7 +613,9 @@
                   },
                   "points": 20
                 }
-              ]
+              ],
+              "consultation": false,
+              "validation": true
             }
           ],
           "badge": {
@@ -619,7 +660,9 @@
                   },
                   "points": 10
                 }
-              ]
+              ],
+              "consultation": true,
+              "validation": false
             },
             {
               "id": "ch3_step2",
@@ -642,7 +685,9 @@
                   },
                   "points": 10
                 }
-              ]
+              ],
+              "consultation": true,
+              "validation": false
             },
             {
               "id": "ch3_step3",
@@ -672,7 +717,9 @@
                   },
                   "points": 10
                 }
-              ]
+              ],
+              "consultation": false,
+              "validation": true
             },
             {
               "id": "ch3_step4",
@@ -710,7 +757,9 @@
                   },
                   "points": 10
                 }
-              ]
+              ],
+              "consultation": true,
+              "validation": false
             },
             {
               "id": "ch3_step5",
@@ -770,7 +819,9 @@
                   },
                   "points": 20
                 }
-              ]
+              ],
+              "consultation": false,
+              "validation": true
             }
           ],
           "badge": {
@@ -815,7 +866,9 @@
                   },
                   "points": 10
                 }
-              ]
+              ],
+              "consultation": true,
+              "validation": false
             },
             {
               "id": "ch4_step2",
@@ -853,7 +906,9 @@
                   },
                   "points": 10
                 }
-              ]
+              ],
+              "consultation": true,
+              "validation": false
             },
             {
               "id": "ch4_step3",
@@ -883,7 +938,9 @@
                   },
                   "points": 10
                 }
-              ]
+              ],
+              "consultation": false,
+              "validation": true
             },
             {
               "id": "ch4_step4",
@@ -906,7 +963,9 @@
                   },
                   "points": 10
                 }
-              ]
+              ],
+              "consultation": true,
+              "validation": false
             },
             {
               "id": "ch4_step5",
@@ -966,7 +1025,9 @@
                   },
                   "points": 20
                 }
-              ]
+              ],
+              "consultation": false,
+              "validation": true
             }
           ],
           "badge": {
@@ -1011,7 +1072,9 @@
                   },
                   "points": 10
                 }
-              ]
+              ],
+              "consultation": true,
+              "validation": false
             },
             {
               "id": "ch5_step2",
@@ -1034,7 +1097,9 @@
                   },
                   "points": 10
                 }
-              ]
+              ],
+              "consultation": true,
+              "validation": false
             },
             {
               "id": "ch5_step3",
@@ -1072,7 +1137,9 @@
                   },
                   "points": 10
                 }
-              ]
+              ],
+              "consultation": false,
+              "validation": true
             },
             {
               "id": "ch5_step4",
@@ -1102,7 +1169,9 @@
                   },
                   "points": 10
                 }
-              ]
+              ],
+              "consultation": false,
+              "validation": true
             },
             {
               "id": "ch5_step5",
@@ -1162,7 +1231,9 @@
                   },
                   "points": 20
                 }
-              ]
+              ],
+              "consultation": false,
+              "validation": true
             }
           ],
           "badge": {

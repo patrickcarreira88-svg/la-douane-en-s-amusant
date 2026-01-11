@@ -364,6 +364,7 @@ body {
     overflow-x: hidden;
     padding: var(--spacing-lg);
     padding-top: 80px;
+    padding-bottom: 150px;
     box-shadow: none;
     z-index: 1001;
 }
@@ -736,12 +737,210 @@ body {
 /* JALON OBJECTIFS DANS LE CHEMIN */
 /* ═══════════════════════════════════════════════════════════════ */
 
-.step-group[data-is-objectives="true"] .step-box {
+.step-group[data-is-objectives="true"] .step-rect {
     filter: drop-shadow(0 0 8px rgba(107, 91, 149, 0.3));
 }
 
-.step-group[data-is-objectives="true"]:hover .step-box {
+.step-group[data-is-objectives="true"]:hover .step-rect {
     filter: drop-shadow(0 0 12px rgba(107, 91, 149, 0.6));
+}
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* SYSTÈME DE VERROUS D'ÉTAPES - ÉTATS DES JALONS */
+/* ═══════════════════════════════════════════════════════════════ */
+
+/**
+ * États possibles: completed | active | locked
+ * Appliqué via dataset: <g class="step-group" data-state="completed|active|locked">
+ */
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* ÉTAT COMPLETED - VERT ✅                                        */
+/* ═══════════════════════════════════════════════════════════════ */
+
+.step-group[data-state="completed"],
+.step-group.completed {
+    opacity: 1 !important;
+    pointer-events: auto;
+}
+
+.step-group[data-state="completed"] .step-rect,
+.step-group.completed .step-rect {
+    fill: #22c55e !important;        /* VERT VIFF */
+    stroke: #16a34a !important;      /* Bordure vert foncé */
+    stroke-width: 3 !important;
+    filter: drop-shadow(0 0 8px rgba(34, 197, 94, 0.4));
+}
+
+.step-group[data-state="completed"] .step-emoji,
+.step-group.completed .step-emoji {
+    color: #ffffff !important;
+    fill: #ffffff !important;
+    font-size: 28px;
+    font-weight: bold;
+    animation: none !important;
+    opacity: 1 !important;
+    filter: none !important;
+}
+
+.step-group[data-state="completed"]:hover .step-rect,
+.step-group.completed:hover .step-rect {
+    filter: drop-shadow(0 0 12px rgba(34, 197, 94, 0.6));
+    cursor: not-allowed;
+}
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* ÉTAT ACTIVE - ORANGE ⚡                                         */
+/* ═══════════════════════════════════════════════════════════════ */
+
+.step-group[data-state="active"],
+.step-group.active {
+    opacity: 1 !important;
+    pointer-events: auto;
+}
+
+.step-group[data-state="active"] .step-rect,
+.step-group.active .step-rect {
+    fill: #f97316 !important;        /* ORANGE VIF */
+    stroke: #ea580c !important;      /* Bordure orange foncé */
+    stroke-width: 2.5 !important;
+    filter: drop-shadow(0 0 12px rgba(249, 115, 22, 0.7));
+    animation: pulse-active 1.5s ease-in-out infinite;
+}
+
+.step-group[data-state="active"] .step-emoji,
+.step-group.active .step-emoji {
+    color: #ffffff !important;
+    fill: #ffffff !important;
+    font-size: 28px;
+    font-weight: bold;
+    animation: flicker 0.3s ease-in-out infinite alternate;
+    opacity: 1 !important;
+}
+
+.step-group[data-state="active"]:hover .step-rect,
+.step-group.active:hover .step-rect {
+    filter: drop-shadow(0 0 16px rgba(249, 115, 22, 0.9));
+    cursor: pointer;
+    stroke-width: 3 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* ÉTAT LOCKED - GRISÉ 🔒                                          */
+/* ═══════════════════════════════════════════════════════════════ */
+
+.step-group[data-state="locked"],
+.step-group.locked {
+    opacity: 0.4 !important;
+    pointer-events: auto;
+}
+
+.step-group[data-state="locked"] .step-rect,
+.step-group.locked .step-rect {
+    fill: #d1d5db !important;        /* GRIS */
+    stroke: #9ca3af !important;      /* Bordure gris foncé */
+    stroke-width: 2 !important;
+    filter: grayscale(1) brightness(0.8) drop-shadow(0 0 4px rgba(149, 165, 166, 0.2));
+}
+
+.step-group[data-state="locked"] .step-emoji,
+.step-group.locked .step-emoji {
+    color: #9ca3af !important;
+    fill: #9ca3af !important;
+    font-size: 28px;
+    animation: none !important;
+    opacity: 0.7 !important;
+    filter: grayscale(1) !important;
+}
+
+.step-group[data-state="locked"]:hover .step-rect,
+.step-group.locked:hover .step-rect {
+    filter: grayscale(1) brightness(0.85) drop-shadow(0 0 6px rgba(149, 165, 166, 0.4));
+    cursor: not-allowed;
+}
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* ANIMATIONS POUR ÉTATS DES ÉTAPES */
+/* ═══════════════════════════════════════════════════════════════ */
+
+/**
+ * Animation PULSE-ACTIVE: Pulsation subtile pour étapes actives
+ * Crée un effet "respiration" avec une légère variation d'échelle
+ */
+@keyframes pulse-active {
+    0%, 100% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 12px rgba(249, 115, 22, 0.7));
+    }
+    50% {
+        transform: scale(1.08);
+        filter: drop-shadow(0 0 16px rgba(249, 115, 22, 0.9));
+    }
+}
+
+/**
+ * Animation FLICKER: Clignotement subtil pour l'émoji actif
+ * Donne un effet "étincellement" à l'éclair ⚡
+ */
+@keyframes flicker {
+    0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
+        opacity: 1;
+        text-shadow: 0 0 4px rgba(255, 255, 255, 0.8);
+    }
+    20%, 24%, 55% {
+        opacity: 0.6;
+        text-shadow: none;
+    }
+}
+
+/**
+ * Animation SHAKE: Tremblement pour feedback verrouillé
+ * Utilisé quand user clique sur étape verrouillée
+ */
+@keyframes shake {
+    0%, 100% {
+        transform: translateX(0);
+    }
+    25% {
+        transform: translateX(-8px);
+    }
+    75% {
+        transform: translateX(8px);
+    }
+}
+
+/**
+ * Animation UNLOCK-PULSE: Pulsation lors du déblocage d'étape
+ * Feedback visuel quand l'étape précédente est complétée
+ */
+@keyframes unlock-pulse {
+    0% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 0px rgba(249, 115, 22, 0));
+    }
+    50% {
+        transform: scale(1.15);
+        filter: drop-shadow(0 0 20px rgba(249, 115, 22, 0.8));
+    }
+    100% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 10px rgba(249, 115, 22, 0.4));
+    }
+}
+
+/* Animation de déblocage (à appliquer temporairement lors du changement d'état) */
+.step-group[data-state="active"].just-unlocked .step-rect,
+.step-group.active.just-unlocked .step-rect {
+    animation: unlock-pulse 0.6s ease-out;
+}
+
+/* Transitions fluides */
+.step-group {
+    transition: all 0.3s ease;
+}
+
+.step-group .step-emoji {
+    transition: all 0.2s ease;
 }
 
 /* ═══════════════════════════════════════════════════════════════ */
@@ -2875,3 +3074,29 @@ body {
         right: 10px;
     }
 }
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* STEP ICONS - Icônes de statut des étapes */
+/* ═══════════════════════════════════════════════════════════════ */
+
+.step-icon {
+    transition: all 0.3s ease;
+    display: inline-block;
+    font-size: 1.2em;
+}
+
+.step-icon.locked {
+    color: #999;
+    opacity: 0.6;
+}
+
+.step-icon.in-progress {
+    color: #ff9800;
+    opacity: 1;
+}
+
+.step-icon.completed {
+    color: #4caf50;
+    opacity: 1;
+}
+

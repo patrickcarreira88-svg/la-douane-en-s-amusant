@@ -12,6 +12,10 @@ const exerciseLoader = new ExerciseLoader();
 const exerciseValidator = new ExerciseValidator();
 const exerciseNormalizer = new ExerciseNormalizer();
 
+// 🔒 FLAGS POUR PRÉVENIR RACE CONDITIONS
+let isFlashcardsProcessing = false;  // Prévient double-click flashcards
+let isEtapeProcessing = false;       // Prévient double-click navigation
+
 // ═══════════════════════════════════════════════════════════════
 // CHARGE DES DONNÉES ET FONCTIONS UTILITAIRES
 // ═══════════════════════════════════════════════════════════════
@@ -46,6 +50,8 @@ async function loadChapitres(niveauId = 'N1') {
         // ✅ INITIALISER localStorage APRÈS chargement
         for (let chapitre of chapitres) {
             initializeChapterStorage(chapitre);
+            // ✅ VALIDER ET NETTOYER les données suspectes
+            validateAndCleanStorage(chapitre);
         }
         
         // Nouveau: Charger tous les exercices
@@ -326,6 +332,285 @@ function initializeChapterStorage(chapitre) {
 }
 
 /**
+ * ✅ VALIDATION: Nettoie les données localStorage corrompues
+ * PROBLÈME: L'ancien code auto-complétait tous les steps, 
+ * ce qui laisse localStorage avec completed=true pour tout.
+ * Cette fonction détecte et nettoie les données suspectes.
+ */
+function validateAndCleanStorage(chapitre) {
+    if (!chapitre || !chapitre.etapes) return;
+    
+    const chapitreId = chapitre.id;
+    let completedCount = 0;
+    let suspiciousSteps = [];
+    
+    // Compter combien de steps sont marqués comme complétés
+    chapitre.etapes.forEach((etape, index) => {
+        const stepKey = `step_${etape.id}`;
+        const stored = localStorage.getItem(stepKey);
+        
+        if (stored) {
+            try {
+                const parsed = JSON.parse(stored);
+                if (parsed.completed === true) {
+                    completedCount++;
+                    suspiciousSteps.push({
+                        id: etape.id,
+                        type: etape.type,
+                        index: index
+                    });
+                }
+            } catch (e) {
+                // Ignorer les erreurs de parsing
+            }
+        }
+    });
+    
+    // 🚨 DÉTECTION: Si plus de 70% des steps sont complétés, c'est probablement une corruption
+    // (Les utilisateurs réels ne complètent pas 5+ steps sans jamais relancer le navigateur)
+    const suspiciousRatio = completedCount / chapitre.etapes.length;
+    
+    if (suspiciousRatio > 0.6) {
+        console.warn(`⚠️ DÉTECTION: ${completedCount}/${chapitre.etapes.length} steps marqués comme complétés`);
+        console.warn(`   → Ratio suspect: ${(suspiciousRatio * 100).toFixed(0)}% (seuil: 60%)`);
+        console.warn(`   → Réinitialisant tous les steps pour ${chapitreId}...`);
+        
+        // Réinitialiser TOUS les steps
+        chapitre.etapes.forEach((etape) => {
+            const stepKey = `step_${etape.id}`;
+            const cleanData = {
+                id: etape.id,
+                chapitreId: chapitreId,
+                completed: false,  // ← RESET to incomplete
+                points: 0,
+                maxPoints: etape.points || 10,
+                timestamp: null,
+                attempts: 0,
+                lastAttempt: null
+            };
+            localStorage.setItem(stepKey, JSON.stringify(cleanData));
+        });
+        
+        console.log(`✅ localStorage nettoyé pour ${chapitreId}`);
+    }
+}
+
+/**
+ * ═══════════════════════════════════════════════════════════════
+ * SYSTÈME DE VERROUS D'ÉTAPES - PROGRESSION SÉQUENTIELLE
+ * ═══════════════════════════════════════════════════════════════
+ * 
+ * Détermine l'état de verrouillage d'une étape selon les règles :
+ * 1. Nouvelle chapitre: 1ère étape déverrouillée, autres verrouillées
+ * 2. Objectifs complétés: Étape 1 active, autres verrouillées
+ * 3. Étape N complétée: Étape N+1 déverrouillée, autres verrouillées
+ * 4. Toutes étapes complétées: Seul Portfolio reste actif
+ * 5. Portfolio complété: Tous les états = "completed", chapitre.completed = true
+ */
+
+/**
+ * Détermine l'état de verrou d'une étape
+ * 
+ * @param {Object} chapitre - L'objet chapitre contenant les étapes
+ * @param {number} etapeIndex - Index de l'étape à vérifier (0-based)
+ * @param {string} chapitreId - ID du chapitre (optionnel, pour logs)
+ * @returns {string} 'completed' | 'active' | 'locked'
+ * 
+ * Logique:
+ * - 'completed': L'étape est complétée (✅)
+ * - 'active': L'étape est déverrouillée et peut être utilisée (⚡)
+ * - 'locked': L'étape est verrouillée (🔒)
+ */
+function getStepLockState(chapitre, etapeIndex, chapitreId = '') {
+    if (!chapitre || !chapitre.etapes || etapeIndex < 0 || etapeIndex >= chapitre.etapes.length) {
+        console.warn(`⚠️ getStepLockState: Paramètres invalides`);
+        return 'locked';
+    }
+    
+    const etapeActuelle = chapitre.etapes[etapeIndex];
+    
+    // Rule: Si l'étape est déjà complétée
+    if (etapeActuelle.completed === true) {
+        return 'completed';
+    }
+    
+    // Rule: 🔓 NOUVEAU - La première VRAIE étape (index 1, car 0 = objectifs) nécessite les objectifs complétés
+    if (etapeIndex === 1) {
+        // Vérifier si les objectifs (étape 0) sont complétés
+        const objectifs = chapitre.etapes[0];
+        if (objectifs && objectifs.completed === true) {
+            return 'active';
+        } else {
+            return 'locked';
+        }
+    }
+    
+    // Rule: Pour les autres étapes (index >= 2), vérifier si l'étape précédente est complétée
+    const etapePrecedente = chapitre.etapes[etapeIndex - 1];
+    if (etapePrecedente && etapePrecedente.completed === true) {
+        return 'active';
+    }
+    
+    // Par défaut: verrouillée si l'étape précédente n'est pas complétée
+    return 'locked';
+}
+
+/**
+ * Met à jour les icônes visuelles et états de toutes les étapes d'un chapitre
+ * Applique les classes CSS correspondant à leur état de verrou
+ * 
+ * @param {string} chapitreId - ID du chapitre
+ * @param {Object} chapitre - L'objet chapitre (optionnel, récupéré si non fourni)
+ */
+function updateStepIcons(chapitreId, chapitre = null) {
+    // ⏸️ FIX CRITICAL: Délai augmenté de 100ms → 200ms pour garantir localStorage sync
+    // Cela élimine la boucle infinie de retries qui causait 20+ warnings en cascade
+    setTimeout(() => {
+        // Vérifier que StorageManager est bien prêt avant de lire
+        const testState = StorageManager.getEtapeState(chapitreId, 0);
+        
+        if (!testState && chapitre) {
+            console.debug('ℹ️ updateStepIcons: Réessai après 100ms (attente localStorage sync)');
+            // Retry UNE SEULE FOIS après 100ms supplémentaires
+            setTimeout(() => updateStepIcons(chapitreId, chapitre), 100);
+            return;
+        }
+        
+        // Récupérer le chapitre si non fourni
+        if (!chapitre) {
+            if (CHAPITRES && Array.isArray(CHAPITRES)) {
+                chapitre = CHAPITRES.find(ch => ch.id === chapitreId);
+            }
+            if (!chapitre && window.allNiveaux) {
+                for (let niveauId in window.allNiveaux) {
+                    const chapitres = window.allNiveaux[niveauId];
+                    if (Array.isArray(chapitres)) {
+                        chapitre = chapitres.find(ch => ch.id === chapitreId);
+                        if (chapitre) break;
+                    }
+                }
+            }
+        }
+        
+        if (!chapitre) {
+            console.error(`❌ updateStepIcons: Chapitre ${chapitreId} non trouvé`);
+            return;
+        }
+        
+        console.log(`🔄 updateStepIcons: Updating icons for ${chapitreId} (localStorage verified)`);
+        
+        // Récupérer tous les éléments step-group du SVG
+        const stepGroups = document.querySelectorAll('.step-group');
+        if (stepGroups.length === 0) {
+            console.warn(`⚠️ updateStepIcons: Aucun step-group trouvé dans le DOM`);
+            return;
+        }
+        
+        // Compteur d'étapes réelles (exclure objectifs/portfolio)
+        let etapeIndex = 0;
+        
+        stepGroups.forEach((el, groupIndex) => {
+            const isObjectives = el.dataset.isObjectives === 'true';
+            const isPortfolio = el.dataset.isPortfolio === 'true';
+            const isMidpoint = el.dataset.isMidpoint === 'true';
+            
+            let state = 'locked';
+            let emoji = '🔒';
+            
+            // Les jalons spéciaux (objectifs/portfolio) ne sont pas numérotés
+            if (isObjectives) {
+                // ✅ CHARGER STATE DEPUIS localStorage (pas JSON!)
+                const objectifState = StorageManager.loadEtapeState(chapitreId, 0);
+                
+                if (objectifState?.completed === true || chapitre.etapes[0]?.completed === true) {
+                    state = 'completed';
+                    emoji = '✅';
+                } else {
+                    state = 'active';
+                    emoji = '⚡';
+                }
+                console.log(`  Objectifs: state=${objectifState?.completed ? 'COMPLETED' : 'IN_PROGRESS'}`);
+            } else if (isPortfolio) {
+                // ✅ CHARGER STATE DEPUIS localStorage
+                const portfolioState = StorageManager.getPortfolioStatus(chapitreId);
+                const allStepsCompleted = chapitre.etapes.every(e => {
+                    const state = StorageManager.loadEtapeState(chapitreId, chapitre.etapes.indexOf(e));
+                    return state?.completed === true || e.completed === true;
+                });
+                const portfolioCompleted = portfolioState?.completed === true || chapitre.portfolioCompleted === true;
+                
+                if (!allStepsCompleted) {
+                    state = 'locked';
+                    emoji = '🔒';
+                } else if (!portfolioCompleted) {
+                    state = 'active';
+                    emoji = '⚡';
+                } else {
+                    state = 'completed';
+                    emoji = '✅';
+                }
+                console.log(`  Portfolio: allCompleted=${allStepsCompleted}, portfolioCompleted=${portfolioCompleted}`);
+            } 
+            // Étapes normales
+            else {
+                // ✅ CHARGER STATE DEPUIS localStorage ET en mémoire
+                const realEtapeIndex = etapeIndex + 1;
+                if (realEtapeIndex < chapitre.etapes.length) {
+                    // Charger depuis localStorage D'ABORD
+                    const etapeState = StorageManager.loadEtapeState(chapitreId, realEtapeIndex);
+                    const isCompleted = etapeState?.completed === true || chapitre.etapes[realEtapeIndex]?.completed === true;
+                    
+                    state = getStepLockState(chapitre, realEtapeIndex, chapitreId);
+                    
+                    // Si localStorage dit completed, forcer completed
+                    if (isCompleted) {
+                        state = 'completed';
+                    }
+                    
+                    // Assigner le bon emoji selon l'état
+                    if (state === 'completed') {
+                        emoji = '✅';
+                    } else if (state === 'active') {
+                        emoji = '⚡';
+                    } else if (state === 'locked') {
+                        emoji = '🔒';
+                    }
+                    
+                    console.log(`  Étape ${realEtapeIndex}: state=${state} (localStorage=${etapeState?.completed ? 'completed' : etapeState ? 'exists' : 'empty'}, memory=${chapitre.etapes[realEtapeIndex]?.completed ? 'completed' : 'empty'})`);
+                    etapeIndex++;
+                }
+            }
+            
+            // ✅ METTRE À JOUR data-state
+            el.dataset.state = state;
+            
+            // ✅ CHANGER LE SYMBOLE EMOJI DYNAMIQUEMENT
+            const emojiElement = el.querySelector('.step-emoji');
+            if (emojiElement) {
+                emojiElement.textContent = emoji;
+            }
+            
+            // ✅ GÉRER LES CLASSES CSS
+            el.classList.remove('completed', 'active', 'locked');
+            el.classList.add(state);
+            
+            // ✅ METTRE À JOUR LE FILL DU RECT (CSS cascade fix)
+            const rectElement = el.querySelector('.step-box');
+            if (rectElement) {
+                const colors = {
+                    'completed': '#22c55e',  // Green
+                    'active': '#f97316',     // Orange
+                    'locked': '#d1d5db'      // Grey
+                };
+                rectElement.setAttribute('fill', colors[state] || '#d1d5db');
+            }
+        });
+        
+        console.log(`✅ updateStepIcons: Icônes mises à jour pour ${chapitreId}`);
+    }, 200);  // FIX: Augmenté de 100ms → 200ms pour garantir localStorage sync
+}
+
+/**
  * Récupère les données de progression d'une étape avec fallback par défaut
  * Utilise try/catch pour gérer les données corrompues
  * 
@@ -397,8 +682,8 @@ function setStepProgress(stepId, data) {
  */
 function resetChapterProgress(chapitreId) {
     try {
-        // Trouver le chapitre dans CHAPITRES global
-        const chapitre = CHAPITRES.find(ch => ch.id === chapitreId);
+        // Trouver le chapitre dans TOUS les niveaux
+        const chapitre = findChapitreGlobal(chapitreId);
         if (!chapitre) {
             console.error(`❌ Chapitre non trouvé: ${chapitreId}`);
             return;
@@ -427,6 +712,7 @@ function resetChapterProgress(chapitreId) {
         // ✅ Réinitialiser le stockage pour recommencer
         if (chapitre) {
             initializeChapterStorage(chapitre);
+            validateAndCleanStorage(chapitre);
         }
     } catch (e) {
         console.error(`❌ Erreur réinitialisation localStorage:`, e);
@@ -935,7 +1221,33 @@ function normalizeExercise(exercice) {
 // Stocker les chapitres globalement
 let CHAPITRES = [];
 // Alias pour faciliter debug console
+window.CHAPITRES = CHAPITRES;
 window.CHAPTERS = CHAPITRES;
+
+/**
+ * 🌉 HELPER GLOBAL: Chercher un chapitre dans tous les endroits
+ * Cherche d'abord dans CHAPITRES[], puis dans allNiveaux
+ */
+function findChapitreGlobal(chapitreId) {
+    // D'abord chercher dans CHAPITRES (niveau actuel)
+    if (CHAPITRES && Array.isArray(CHAPITRES)) {
+        const found = CHAPITRES.find(ch => ch.id === chapitreId);
+        if (found) return found;
+    }
+    
+    // Sinon chercher dans tous les niveaux chargés
+    if (window.allNiveaux) {
+        for (let niveauId in window.allNiveaux) {
+            const chapitres = window.allNiveaux[niveauId];
+            if (Array.isArray(chapitres)) {
+                const found = chapitres.find(ch => ch.id === chapitreId);
+                if (found) return found;
+            }
+        }
+    }
+    
+    return null;
+}
 
 /**
  * Charge et affiche les objectifs du chapitre sélectionné
@@ -943,7 +1255,7 @@ window.CHAPTERS = CHAPITRES;
  * @returns {array} Tableau des objectifs
  */
 function getChapitreObjectifs(chapitreId) {
-  const chapitre = CHAPITRES.find(ch => ch.id === chapitreId);
+  const chapitre = findChapitreGlobal(chapitreId);
   if (!chapitre || !chapitre.objectifs) {
     console.warn(`Aucun objectif trouvé pour ${chapitreId}`);
     return [];
@@ -963,6 +1275,23 @@ function calculateTotalPoints(stepsPoints) {
     return Object.values(stepsPoints).reduce((sum, points) => {
         return sum + (parseInt(points) || 0);
     }, 0);
+}
+
+/**
+ * ✅ HELPER: Charge l'état d'une étape depuis localStorage de façon sécurisée
+ * Évite les données suspectes
+ */
+function getStepCompletionStatus(stepId, defaultValue = false) {
+    try {
+        const stored = localStorage.getItem(`step_${stepId}`);
+        if (!stored) return defaultValue;
+        
+        const parsed = JSON.parse(stored);
+        return parsed.completed === true;
+    } catch (e) {
+        console.warn(`⚠️ Erreur lecture localStorage pour ${stepId}:`, e);
+        return defaultValue;
+    }
 }
 
 /**
@@ -1048,20 +1377,11 @@ function generatePathSVG(etapes, chapitre = null) {
     
     let steps = '';
     positions.forEach(({ x, y, step, index }) => {
-        // ✅ NOUVEAU : Charger l'état réel depuis localStorage
+        // ✅ Charger l'état réel depuis localStorage (avec validation)
         let isCompleted = step.completed;
         
         if (step.id && !step.isObjectives && !step.isPortfolio) {
-            const progress = localStorage.getItem(`step_${step.id}`);
-            if (progress) {
-                try {
-                    const parsed = JSON.parse(progress);
-                    isCompleted = parsed.completed === true;
-                } catch (e) {
-                    console.error('Erreur parsing localStorage:', e);
-                    isCompleted = false;
-                }
-            }
+            isCompleted = getStepCompletionStatus(step.id, step.completed);
         }
         
         const isLocked = index > 0 && !positions[index - 1].step.completed;
@@ -1087,12 +1407,12 @@ function generatePathSVG(etapes, chapitre = null) {
         }
         
         steps += `
-            <g class="step-group" data-step-id="${step.id}" data-is-objectives="${isObjectives}" data-is-portfolio="${isPortfolio}" data-is-midpoint="${step.isMidpoint || false}">
+            <g class="step-group" data-step-id="${step.id}" data-is-objectives="${isObjectives}" data-is-portfolio="${isPortfolio}" data-is-midpoint="${step.isMidpoint || false}" data-state="${isCompleted ? 'completed' : isLocked ? 'locked' : 'active'}">
                 <rect x="${x - stepSize/2}" y="${y - stepSize/2}" 
                       width="${stepSize}" height="${stepSize}" 
-                      rx="12" fill="${bgColor}" 
+                      rx="12" 
                       stroke="${lineColor}" stroke-width="2"
-                      class="step-box"/>
+                      class="step-rect"/>
                 <text x="${x}" y="${y + 8}" 
                       text-anchor="middle" font-size="28" 
                       class="step-emoji">${emoji}</text>
@@ -1296,18 +1616,48 @@ function renderVideoPlayer(videoData) {
   }
 
   // Vérifier si vidéo déjà présente
-  if (container.querySelector('video-player')) {
+  if (container.querySelector('video')) {
     return;
   }
 
-  // Créer élément vidéo
-  const videoElement = document.createElement('video-player');
-  videoElement.setAttribute('video-id', videoData.id);
-  videoElement.setAttribute('title', videoData.title);
+  // Résoudre le chemin vidéo depuis le manifest
+  const videoSrc = videoData.sources['720p'] || videoData.sources['480p'] || videoData.sources['360p'];
+  const resolvedPath = videoSrc.replace('../', '/assets/videos/');
+
+  // Créer élément vidéo HTML5
+  const videoElement = document.createElement('video');
+  videoElement.setAttribute('controls', 'true');
+  videoElement.setAttribute('width', '100%');
+  videoElement.setAttribute('height', 'auto');
   videoElement.className = 'video-player-container';
+  videoElement.style.maxWidth = '100%';
+  videoElement.style.marginBottom = '20px';
+  
+  // Source vidéo
+  const sourceElement = document.createElement('source');
+  sourceElement.setAttribute('src', resolvedPath);
+  sourceElement.setAttribute('type', 'video/mp4');
+  videoElement.appendChild(sourceElement);
+  
+  // Sous-titres si disponibles
+  if (videoData.captions?.fr) {
+    const trackElement = document.createElement('track');
+    trackElement.setAttribute('kind', 'subtitles');
+    trackElement.setAttribute('src', `/assets/videos/101ab/${videoData.captions.fr}`);
+    trackElement.setAttribute('srclang', 'fr');
+    trackElement.setAttribute('label', 'Français');
+    videoElement.appendChild(trackElement);
+  }
+  
+  // Fallback message
+  const fallback = document.createElement('p');
+  fallback.textContent = 'Votre navigateur ne supporte pas la vidéo HTML5.';
+  videoElement.appendChild(fallback);
 
   // Insérer dans le conteneur
   container.appendChild(videoElement);
+  console.log(`✅ Vidéo chargée: ${videoData.title} (${resolvedPath})`);
+
 
   // Listener pour complétude vidéo
   videoElement.addEventListener('video-completed', (e) => {
@@ -1372,6 +1722,598 @@ function trackEvent(eventName, data = {}) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// FONCTIONS UNIFIÉES CONSULTATION vs VALIDATION (GLOBALES)
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * ✅ COMPLÈTE une étape de type CONSULTATION
+ * Utilisée pour: vidéos, lectures, contenus théoriques sans scoring
+ * 
+ * @param {string} chapitreId - "ch1", "101BT", etc.
+ * @param {number} etapeIndex - Index: 0, 1, 2, etc.
+ * @param {object} metadata - { timeSpent, viewed: true, etc. }
+ * @returns {object} { success, message, nextStepUnlocked, nextStepId }
+ */
+function completerEtapeConsultation(chapitreId, etapeIndex, metadata = {}) {
+  console.log(`[📖 CONSULTATION] Complétant étape ${chapitreId}:${etapeIndex}`, metadata);
+  
+  try {
+    // 1. SAUVEGARDER l'étape comme COMPLÉTÉE dans StorageManager
+    StorageManager.saveEtapeState(chapitreId, etapeIndex, {
+      completed: true,                              // ← CLEF
+      status: 'completed',
+      completedAt: new Date().toISOString(),
+      visitedAt: metadata.visitedAt || new Date().toISOString(),
+      timeSpent: metadata.timeSpent || 0,
+      viewed: metadata.viewed !== false,
+      attempts: 1,
+      score: 100  // Consultation = score auto 100%
+    });
+    console.log(`[✅] Étape ${chapitreId}:${etapeIndex} marquée COMPLÉTÉE`);
+    
+    // 1b. SYNCHRONISER avec localStorage pour compatibilité avec App.getStepState()
+    const stepKey = `step_${chapitreId}_${etapeIndex}`;
+    localStorage.setItem(stepKey, JSON.stringify({
+      status: 'completed',
+      score: 100,
+      visited: true,
+      pointsAwarded: true
+    }));
+
+    // 2. METTRE À JOUR progression du chapitre
+    const progressResult = StorageManager.updateChapterProgress(chapitreId);
+    console.log(`[📊] Progression chapitre ${chapitreId}:`, progressResult);
+
+    // 3. DÉBLOQUER étape suivante AUTOMATIQUEMENT
+    const chapitre = CHAPITRES.find(c => c.id === chapitreId);
+    if (!chapitre) {
+      console.error(`Chapitre ${chapitreId} non trouvé!`);
+      return { success: false, message: 'Chapitre non trouvé' };
+    }
+
+    const nextIndex = etapeIndex + 1;
+    if (nextIndex < chapitre.etapes.length) {
+      // Débloquer étape suivante
+      App.unlockNextStep(chapitreId, etapeIndex);
+      const nextEtape = chapitre.etapes[nextIndex];
+      console.log(`[🔓] Étape suivante ${chapitreId}:${nextIndex} débloquée`);
+      
+      return {
+        success: true,
+        message: '✅ Étape de consultation complétée',
+        nextStepUnlocked: true,
+        nextStepId: nextEtape.id,
+        nextStepTitle: nextEtape.titre
+      };
+    } else {
+      // Dernière étape du chapitre
+      console.log(`[🏁] Dernière étape du chapitre ${chapitreId} complétée`);
+      return {
+        success: true,
+        message: '✅ Chapitre complété!',
+        nextStepUnlocked: false
+      };
+    }
+
+  } catch (error) {
+    console.error(`[❌] Erreur completerEtapeConsultation:`, error);
+    showErrorNotification('Erreur lors de la sauvegarde');
+    return { success: false, message: error.message };
+  }
+}
+
+/**
+ * 🎯 VALIDE une étape avec seuil de scoring (≥ 80%)
+ * Utilisée pour: QCM, Quiz, Assessments, Exercices de validation
+ * 
+ * @param {string} chapitreId - "ch1", "101BT", etc.
+ * @param {number} etapeIndex - 0, 1, 2, etc.
+ * @param {number} score - Score obtenu (0-100)
+ * @param {object} metadata - { answers, duration, maxPoints }
+ * @returns {object} { success, passed, score, message, nextStepUnlocked }
+ */
+function validerEtapeAvecSeuil(chapitreId, etapeIndex, score, metadata = {}) {
+  const MIN_SCORE_THRESHOLD = 80;  // ← Seuil de passage
+  const MAX_ATTEMPTS = 3;
+
+  console.log(
+    `[🎯 VALIDATION] Étape ${chapitreId}:${etapeIndex} | Score: ${score}%`
+  );
+
+  try {
+    // 1. RÉCUPÉRER état actuel de l'étape
+    const currentState = StorageManager.loadEtapeState(chapitreId, etapeIndex);
+    const currentAttempts = (currentState?.attempts || 0) + 1;
+
+    console.log(`[📋] État actuel - Tentatives: ${currentAttempts}/${MAX_ATTEMPTS}`);
+
+    // 2. DÉTERMINER si score ≥ 80%
+    const passed = score >= MIN_SCORE_THRESHOLD;
+
+    // 3. SAUVEGARDER cette tentative
+    StorageManager.saveEtapeState(chapitreId, etapeIndex, {
+      completed: passed,  // ← true si score ≥ 80%, false sinon
+      status: passed ? 'completed' : 'failed',
+      completedAt: passed ? new Date().toISOString() : null,
+      score: score,
+      attempts: currentAttempts,
+      lastAttemptAt: new Date().toISOString(),
+      duration: metadata.duration || 0,
+      answers: metadata.answers || []
+    });
+    console.log(
+      `[💾] Sauvegardé: score=${score}%, attempts=${currentAttempts}, completed=${passed}`
+    );
+
+    // 4. CAS 1: Score < 80% ET tentatives restantes
+    if (!passed && currentAttempts < MAX_ATTEMPTS) {
+      const remainingAttempts = MAX_ATTEMPTS - currentAttempts;
+      const errorMsg = 
+        `❌ Score insuffisant: ${score}% < ${MIN_SCORE_THRESHOLD}%\n` +
+        `Tentatives restantes: ${remainingAttempts}/${MAX_ATTEMPTS}`;
+
+      console.log(`[⚠️] ${errorMsg}`);
+      showErrorNotification(errorMsg);
+
+      return {
+        success: true,  // Opération réussie (mais test échoué)
+        passed: false,
+        score: score,
+        message: errorMsg,
+        attemptsRemaining: remainingAttempts,
+        nextStepUnlocked: false
+      };
+    }
+
+    // 5. CAS 2: Score < 80% ET pas de tentatives
+    if (!passed && currentAttempts >= MAX_ATTEMPTS) {
+      const errorMsg = 
+        `❌ Score insuffisant: ${score}%\n` +
+        `Tentatives épuisées (${MAX_ATTEMPTS}). Contactez l'instructeur.`;
+
+      console.log(`[🚫] ${errorMsg}`);
+      showErrorNotification(errorMsg);
+
+      return {
+        success: true,
+        passed: false,
+        score: score,
+        message: errorMsg,
+        attemptsRemaining: 0,
+        nextStepUnlocked: false
+      };
+    }
+
+    // 6. CAS 3: Score ≥ 80% - SUCCÈS!
+    if (passed) {
+      console.log(`[🎉] SUCCÈS! Score ${score}% ≥ ${MIN_SCORE_THRESHOLD}%`);
+
+      // a. DÉBLOQUER étape suivante
+      const chapitre = CHAPITRES.find(c => c.id === chapitreId);
+      const nextIndex = etapeIndex + 1;
+
+      if (chapitre && nextIndex < chapitre.etapes.length) {
+        App.unlockNextStep(chapitreId, etapeIndex);
+        console.log(`[🔓] Étape suivante ${chapitreId}:${nextIndex} débloquée`);
+      }
+
+      // b. METTRE À JOUR progression chapitre
+      StorageManager.updateChapterProgress(chapitreId);
+      console.log(`[📊] Progression chapitre mise à jour`);
+
+      // c. Construire message succès
+      const successMsg = 
+        `✅ RÉUSSI!\n` +
+        `Score: ${score}%`;
+
+      showSuccessNotification(successMsg);
+
+      return {
+        success: true,
+        passed: true,
+        score: score,
+        message: successMsg,
+        attemptsRemaining: 0,
+        nextStepUnlocked: nextIndex < chapitre?.etapes.length,
+        nextStepId: chapitre?.etapes[nextIndex]?.id
+      };
+    }
+
+  } catch (error) {
+    console.error(`[❌] Erreur validerEtapeAvecSeuil:`, error);
+    showErrorNotification('Erreur validation');
+    return { 
+      success: false, 
+      message: error.message,
+      passed: false 
+    };
+  }
+}
+
+/**
+ * 🎯 VALIDE une étape avec seuil de scoring (≥ 80%)
+ * VERSION ANGLAISE - Alias pour validateStepWithThreshold
+ * Utilisée pour: QCM, Quiz, Assessments, Exercices de validation
+ * 
+ * @param {string} chapitreId - "ch1", "101BT", etc.
+ * @param {number} etapeIndex - 0, 1, 2, etc.
+ * @param {number} score - Score obtenu (0-100)
+ * @param {object} metadata - { answers, duration, maxPoints }
+ * @returns {object} { success, passed, score, message, nextStepUnlocked }
+ */
+function validateStepWithThreshold(chapitreId, etapeIndex, score, metadata = {}) {
+  const MIN_SCORE_THRESHOLD = 80;  // ← Seuil de passage
+  const MAX_ATTEMPTS = 3;
+
+  console.log(
+    `[🎯 VALIDATION] Étape ${chapitreId}:${etapeIndex} | Score: ${score}%`
+  );
+
+  try {
+    // 1. RÉCUPÉRER état actuel de l'étape
+    const currentState = StorageManager.getEtapeState(chapitreId, etapeIndex);
+    const currentAttempts = (currentState?.attempts || 0) + 1;
+
+    console.log(`[📋] État actuel - Tentatives: ${currentAttempts}/${MAX_ATTEMPTS}`);
+
+    // 2. DÉTERMINER si score ≥ 80%
+    const passed = score >= MIN_SCORE_THRESHOLD;
+
+    // 3. SAUVEGARDER cette tentative
+    StorageManager.saveEtapeState(chapitreId, etapeIndex, {
+      completed: passed,  // ← true si score ≥ 80%, false sinon
+      status: passed ? 'completed' : 'failed',
+      completedAt: passed ? new Date().toISOString() : null,
+      score: score,
+      attempts: currentAttempts,
+      lastAttemptAt: new Date().toISOString(),
+      duration: metadata.duration || 0,
+      answers: metadata.answers || []
+    });
+    console.log(
+      `[💾] Sauvegardé: score=${score}%, attempts=${currentAttempts}, completed=${passed}`
+    );
+
+    // 4. CAS 1: Score < 80% ET tentatives restantes
+    if (!passed && currentAttempts < MAX_ATTEMPTS) {
+      const remainingAttempts = MAX_ATTEMPTS - currentAttempts;
+      const errorMsg = 
+        `❌ Score insuffisant: ${score}% < ${MIN_SCORE_THRESHOLD}%\n` +
+        `Tentatives restantes: ${remainingAttempts}/${MAX_ATTEMPTS}`;
+
+      console.log(`[⚠️] ${errorMsg}`);
+      showErrorNotification(errorMsg);
+
+      return {
+        success: true,  // Opération réussie (mais test échoué)
+        passed: false,
+        score: score,
+        message: errorMsg,
+        attemptsRemaining: remainingAttempts,
+        nextStepUnlocked: false
+      };
+    }
+
+    // 5. CAS 2: Score < 80% ET pas de tentatives
+    if (!passed && currentAttempts >= MAX_ATTEMPTS) {
+      const errorMsg = 
+        `❌ Score insuffisant: ${score}%\n` +
+        `Tentatives épuisées (${MAX_ATTEMPTS}). Contactez l'instructeur.`;
+
+      console.log(`[🚫] ${errorMsg}`);
+      showErrorNotification(errorMsg);
+
+      return {
+        success: true,
+        passed: false,
+        score: score,
+        message: errorMsg,
+        attemptsRemaining: 0,
+        nextStepUnlocked: false
+      };
+    }
+
+    // 6. CAS 3: Score ≥ 80% - SUCCÈS!
+    if (passed) {
+      console.log(`[🎉] SUCCÈS! Score ${score}% ≥ ${MIN_SCORE_THRESHOLD}%`);
+
+      // a. CALCULER et AJOUTER points
+      const maxPoints = metadata.maxPoints || 100;
+      const pointsEarned = Math.round((score / 100) * maxPoints);
+      StorageManager.addPoints(pointsEarned);
+      console.log(`[💎] +${pointsEarned} points`);
+
+      // b. DÉBLOQUER étape suivante
+      const chapitre = CHAPITRES.find(c => c.id === chapitreId);
+      const nextIndex = etapeIndex + 1;
+
+      if (chapitre && nextIndex < chapitre.etapes.length) {
+        App.unlockNextStep(chapitreId, etapeIndex);
+        console.log(`[🔓] Étape suivante ${chapitreId}:${nextIndex} débloquée`);
+      }
+
+      // c. METTRE À JOUR progression chapitre
+      StorageManager.updateChapterProgress(chapitreId);
+      console.log(`[📊] Progression chapitre mise à jour`);
+
+      // d. VÉRIFIER badges gagnés (optionnel)
+      if (typeof checkAndUnlockBadges === 'function') {
+        checkAndUnlockBadges(chapitreId);
+        console.log(`[🏆] Badges vérifiés`);
+      }
+
+      // e. Construire message succès
+      const successMsg = 
+        `✅ RÉUSSI!\n` +
+        `Score: ${score}%\n` +
+        `Points gagnés: +${pointsEarned}`;
+
+      showSuccessNotification(successMsg);
+
+      return {
+        success: true,
+        passed: true,
+        score: score,
+        pointsEarned: pointsEarned,
+        message: successMsg,
+        attemptsRemaining: 0,
+        nextStepUnlocked: nextIndex < chapitre?.etapes.length,
+        nextStepId: chapitre?.etapes[nextIndex]?.id
+      };
+    }
+
+  } catch (error) {
+    console.error(`[❌] Erreur validateStepWithThreshold:`, error);
+    showErrorNotification(`Erreur: ${error.message}`);
+    return { 
+      success: false, 
+      message: error.message,
+      passed: false 
+    };
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FONCTIONS DE CALCUL DE SCORE PAR TYPE
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Calcule le score d'un QCM basé sur la réponse sélectionnée
+ * @param {object} etape - L'étape contenant les exercices QCM
+ * @param {string} chapitreId - ID du chapitre
+ * @param {number} etapeIndex - Index de l'étape
+ * @returns {number} Score en pourcentage (0-100)
+ */
+function calculateQCMScore(etape, chapitreId, etapeIndex) {
+  try {
+    if (!etape?.exercices || etape.exercices.length === 0) {
+      console.warn(`[⚠️] Aucun exercice trouvé pour ${chapitreId}:${etapeIndex}`);
+      return 0;
+    }
+
+    let correctCount = 0;
+    const totalQuestions = etape.exercices.length;
+
+    etape.exercices.forEach((exercice, exIdx) => {
+      // Récupérer la réponse sélectionnée par l'utilisateur
+      const selectedAnswerId = document.querySelector(
+        `input[name="exercice_${exIdx}"]:checked`
+      )?.value;
+
+      if (!selectedAnswerId) {
+        console.log(`[⚠️] Q${exIdx + 1}: Pas de réponse sélectionnée`);
+        return;
+      }
+
+      // Vérifier si c'est la bonne réponse
+      const isCorrect = selectedAnswerId === exercice.correctAnswer;
+      if (isCorrect) {
+        correctCount++;
+        console.log(`[✅] Q${exIdx + 1}: Correct`);
+      } else {
+        console.log(`[❌] Q${exIdx + 1}: Incorrect (sélectionné: ${selectedAnswerId}, correct: ${exercice.correctAnswer})`);
+      }
+    });
+
+    const score = Math.round((correctCount / totalQuestions) * 100);
+    console.log(`[📊] QCM Score: ${correctCount}/${totalQuestions} = ${score}%`);
+    return score;
+
+  } catch (error) {
+    console.error(`[❌] Erreur calculateQCMScore:`, error);
+    return 0;
+  }
+}
+
+/**
+ * Calcule le score des flashcards basé sur la maîtrise
+ * @param {object} etape - L'étape contenant les flashcards
+ * @param {string} chapitreId - ID du chapitre
+ * @param {number} etapeIndex - Index de l'étape
+ * @returns {number} Score en pourcentage (0-100)
+ */
+function calculateFlashcardsScore(etape, chapitreId, etapeIndex) {
+  try {
+    if (!etape?.flashcards || etape.flashcards.length === 0) {
+      console.warn(`[⚠️] Aucune flashcard trouvée pour ${chapitreId}:${etapeIndex}`);
+      return 0;
+    }
+
+    let masteredCount = 0;
+    const totalCards = etape.flashcards.length;
+
+    etape.flashcards.forEach((card, idx) => {
+      // Une flashcard est maîtrisée si l'utilisateur l'a marquée comme "known" 3+ fois
+      const cardState = sessionStorage.getItem(`flashcard_${etapeIndex}_${idx}_known`) || 0;
+      if (parseInt(cardState) >= 3) {
+        masteredCount++;
+      }
+    });
+
+    const score = Math.round((masteredCount / totalCards) * 100);
+    console.log(`[📊] Flashcards Score: ${masteredCount}/${totalCards} = ${score}%`);
+    return score;
+
+  } catch (error) {
+    console.error(`[❌] Erreur calculateFlashcardsScore:`, error);
+    return 0;
+  }
+}
+
+/**
+ * Calcule le score du Matching/Drag-Drop basé sur les bonnes appairements
+ * @param {object} etape - L'étape contenant les éléments à appairer
+ * @param {string} chapitreId - ID du chapitre
+ * @param {number} etapeIndex - Index de l'étape
+ * @returns {number} Score en pourcentage (0-100)
+ */
+function calculateMatchingScore(etape, chapitreId, etapeIndex) {
+  try {
+    if (!etape?.matchingPairs || etape.matchingPairs.length === 0) {
+      console.warn(`[⚠️] Aucun appairage trouvé pour ${chapitreId}:${etapeIndex}`);
+      return 0;
+    }
+
+    let correctPairings = 0;
+    const totalPairs = etape.matchingPairs.length;
+
+    etape.matchingPairs.forEach((pair, pairIdx) => {
+      // Récupérer l'appairage sélectionné par l'utilisateur
+      const selectedMatch = document.querySelector(
+        `select[data-pair="${pairIdx}"]`
+      )?.value;
+
+      if (!selectedMatch) {
+        console.log(`[⚠️] Paire ${pairIdx + 1}: Pas d'appairage sélectionné`);
+        return;
+      }
+
+      // Vérifier si c'est le bon appairage
+      const isCorrect = selectedMatch === pair.correctMatch;
+      if (isCorrect) {
+        correctPairings++;
+        console.log(`[✅] Paire ${pairIdx + 1}: Correct`);
+      } else {
+        console.log(`[❌] Paire ${pairIdx + 1}: Incorrect`);
+      }
+    });
+
+    const score = Math.round((correctPairings / totalPairs) * 100);
+    console.log(`[📊] Matching Score: ${correctPairings}/${totalPairs} = ${score}%`);
+    return score;
+
+  } catch (error) {
+    console.error(`[❌] Erreur calculateMatchingScore:`, error);
+    return 0;
+  }
+}
+
+/**
+ * Soumet une réponse d'exercice de validation
+ * Calcule le score et appelle validateStepWithThreshold()
+ * 
+ * @param {string} chapitreId - ID du chapitre (ex: 'ch1')
+ * @param {number} etapeIndex - Index de l'étape (0-based)
+ * @returns {object} Résultat de la validation
+ */
+function submitValidationExercise(chapitreId, etapeIndex) {
+  const chapitre = CHAPITRES.find(c => c.id === chapitreId);
+  const etape = chapitre?.etapes[etapeIndex];
+
+  if (!etape) {
+    console.error(`Étape ${chapitreId}:${etapeIndex} non trouvée`);
+    showErrorNotification('Étape non trouvée');
+    return { success: false, message: 'Étape non trouvée' };
+  }
+
+  console.log(`[📤 SUBMIT] Soumettant réponses pour ${chapitreId}:${etapeIndex}`);
+
+  // RÉCUPÉRER les réponses de l'utilisateur selon le type
+  let score = 0;
+  const metadata = {};
+
+  if (etape.type === 'qcm' || etape.type === 'quiz' || etape.type === 'qcm_scenario') {
+    // Calculer score QCM/Quiz/QCM_Scenario
+    score = calculateQCMScore(etape, chapitreId, etapeIndex);
+    metadata.maxPoints = 100;
+  } 
+  else if (etape.type === 'flashcards') {
+    // Calculer score flashcards
+    score = calculateFlashcardsScore(etape, chapitreId, etapeIndex);
+    metadata.maxPoints = 100;
+  }
+  else if (etape.type === 'matching' || etape.type === 'drag-drop') {
+    // Calculer score pour appariement/drag-drop
+    score = calculateMatchingScore(etape, chapitreId, etapeIndex);
+    metadata.maxPoints = 100;
+  }
+  else {
+    // Autres types: score auto à 100%
+    score = 100;
+  }
+
+  console.log(`[📊] Score calculé: ${score}%`);
+
+  // Incrémenter tentatives
+  if (!metadata.attempts) metadata.attempts = 0;
+  metadata.attempts++;
+
+  // VALIDER avec seuil
+  const result = validateStepWithThreshold(chapitreId, etapeIndex, score, metadata);
+
+  // RAFRAÎCHIR l'affichage après validation
+  if (typeof App !== 'undefined' && App.rafraichirAffichage) {
+    App.rafraichirAffichage();
+  }
+
+  return result;
+}
+
+/**
+ * Valide une étape (router universal)
+ * Détecte le type et redirige vers completerEtapeConsultation() ou validateStepWithThreshold()
+ * 
+ * @param {string} chapitreId - ID du chapitre (ex: 'ch1')
+ * @param {number} etapeIndex - Index de l'étape (0-based)
+ * @param {number} score - Score optionnel (requis pour VALIDATION)
+ */
+function validerExercice(chapitreId, etapeIndex, score = null) {
+  const chapitre = CHAPITRES.find(c => c.id === chapitreId);
+  const etape = chapitre?.etapes[etapeIndex];
+
+  if (!etape) {
+    console.error(`Étape ${chapitreId}:${etapeIndex} non trouvée`);
+    showErrorNotification('Étape non trouvée');
+    return;
+  }
+
+  // DÉTECTER type d'étape
+  const isConsultation = etape.consultation === true;
+  const isValidation = etape.validation === true || ['qcm', 'quiz'].includes(etape.type);
+
+  console.log(`[🔀 VALIDER] Étape ${etape.titre} | Type: ${isConsultation ? 'CONSULTATION' : 'VALIDATION'}`);
+
+  if (isConsultation) {
+    // === CONSULTATION ===
+    completerEtapeConsultation(chapitreId, etapeIndex, { viewed: true });
+
+  } else if (isValidation) {
+    // === VALIDATION ===
+    if (score === null) {
+      console.error('Score requis pour validation');
+      showErrorNotification('Score manquant');
+      return;
+    }
+    validateStepWithThreshold(chapitreId, etapeIndex, score, { maxPoints: 100 });
+  }
+
+  // Rafraîchir UI
+  if (typeof App !== 'undefined' && App.rafraichirAffichage) {
+    App.rafraichirAffichage();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
 // OBJET APP PRINCIPAL
 // ═══════════════════════════════════════════════════════════════
 
@@ -1382,24 +2324,46 @@ const App = {
     init() {
         console.log('🚀 Initialisation App...');
         
-        // Vérifier si le profil doit être créé au premier démarrage
-        const user = StorageManager.getUser();
-        if (!user.profileCreated) {
-            console.log('📝 Premier démarrage détecté - affichage modal création profil');
-            this.showProfileCreationModal();
-            return; // Ne pas continuer l'initialisation jusqu'à création du profil
+        // Charger le manifest vidéo (synchrone - attendre avant de continuer)
+        this.loadVideoManifest().then(() => {
+            // Vérifier si le profil doit être créé au premier démarrage
+            const user = StorageManager.getUser();
+            if (!user.profileCreated) {
+                console.log('📝 Premier démarrage détecté - affichage modal création profil');
+                this.showProfileCreationModal();
+                return; // Ne pas continuer l'initialisation jusqu'à création du profil
+            }
+            
+            this.loadPage('accueil');
+            
+            if (!this.eventsAttached) {
+                this.setupNavigation();
+                this.eventsAttached = true;
+            }
+            
+            this.updateHeader();
+            
+            console.log('✅ App initialisée');
+        });
+    },
+    
+    /**
+     * Charge le manifest des vidéos
+     */
+    async loadVideoManifest() {
+        try {
+            const response = await fetch('/assets/videos/101ab/video-manifest.json');
+            const manifest = await response.json();
+            window.videoManifest = manifest;
+            console.log(`✅ Manifest vidéo chargé: ${manifest.videos?.length || 0} vidéos`);
+            manifest.videos?.forEach(v => {
+                console.log(`   📺 ${v.id}: ${v.title}`);
+            });
+            return manifest;
+        } catch (e) {
+            console.warn('⚠️ Manifest vidéo non trouvé:', e.message);
+            return null;
         }
-        
-        this.loadPage('accueil');
-        
-        if (!this.eventsAttached) {
-            this.setupNavigation();
-            this.eventsAttached = true;
-        }
-        
-        this.updateHeader();
-        
-        console.log('✅ App initialisée');
     },
     
     setupNavigation() {
@@ -1597,8 +2561,121 @@ const App = {
      * Affiche un chapitre spécifique
      */
     afficherChapitre(chapitreId) {
-        // ✅ Afficher directement le contenu (chemin SVG)
-        this.afficherChapitreContenu(chapitreId);
+        const chapter = CHAPITRES.find(c => c.id === chapitreId);
+        
+        if (!chapter) {
+            console.error(`❌ Chapitre ${chapitreId} non trouvé`);
+            return;
+        }
+        
+        // ✅ INITIALISER localStorage pour les étapes si nécessaire
+        for (let i = 0; i < chapter.etapes.length; i++) {
+            const stepKey = `step_${chapitreId}_${i}`;
+            if (!localStorage.getItem(stepKey)) {
+                // Vérifier dans StorageManager
+                const state = StorageManager.getEtapeState(chapitreId, i);
+                
+                if (state?.completed) {
+                    // Déjà complétée
+                    localStorage.setItem(stepKey, JSON.stringify({
+                        status: 'completed',
+                        score: state.score || 100,
+                        visited: true,
+                        pointsAwarded: true
+                    }));
+                } else if (state?.unlocked || state?.status === "in_progress") {
+                    // Étape déverrouillée mais pas complétée
+                    localStorage.setItem(stepKey, JSON.stringify({
+                        status: 'in_progress',
+                        score: null,
+                        visited: state.visited || false,
+                        pointsAwarded: false
+                    }));
+                } else if (i === 0) {
+                    // Première étape toujours accessible
+                    localStorage.setItem(stepKey, JSON.stringify({
+                        status: 'in_progress',
+                        score: null,
+                        visited: false,
+                        pointsAwarded: false
+                    }));
+                } else {
+                    // Les autres sont verrouillées par défaut
+                    localStorage.setItem(stepKey, JSON.stringify({
+                        status: 'locked',
+                        score: null,
+                        visited: false,
+                        pointsAwarded: false
+                    }));
+                }
+            }
+        }
+        
+        const progress = this.getChapterProgress(chapitreId);
+        const container = document.getElementById('app-content');
+        
+        if (!container) {
+            console.error('❌ Container #app-content manquant');
+            return;
+        }
+        
+        // Barre de progression
+        const progressHTML = `
+            <div class="chapter-view">
+                <button class="btn btn--secondary" onclick="App.navigateTo('accueil')" style="margin-bottom: 20px;">
+                    ← Retour
+                </button>
+                
+                <div class="chapter-progress">
+                    <h2>${chapter.emoji || '📖'} ${chapter.titre || chapter.id}</h2>
+                    <div class="progress-bar" style="margin: 20px 0;">
+                        <div class="progress-fill" style="width: ${progress.percentage}%; background-color: #4caf50;"></div>
+                    </div>
+                    <p style="text-align: center; color: #666;">
+                        ${progress.completed}/${progress.total} étapes complétées (${progress.percentage}%)
+                    </p>
+                </div>
+                
+                <div class="steps-list" style="margin-top: 30px;">
+        `;
+        
+        // Liste d'étapes
+        const stepsHTML = chapter.etapes.map((step, idx) => {
+            const accessible = this.canAccessStep(chapitreId, idx);
+            const stepState = this.getStepState(chapitreId, idx);
+            
+            return `
+                <div class="step-item" data-step="${chapitreId}_${idx}" style="padding: 15px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 12px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div class="step-icon" style="font-size: 1.5em;"></div>
+                        <div style="flex: 1;">
+                            <h3 style="margin: 0 0 5px 0;">${step.title || `Étape ${idx + 1}`}</h3>
+                            <p style="margin: 0; color: #666; font-size: 0.9em;">${step.description || ''}</p>
+                        </div>
+                        <button 
+                            class="btn btn--primary"
+                            onclick="App.afficherEtape('${chapitreId}', ${idx})"
+                            ${!accessible ? 'disabled' : ''}
+                            style="${!accessible ? 'opacity: 0.6; cursor: not-allowed;' : ''}"
+                        >
+                            ${accessible ? '▶ Accéder' : '🔒 Verrouillée'}
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        const closingHTML = `
+                </div>
+            </div>
+        `;
+        
+        container.innerHTML = progressHTML + stepsHTML + closingHTML;
+        
+        // Mettre à jour les icônes
+        for (let i = 0; i < chapter.etapes.length; i++) {
+            this.updateStepIcon(chapitreId, i);
+        }
     },
     
     /**
@@ -1617,6 +2694,7 @@ const App = {
             
             // 2. Charger chapitres du niveau
             CHAPITRES = await loadChapitres(niveauId);
+            window.CHAPITRES = CHAPITRES;
             
             if (!CHAPITRES || CHAPITRES.length === 0) {
                 console.warn(`⚠️ Le niveau ${niveauId} n'a pas encore de chapitres.`);
@@ -1754,165 +2832,852 @@ const App = {
         
         console.log('[Tutoring] Bouton "Demander aide" créé pour', chapitreId, stepIndex);
     },
-    
-    /**
-     * Affiche une étape (simple et fonctionnelle)
-     * @param {string} chapitreId - ID du chapitre
-     * @param {number|string} stepIndexOrId - Index de l'étape ou ID
-     */
-    afficherEtape(chapitreId, stepIndexOrId) {
-        // 🌉 Utiliser la fonction bridge pour trouver le chapitre dans tous les niveaux
-        let chapitre = this.findChapitreById(chapitreId);
-        
-        if (!chapitre) {
-            console.error(`❌ Chapitre ${chapitreId} non trouvé dans tous les niveaux`);
-            return;
-        }
 
-        // Déterminer l'index de l'étape
-        let index = 0;
-        if (typeof stepIndexOrId === 'number') {
-            index = stepIndexOrId;
-        } else if (typeof stepIndexOrId === 'string') {
-            // Si c'est un ID, chercher l'index
-            index = chapitre.etapes.findIndex(e => e.id === stepIndexOrId);
-            if (index === -1) {
-                console.error(`❌ Étape ${stepIndexOrId} non trouvée`);
-                return;
+    /**
+     * Récupère l'état d'une étape depuis localStorage
+     * @param {string} chapitreId - ID du chapitre
+     * @param {number} stepIndex - Index de l'étape
+     * @returns {Object} État de l'étape {status, score, visited, pointsAwarded}
+     */
+    getStepState(chapitreId, stepIndex) {
+        const key = `step_${chapitreId}_${stepIndex}`;
+        const saved = localStorage.getItem(key);
+        
+        if (!saved) {
+            return {
+                status: "locked",
+                score: null,
+                visited: false,
+                pointsAwarded: false
+            };
+        }
+        
+        return JSON.parse(saved);
+    },
+
+    /**
+     * Sauvegarde l'état d'une étape dans localStorage
+     * @param {string} chapitreId - ID du chapitre
+     * @param {number} stepIndex - Index de l'étape
+     * @param {Object} stateObject - État à sauvegarder {status, score, visited, pointsAwarded}
+     * @returns {boolean} true si succès, false si erreur
+     */
+    saveStepState(chapitreId, stepIndex, stateObject) {
+        const key = `step_${chapitreId}_${stepIndex}`;
+        try {
+            localStorage.setItem(key, JSON.stringify(stateObject));
+            return true;
+        } catch (error) {
+            console.error(`Erreur sauvegarde step ${key}:`, error);
+            return false;
+        }
+    },
+
+    /**
+     * Vérifie si une étape est accessible (ordre strict)
+     * @param {string} chapitreId - ID du chapitre
+     * @param {number} stepIndex - Index de l'étape
+     * @returns {boolean} true si l'étape est accessible, false sinon
+     */
+    canAccessStep(chapitreId, stepIndex) {
+        // 1ère étape toujours accessible
+        if (stepIndex === 0) {
+            return true;
+        }
+        
+        // Vérifier que l'étape précédente est complétée en utilisant StorageManager
+        const previousStep = StorageManager.getEtapeState(chapitreId, stepIndex - 1);
+        return previousStep?.completed === true;
+    },
+
+    /**
+     * Calcule la progression d'un chapitre
+     * @param {string} chapitreId - ID du chapitre
+     * @returns {Object} {completed: nombre_complétées, total: nombre_total, percentage: pourcentage}
+     */
+    getChapterProgress(chapitreId) {
+        const chapter = CHAPITRES.find(c => c.id === chapitreId);
+        if (!chapter) {
+            return { completed: 0, total: 0, percentage: 0 };
+        }
+        
+        const totalSteps = chapter.etapes.length;
+        let completedSteps = 0;
+        
+        for (let i = 0; i < totalSteps; i++) {
+            const stepState = this.getStepState(chapitreId, i);
+            if (stepState.status === "completed") {
+                completedSteps++;
             }
         }
+        
+        const percentage = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
+        
+        return {
+            completed: completedSteps,
+            total: totalSteps,
+            percentage: percentage
+        };
+    },
 
-        const etape = chapitre.etapes[index];
-        if (!etape) {
-            console.error(`❌ Étape ${index} n'existe pas`);
+    /**
+     * Met à jour l'icône d'une étape selon son statut
+     * @param {string} chapitreId - ID du chapitre
+     * @param {number} stepIndex - Index de l'étape
+     */
+    updateStepIcon(chapitreId, stepIndex) {
+        const state = this.getStepState(chapitreId, stepIndex);
+        const iconEl = document.querySelector(`[data-step="${chapitreId}_${stepIndex}"] .step-icon`);
+        
+        if (!iconEl) return;
+        
+        // Enlever les anciennes classes
+        iconEl.classList.remove("locked", "in-progress", "completed");
+        
+        // Ajouter la nouvelle classe
+        iconEl.classList.add(state.status);
+        
+        // Changer l'emoji
+        switch (state.status) {
+            case "locked":
+                iconEl.textContent = "🔒";
+                break;
+            case "in-progress":
+                iconEl.textContent = "⚡";
+                break;
+            case "completed":
+                iconEl.textContent = "✅";
+                break;
+        }
+    },
+
+    /**
+     * Marque une étape comme visitée/complétée (Type A)
+     * @param {string} chapitreId - ID du chapitre
+     * @param {number} stepIndex - Index de l'étape
+     */
+    markStepVisited(chapitreId, stepIndex) {
+        const chapter = CHAPITRES.find(c => c.id === chapitreId);
+        
+        if (!chapter || !chapter.etapes[stepIndex]) {
+            console.error(`❌ Étape non trouvée: ${chapitreId} index ${stepIndex}`);
             return;
         }
-
-        const totalEtapes = chapitre.etapes.length;
-        const progression = Math.round(((index + 1) / totalEtapes) * 100);
-
-        // ✅ Seulement refuse si étape > 0 ET étape précédente non complétée
-        if (index > 0 && !chapitre.etapes[index - 1].completed) {
-            console.warn('⛔ Complétez l\'étape précédente d\'abord!');
-            return;
+        
+        const step = chapter.etapes[stepIndex];
+        
+        // Marquer comme complétée dans StorageManager
+        StorageManager.saveEtapeState(chapitreId, stepIndex, {
+            completed: true,
+            status: 'completed',
+            visited: true,
+            completedAt: new Date().toISOString(),
+            score: 100  // Consultation = score auto 100%
+        });
+        
+        // Synchroniser avec localStorage
+        const stepKey = `step_${chapitreId}_${stepIndex}`;
+        localStorage.setItem(stepKey, JSON.stringify({
+            status: 'completed',
+            score: 100,
+            visited: true,
+            pointsAwarded: true
+        }));
+        
+        // Donner les points (1 seule fois)
+        const oldState = StorageManager.getEtapeState(chapitreId, stepIndex) || {};
+        if (!oldState.pointsAwarded && step.points) {
+            this.addPoints(step.points, `${chapitreId} étape ${stepIndex}`);
+            console.log(`✅ Points gagnés: ${step.points} pts pour ${chapitreId} étape ${stepIndex}`);
         }
+        
+        // Déverrouiller étape suivante
+        this.unlockNextStep(chapitreId, stepIndex);
+        
+        // Mettre à jour l'icône
+        this.updateStepIcon(chapitreId, stepIndex);
+        
+        console.log(`✅ Étape ${stepIndex} marquée comme complétée pour ${chapitreId}`);
+    },
 
-        // � NOUVEAU: Vérifier si l'étape est verrouillée
-        const etapeState = StorageManager.getEtapeState(chapitreId, index);
-        if (etapeState?.isLocked === true) {
-            console.warn(`🔒 Étape ${index} est verrouillée!`);
+    /**
+     * Marque une étape comme tentée avec score (Type B: QCM, Quiz, etc)
+     * @param {string} chapitreId - ID du chapitre
+     * @param {number} stepIndex - Index de l'étape
+     * @param {number} score - Score obtenu (0-100)
+     * @returns {Object} État mis à jour
+     */
+    markStepAttempted(chapitreId, stepIndex, score) {
+        const chapter = CHAPITRES.find(c => c.id === chapitreId);
+        
+        if (!chapter || !chapter.etapes[stepIndex]) {
+            console.error(`❌ Étape non trouvée: ${chapitreId} index ${stepIndex}`);
+            return null;
+        }
+        
+        const step = chapter.etapes[stepIndex];
+        const passingScore = step.passingScore || 80;
+        
+        // 🔴 TOUJOURS lire de StorageManager (source de vérité)
+        let state = StorageManager.getEtapeState(chapitreId, stepIndex);
+        
+        // Garder le MEILLEUR score
+        if (!state.score || score > state.score) {
+            state.score = score;
+            console.log(`📊 Score enregistré: ${score}% pour ${chapitreId} étape ${stepIndex}`);
+        }
+        
+        state.visited = true;
+        
+        if (score >= passingScore) {
+            // ✅ RÉUSSI - Marquer comme complétée
+            state.status = "completed";
+            state.completed = true;
+            console.log(`✅ RÉUSSI! Score ${score}% >= ${passingScore}% pour ${chapitreId} étape ${stepIndex}`);
             
-            const lockedHTML = `
-                <div class="etape-view">
-                    <button class="btn btn--secondary" onclick="App.afficherChapitreContenu('${chapitreId}')" style="margin-bottom: 20px;">
-                        ← Retour au chapitre
-                    </button>
-                    
-                    <div style="background: linear-gradient(135deg, #FF6B6B 0%, rgba(255, 107, 107, 0.7) 100%); padding: 40px; border-radius: 8px; text-align: center; color: white;">
-                        <div style="font-size: 4em; margin-bottom: 20px;">🔒</div>
-                        <h1 style="margin: 0 0 10px 0; font-size: 1.8em;">Étape verrouillée</h1>
-                        <p style="margin: 0; font-size: 1.1em; opacity: 0.9;">Complétez l'étape précédente pour accéder à celle-ci.</p>
-                    </div>
-                </div>
-            `;
-            
-            document.getElementById('app-content').innerHTML = lockedHTML;
+            // Donner les points (1 seule fois)
+            if (!state.pointsAwarded && step.points) {
+                this.addPoints(step.points, `${chapitreId} étape ${stepIndex}`);
+                state.pointsAwarded = true;
+                console.log(`🏆 Points gagnés: ${step.points} pts pour ${chapitreId} étape ${stepIndex}`);
+            }
+        } else {
+            // ❌ ÉCHOUÉ - Marquer comme en cours
+            state.status = "in_progress";
+            console.log(`❌ ÉCHOUÉ. Score ${score}% < ${passingScore}% pour ${chapitreId} étape ${stepIndex}`);
+        }
+        
+        // 🔷 Sauvegarder dans StorageManager
+        StorageManager.saveEtapeState(chapitreId, stepIndex, state);
+        
+        // 🔷 Synchroniser à localStorage aussi
+        const stepKey = `step_${chapitreId}_${stepIndex}`;
+        localStorage.setItem(stepKey, JSON.stringify(state));
+        console.log(`[saveStepState] Données sauvegardées pour ${stepKey}`);
+        
+        // 🔷 Si réussi, déverrouiller l'étape suivante
+        if (score >= passingScore) {
+            this.unlockNextStep(chapitreId, stepIndex);
+        }
+        
+        // Mettre à jour l'icône
+        this.updateStepIcon(chapitreId, stepIndex);
+        
+        return state;
+    },
+
+    /**
+     * Déverrouille l'étape suivante quand l'étape actuelle est complétée
+     * @param {string} chapitreId - ID du chapitre
+     * @param {number} stepIndex - Index de l'étape complétée
+     */
+    unlockNextStep(chapitreId, stepIndex) {
+        const chapter = CHAPITRES.find(c => c.id === chapitreId);
+        if (!chapter) {
+            console.error(`❌ Chapitre ${chapitreId} non trouvé`);
             return;
         }
-
-        // �🔧 FIX: Déterminer si l'étape a des exercices INTERACTIFS (QCM, DragDrop, etc.)
-        // Les vidéos et lectures simples ne bloquent PAS le bouton
-        const hasExercises = etape.exercices && etape.exercices.length > 0 && 
-                            etape.exercices.some(ex => 
-                                ['qcm', 'dragdrop', 'scenario', 'matching', 'truefalse', 'quiz', 'calculation', 'likert', 'fillblanks', 'flashcards'].includes(ex.type)
-                            );
-        const nextButtonDisabled = hasExercises ? 'disabled' : '';
-        const nextButtonClass = hasExercises ? 'style="opacity: 0.5; cursor: not-allowed;"' : '';
-
-        // Construire le HTML
-        let html = `
-            <div class="etape-view">
-                <button class="btn btn--secondary" onclick="App.afficherChapitreContenu('${chapitreId}')" style="margin-bottom: 20px;">
-                    ← Retour au chapitre
-                </button>
-
-                <div class="etape-header" style="background: linear-gradient(135deg, ${chapitre.couleur} 0%, rgba(${chapitre.couleur}, 0.7) 100%); padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-                    <div style="flex: 1;">
-                        <h1 style="margin: 0 0 10px 0; font-size: 1.8em; color: var(--color-text);">${etape.emoji || '📖'} ${etape.titre}</h1>
-                        <p style="margin: 0; opacity: 0.9; color: var(--color-text-light);">${etape.contenu || ''}</p>
+        
+        const nextIndex = stepIndex + 1;
+        
+        // Vérifier que l'étape suivante existe
+        if (nextIndex >= chapter.etapes.length) {
+            console.log(`✅ Chapitre "${chapter.titre || chapitreId}" complété! Pas d'étape suivante.`);
+            return;
+        }
+        
+        // Déverrouiller l'étape suivante en utilisant StorageManager
+        const nextEtapeState = StorageManager.getEtapeState(chapitreId, nextIndex) || {};
+        if (!nextEtapeState.completed) {
+            StorageManager.saveEtapeState(chapitreId, nextIndex, {
+                ...nextEtapeState,
+                status: "in_progress",
+                unlocked: true
+            });
+            
+            // Synchroniser aussi avec localStorage
+            const nextStepKey = `step_${chapitreId}_${nextIndex}`;
+            localStorage.setItem(nextStepKey, JSON.stringify({
+                status: 'in_progress',
+                score: null,
+                visited: false,
+                pointsAwarded: false
+            }));
+            
+            this.updateStepIcon(chapitreId, nextIndex);
+            console.log(`🔓 Étape ${nextIndex} déverrouillée pour ${chapitreId}!`);
+        }
+    },
+    
+    /**
+     * Affiche une modal de consultation (Type A - Objectifs, Vidéos, Lectures, Portfolio)
+     * @param {string} chapitreId - ID du chapitre
+     * @param {number} stepIndex - Index de l'étape
+     * @param {Object} step - Objet étape
+     */
+    renderConsultModal(chapitreId, stepIndex, step) {
+        // 🔧 ADAPTER à la vraie structure: step.contenu au lieu de step.content.text
+        const contenuTexte = step.contenu || step.content?.text || '';
+        const titreTape = step.titre || step.title || 'Étape';
+        
+        // Créer le contenu HTML de la modal
+        const modalHTML = `
+            <div class="modal-overlay consult-modal" id="consult-modal">
+                <div class="modal-content" style="max-width: 700px; max-height: 90vh; background: white; border-radius: 12px; overflow-y: auto; display: flex; flex-direction: column;">
+                    <div class="modal-header" style="background: linear-gradient(135deg, #4A3F87 0%, #6B5B95 100%); padding: 20px; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h2 style="margin: 0; color: white;">${titreTape}</h2>
+                            <p style="margin: 5px 0 0 0; color: rgba(255,255,255,0.9); font-size: 0.9em;">⏱️ ${step.duree || '-'}</p>
+                        </div>
+                        <button class="btn-close" onclick="document.getElementById('consult-modal').remove()" style="background: none; border: none; color: white; font-size: 24px; cursor: pointer;">✕</button>
                     </div>
-                    <div style="text-align: right; opacity: 0.9; white-space: nowrap; color: var(--color-text-light);">
-                        <div>⏱️ ${etape.duree || '-'}</div>
-                        <div>🎯 ${etape.points || 0} pts</div>
-                    </div>
-                </div>
-
-                <div class="etape-progress">
-                    <div class="progress-bar">
-                        <div class="progress-fill" style="width: ${progression}%;"></div>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 0.9em; color: var(--color-text-light);">
-                        <span>Étape ${index + 1} / ${totalEtapes}</span>
-                        <span>${progression}%</span>
-                    </div>
-                </div>
-
-                <div class="etape-content" id="etape-exercices">
-                    <!-- Exercices ici -->
-                </div>
-
-                <div class="etape-navigation" style="display: flex; gap: 12px; margin-top: 30px; justify-content: space-between;">
-                    ${index > 0 ? `
-                        <button class="btn btn--secondary" onclick="App.afficherEtape('${chapitreId}', ${index - 1})">
-                            ← Étape précédente
-                        </button>
-                    ` : `
-                        <div></div>
-                    `}
                     
-                    ${index < totalEtapes - 1 ? `
-                        <button id="next-etape-btn" class="btn btn--primary" onclick="App.nextEtape('${chapitreId}', ${index})" ${nextButtonDisabled} ${nextButtonClass}>
-                            ${hasExercises ? '⏳ Complétez l\'exercice' : 'Étape suivante →'}
+                    <div class="modal-body" style="padding: 30px;">
+                        <!-- Afficher le texte de l'étape -->
+                        ${contenuTexte ? `
+                            <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #4A3F87;">
+                                <p style="font-size: 1em; line-height: 1.8; color: #333; margin: 0; white-space: pre-wrap;">${contenuTexte}</p>
+                            </div>
+                        ` : ''}
+                        
+                        <!-- Afficher les exercices de consultation (vidéos, lectures) -->
+                        <div id="consult-exercises">
+                            <!-- Les exercices seront renderisés ici -->
+                        </div>
+                    </div>
+                    
+                    <div class="modal-footer" style="background: #f5f5f5; padding: 20px; display: flex; gap: 12px; justify-content: flex-end; border-top: 1px solid #ddd;">
+                        <button class="btn btn--secondary" onclick="document.getElementById('consult-modal').remove()" style="padding: 10px 20px; border: 1px solid #ddd; border-radius: 6px; background: white; cursor: pointer;">
+                            ← Fermer
                         </button>
-                    ` : `
-                        <button class="btn btn--success" onclick="App.completerChapitre('${chapitreId}')" style="background: #2ECC71; border: none; color: white;">
-                            ✅ Terminer le chapitre
+                        <button class="btn btn--primary" onclick="App.markStepVisited('${chapitreId}', ${stepIndex}); document.getElementById('consult-modal')?.remove(); App.afficherChapitre('${chapitreId}');" style="padding: 10px 20px; background: #4A3F87; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                            ✅ Marquer comme complétée
                         </button>
-                    `}
+                    </div>
                 </div>
             </div>
         `;
-
-        // Injecter
-        document.getElementById('app-content').innerHTML = html;
-        console.log(`✅ Étape ${index + 1}/${totalEtapes} affichée: ${etape.titre}`);
-
-        // ✅ Sauvegarder l'état de l'étape selon si elle a des exercices
-        if (!hasExercises) {
-            // 🎬 Vidéo seule = auto-complète (passable immédiatement)
-            StorageManager.saveEtapeState(chapitreId, index, {
-                visited: true,
-                completed: true,
-                status: 'completed'
-            });
-            console.log(`🎬 Étape vidéo seule → auto-complétée`);
-        } else {
-            // 📝 Avec exercices = in_progress (user doit valider)
-            StorageManager.saveEtapeState(chapitreId, index, {
-                visited: true,
-                completed: false,
-                status: 'in_progress'
-            });
-            console.log(`📝 Étape avec exercices → in_progress`);
+        
+        // Injecter dans le DOM
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        
+        // Styliser l'overlay (fond semi-transparent)
+        const overlay = document.getElementById('consult-modal');
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        `;
+        
+        // 🔧 Remplir les exercices de consultation si présents
+        this.renderConsultExercises(chapitreId, stepIndex, step);
+        
+        console.log(`📖 Modal Type A affichée: ${titreTape}`);
+    },
+    
+    /**
+     * Rend les exercices de consultation (vidéos, lectures) dans la modal
+     */
+    renderConsultExercises(chapitreId, stepIndex, step) {
+        if (!step.exercices || step.exercices.length === 0) {
+            return;
         }
-
-        // Remplir exercices
-        setTimeout(() => {
-            this.remplirExercicesEtape(etape);
+        
+        const container = document.getElementById('consult-exercises');
+        if (!container) {
+            console.error('❌ Container consult-exercises NOT FOUND!');
+            return;
+        }
+        
+        console.log(`🎬 renderConsultExercises: ${step.exercices.length} exercice(s)`);
+        
+        let exercicesHTML = '';
+        
+        step.exercices.forEach((exo, idx) => {
+            const type = exo.type;
+            const titre = exo.titre || 'Exercice';
+            const description = exo.description || '';
             
-            // ⭐ Ajouter le bouton "Demander aide"
-            this.addTutoringHelpButton(chapitreId, index);
-        }, 100);
+            console.log(`📝 Exercice ${idx}: type=${type}, titre=${titre}`);
+            
+            if (type === 'video') {
+                // Afficher la vidéo
+                let videoType = exo.content?.videoType;
+                let videoUrl = exo.content?.url || exo.url;  // Chercher url au niveau racine aussi
+                const videoDescription = exo.content?.description || '';
+                // Chercher le videoId: d'abord dans exo, sinon dans la step
+                const videoId = exo.videoId || step.videoId;
+                
+                console.log(`🎬 Vidéo détectée: videoId=${videoId}, type=${videoType}, url=${videoUrl}`);
+                
+                // Si les données vidéo manquent, chercher dans le manifest
+                if (!videoType && !videoUrl && videoId) {
+                    console.log(`📺 Cherche vidéo ${videoId} dans le manifest...`);
+                    // Le manifest est chargé globalement
+                    if (window.videoManifest) {
+                        const video = window.videoManifest.videos?.find(v => v.id === videoId);
+                        if (video) {
+                            videoType = video.sources?.['720p'] ? 'local' : 'youtube';
+                            videoUrl = video.sources?.['720p'] || video.sources?.['480p'];
+                            // Résoudre les chemins relatifs: ../file.mp4 → /assets/videos/file.mp4
+                            if (videoUrl && videoUrl.startsWith('../')) {
+                                videoUrl = `/assets/videos/${videoUrl.slice(3)}`;
+                            }
+                            console.log(`✅ Vidéo trouvée: ${videoUrl}`);
+                        }
+                    }
+                }
+                
+                // ✅ DÉTERMINE le type de vidéo si pas encore défini
+                if (!videoType && videoUrl) {
+                    if (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be')) {
+                        videoType = 'youtube';
+                    } else if (videoUrl.endsWith('.mp4') || videoUrl.endsWith('.webm') || videoUrl.endsWith('.ogg')) {
+                        videoType = 'local';
+                    }
+                    console.log(`🔍 Type détecté auto: ${videoType} (URL: ${videoUrl})`);
+                }
+                
+                console.log(`🎬 Vidéo finale:`, {videoType, videoUrl, videoDescription});
+                
+                if (videoType === 'youtube') {
+                    // YouTube iframe
+                    const iframeUrl = videoUrl.replace('watch?v=', 'embed/');
+                    exercicesHTML += `
+                        <div style="margin-bottom: 30px; padding: 20px; background: #f0f0f0; border-radius: 8px;">
+                            <h3 style="margin: 0 0 10px 0; color: #4A3F87;">🎬 ${titre}</h3>
+                            ${description ? `<p style="margin: 0 0 15px 0; font-size: 0.9em; color: #666;">${description}</p>` : ''}
+                            <iframe width="100%" height="300" src="${iframeUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="border-radius: 8px;"></iframe>
+                        </div>
+                    `;
+                } else if (videoType === 'local') {
+                    // Vidéo locale
+                    exercicesHTML += `
+                        <div style="margin-bottom: 30px; padding: 20px; background: #f0f0f0; border-radius: 8px;">
+                            <h3 style="margin: 0 0 10px 0; color: #4A3F87;">🎬 ${titre}</h3>
+                            ${description ? `<p style="margin: 0 0 15px 0; font-size: 0.9em; color: #666;">${description}</p>` : ''}
+                            <video width="100%" height="300" controls style="border-radius: 8px; background: #000;">
+                                <source src="${videoUrl}" type="video/mp4">
+                                Votre navigateur ne supporte pas les vidéos.
+                            </video>
+                        </div>
+                    `;
+                } else {
+                    // Vidéo sans type détecté
+                    exercicesHTML += `
+                        <div style="margin-bottom: 30px; padding: 20px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 8px;">
+                            <h3 style="margin: 0 0 10px 0; color: #ff9800;">🎬 ${titre}</h3>
+                            <p style="margin: 0; color: #666;">⚠️ Vidéo non trouvée ou format non supporté</p>
+                        </div>
+                    `;
+                }
+            } else if (type === 'lecture') {
+                // Afficher le texte de lecture
+                const lectureText = exo.content?.text || '';
+                exercicesHTML += `
+                    <div style="margin-bottom: 30px; padding: 20px; background: #fffacd; border-left: 4px solid #ff9800; border-radius: 8px;">
+                        <h3 style="margin: 0 0 10px 0; color: #ff9800;">📚 ${titre}</h3>
+                        ${description ? `<p style="margin: 0 0 15px 0; font-size: 0.9em; color: #666;">${description}</p>` : ''}
+                        <p style="margin: 0; line-height: 1.8; white-space: pre-wrap; color: #333;">${lectureText}</p>
+                    </div>
+                `;
+            } else if (type === 'flashcards') {
+                // Afficher les flashcards
+                const cards = exo.content?.cards || [];
+                exercicesHTML += `
+                    <div style="margin-bottom: 30px;">
+                        <h3 style="margin: 0 0 15px 0; color: #4A3F87;">🗂️ ${titre}</h3>
+                        ${description ? `<p style="margin: 0 0 15px 0; font-size: 0.9em; color: #666;">${description}</p>` : ''}
+                        <div style="display: grid; gap: 15px;">
+                            ${cards.map((card, cidx) => `
+                                <div style="padding: 15px; background: white; border: 2px solid #4A3F87; border-radius: 8px; cursor: pointer; transition: all 0.3s;" 
+                                     onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'" 
+                                     onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none'">
+                                    <div style="color: #666; font-size: 0.9em; margin-bottom: 8px;">❓ ${card.recto}</div>
+                                    <div style="background: #f0f0f0; padding: 10px; border-radius: 4px; color: #333; font-weight: 500;">✅ ${card.verso}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+        });
+        
+        console.log(`✅ HTML généré: ${exercicesHTML.length} caractères`);
+        container.innerHTML = exercicesHTML;
+        console.log(`✅ ${step.exercices.length} exercice(s) de consultation rendus`);
+    },
+    
+    /**
+     * Affiche une modal d'exercice (Type B - QCM, Flashcards, Quiz)
+     * @param {string} chapitreId - ID du chapitre
+     * @param {number} stepIndex - Index de l'étape
+     * @param {Object} step - Objet étape
+     */
+    renderExerciseModal(chapitreId, stepIndex, step) {
+        // 🔧 ADAPTER à la vraie structure: step.exercices[0] au lieu de step.content
+        if (!step.exercices || step.exercices.length === 0) {
+            console.error('❌ Pas d\'exercice dans cette étape');
+            alert('Aucun exercice à afficher');
+            return;
+        }
+        
+        const exercice = step.exercices[0]; // Premier exercice
+        const titreTape = step.titre || step.title || 'Exercice';
+        const typeExo = exercice.type;
+        
+        // ========== DÉTERMINER TYPE D'ÉTAPE ==========
+        // CONSULTATION: video, lecture, objectives, portfolio
+        // VALIDATION: qcm, qcm_scenario, quiz, assessment, scenario, calculation
+        const CONSULTATION_TYPES = ['video', 'lecture', 'objectives', 'portfolio', 'flashcards'];
+        const VALIDATION_TYPES = ['qcm', 'qcm_scenario', 'quiz', 'assessment', 'scenario', 'calculation'];
+        
+        const isConsultation = CONSULTATION_TYPES.includes(typeExo) || step.consultation === true;
+        const isValidation = VALIDATION_TYPES.includes(typeExo) || step.validation === true;
+        
+        console.log(`[🔍 MODAL] ${titreTape} | Consultation: ${isConsultation}, Validation: ${isValidation}`);
+        
+        // Générer le contenu HTML selon le type d'exercice
+        let contenuExerciceHTML = '';
+        
+        if (typeExo === 'qcm' || typeExo === 'qcm_scenario') {
+            // QCM/QCM_Scenario: afficher la question et les options
+            const question = exercice.content?.question || '';
+            const options = exercice.content?.options || [];
+            
+            contenuExerciceHTML = `
+                <div style="margin-bottom: 20px;">
+                    <h3 style="margin: 0 0 15px 0; font-size: 1.1em; color: #333;">${question}</h3>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        ${options.map((opt, idx) => `
+                            <label style="display: flex; align-items: center; padding: 12px; border: 2px solid #ddd; border-radius: 6px; cursor: pointer; transition: all 0.2s; background: white;" 
+                                   onmouseover="this.style.background='#f0f0f0'; this.style.borderColor='#4A3F87';" 
+                                   onmouseout="this.style.background='white'; this.style.borderColor='#ddd';">
+                                <input type="radio" name="qcm_answer" value="${idx}" style="margin-right: 12px; cursor: pointer; width: 18px; height: 18px;">
+                                <span style="flex: 1; color: #333;">${opt.label}</span>
+                            </label>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        } else if (typeExo === 'quiz') {
+            // Quiz: utiliser le rendu spécifique
+            contenuExerciceHTML = this.renderExerciceQuiz(exercice);
+        } else if (typeExo === 'flashcards') {
+            // Flashcards: utiliser la vraie fonction de rendu
+            contenuExerciceHTML = this.renderExerciceFlashcards(exercice);
+        } else if (typeExo === 'lecture') {
+            // Lecture: afficher le texte
+            const texte = exercice.content?.text || '';
+            
+            contenuExerciceHTML = `
+                <div style="padding: 20px; background: #fffacd; border-left: 4px solid #ff9800; border-radius: 8px;">
+                    <p style="margin: 0; line-height: 1.8; white-space: pre-wrap; color: #333;">${texte}</p>
+                </div>
+                <p style="margin-top: 15px; text-align: center; color: #666; font-style: italic;">Marquez l'étape comme complétée après avoir lu.</p>
+            `;
+        } else if (typeExo === 'video') {
+            // Vidéo: afficher le lecteur avec détection YouTube vs local
+            let videoType = exercice.content?.videoType;
+            let videoUrl = exercice.content?.url || exercice.url;  // Fallback à exo.url
+            const videoDescription = exercice.content?.description || '';
+            const videoId = exercice.videoId || step.videoId;
+            
+            // Si les données vidéo manquent, chercher dans le manifest
+            if (!videoType && !videoUrl && videoId) {
+                if (window.videoManifest) {
+                    const video = window.videoManifest.videos?.find(v => v.id === videoId);
+                    if (video) {
+                        videoType = video.sources?.['720p'] ? 'local' : 'youtube';
+                        videoUrl = video.sources?.['720p'] || video.sources?.['480p'];
+                        // Résoudre les chemins relatifs
+                        if (videoUrl && videoUrl.startsWith('../')) {
+                            videoUrl = `/assets/videos/${videoUrl.slice(3)}`;
+                        }
+                    }
+                }
+            }
+            
+            // ✅ AUTO-DETECT le type de vidéo si pas encore défini
+            if (!videoType && videoUrl) {
+                if (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be')) {
+                    videoType = 'youtube';
+                } else if (videoUrl.endsWith('.mp4') || videoUrl.endsWith('.webm') || videoUrl.endsWith('.ogg')) {
+                    videoType = 'local';
+                }
+            }
+            
+            if (videoType === 'youtube') {
+                const iframeUrl = videoUrl.replace('watch?v=', 'embed/');
+                contenuExerciceHTML = `
+                    <div style="margin-bottom: 20px;">
+                        ${videoDescription ? `<p style="margin: 0 0 15px 0; color: #666;">${videoDescription}</p>` : ''}
+                        <iframe width="100%" height="400" src="${iframeUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="border-radius: 8px;"></iframe>
+                    </div>
+                    <p style="margin-top: 15px; text-align: center; color: #666; font-style: italic;">Marquez l'étape comme complétée après avoir regardé.</p>
+                `;
+            } else if (videoType === 'local') {
+                contenuExerciceHTML = `
+                    <div style="margin-bottom: 20px;">
+                        ${videoDescription ? `<p style="margin: 0 0 15px 0; color: #666;">${videoDescription}</p>` : ''}
+                        <video width="100%" height="400" controls style="border-radius: 8px; background: #000;">
+                            <source src="${videoUrl}" type="video/mp4">
+                            Votre navigateur ne supporte pas les vidéos.
+                        </video>
+                    </div>
+                    <p style="margin-top: 15px; text-align: center; color: #666; font-style: italic;">Marquez l'étape comme complétée après avoir regardé.</p>
+                `;
+            } else {
+                contenuExerciceHTML = `<p style="color: #666;">⚠️ Vidéo non trouvée ou format non supporté</p>`;
+            }
+        } else {
+            // Type inconnu
+            contenuExerciceHTML = `<p style="color: #666;">Type d'exercice non supporté: ${typeExo}</p>`;
+        }
+        
+        // Créer la modal HTML
+        const modalHTML = `
+            <div class="modal-overlay exercise-modal" id="exercise-modal">
+                <div class="modal-content" style="max-width: 800px; max-height: 90vh; background: white; border-radius: 12px; overflow-y: auto; display: flex; flex-direction: column;">
+                    <div class="modal-header" style="background: linear-gradient(135deg, #4A3F87 0%, #6B5B95 100%); padding: 20px; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h2 style="margin: 0; color: white;">${titreTape}</h2>
+                            <p style="margin: 5px 0 0 0; color: rgba(255,255,255,0.9); font-size: 0.9em;">⏱️ ${step.duree || '-'} | 🎯 ${step.points || 0} pts</p>
+                        </div>
+                        <button class="btn-close" onclick="document.getElementById('exercise-modal').remove()" style="background: none; border: none; color: white; font-size: 24px; cursor: pointer;">✕</button>
+                    </div>
+                    
+                    <div class="modal-body" style="padding: 30px;">
+                        <div id="exercise-content">
+                            ${contenuExerciceHTML}
+                        </div>
+                        
+                        <div id="result-section" style="display: none; margin-top: 25px; padding: 20px; border-radius: 8px; border-left: 4px solid;">
+                            <h3 id="result-title" style="margin: 0 0 10px 0; font-size: 1.3em;"></h3>
+                            <p id="result-message" style="margin: 0; font-size: 1em;"></p>
+                        </div>
+                    </div>
+                    
+                    <div class="modal-footer" style="background: #f5f5f5; padding: 20px; display: flex; gap: 12px; justify-content: flex-end; border-top: 1px solid #ddd;">
+                        <button class="btn btn--secondary" onclick="document.getElementById('exercise-modal').remove()" style="padding: 10px 20px; border: 1px solid #ddd; border-radius: 6px; background: white; cursor: pointer;">
+                            ← Fermer
+                        </button>
+                        ${isConsultation ? `
+                            <button class="btn btn--primary" id="btn-validate" onclick="completerEtapeConsultation('${chapitreId}', ${stepIndex}, {viewed: true}); document.getElementById('exercise-modal')?.remove(); setTimeout(() => App.afficherChapitre('${chapitreId}'), 500);" style="padding: 10px 20px; background: #4A3F87; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                                ✅ Marquer comme complété
+                            </button>
+                        ` : `
+                            <button class="btn btn--primary" id="btn-validate" onclick="App.validerExerciceRenderModal('${typeExo}', '${chapitreId}', ${stepIndex})" style="padding: 10px 20px; background: #4A3F87; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                                🎯 Soumettre réponses
+                            </button>
+                        `}
+                        <button class="btn btn--primary" id="btn-next" style="display: none; padding: 10px 20px; background: #2ECC71; color: white; border: none; border-radius: 6px; cursor: pointer;" onclick="App.markStepAttempted('${chapitreId}', ${stepIndex}, window.lastScore); document.getElementById('exercise-modal')?.remove(); App.afficherChapitre('${chapitreId}');">
+                            ➜ Exercice suivant
+                        </button>
+                        <button class="btn btn--secondary" id="btn-retry" style="display: none; padding: 10px 20px; border: 2px solid #ff9800; background: white; color: #ff9800; border-radius: 6px; cursor: pointer; font-weight: bold;" onclick="document.getElementById('exercise-content').innerHTML = window.lastExerciseHTML; document.getElementById('result-section').style.display = 'none'; document.getElementById('btn-validate').style.display = 'block'; document.getElementById('btn-next').style.display = 'none'; document.getElementById('btn-retry').style.display = 'none';">
+                            🔄 Réessayer
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // ✅ STOCKER pour le bouton retry (évite template literal imbriqué)
+        window.lastExerciseHTML = contenuExerciceHTML;
+        
+        // Injecter dans le DOM
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        
+        // Styliser l'overlay
+        const overlay = document.getElementById('exercise-modal');
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        `;
+        
+        // ✅ Si c'est une flashcard, les événements auront été attachés dans renderExerciceFlashcards()
+        // Mais on doit re-attacher après insertion dans le DOM de la modal
+        if (typeExo === 'flashcards') {
+            setTimeout(() => {
+                document.querySelectorAll('.flashcard-wrapper').forEach(wrapper => {
+                    const inner = wrapper.querySelector('.flashcard-inner');
+                    let isFlipped = false;
+                    
+                    // Clic pour retourner la carte
+                    wrapper.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        isFlipped = !isFlipped;
+                        inner.style.transform = isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)';
+                    });
+                    
+                    // Hover pour feedback visuel
+                    wrapper.addEventListener('mouseover', function() {
+                        this.style.boxShadow = '0 12px 24px rgba(0,0,0,0.3)';
+                        this.style.transform = 'translateY(-5px)';
+                    });
+                    
+                    wrapper.addEventListener('mouseout', function() {
+                        this.style.boxShadow = 'none';
+                        this.style.transform = 'translateY(0)';
+                    });
+                });
+            }, 150);
+        }
+        
+        console.log(`✏️ Modal Type B (${typeExo}) affichée: ${titreTape}`);
+    },
+    
+    /**
+     * Soumet l'exercice et affiche le résultat
+     * @param {string} chapitreId - ID du chapitre
+     * @param {number} stepIndex - Index de l'étape
+     */
+    submitExercise(chapitreId, stepIndex) {
+        // 🎯 UTILISER LE SCORE DÉFINI PAR validerQCMSecurise() S'IL EXISTE
+        let score = window.lastScore !== undefined ? window.lastScore : 0;
+        
+        // Si window.lastScore n'était pas défini, essayer de calculer le score
+        if (window.lastScore === undefined) {
+            if (typeof this.calculateScore === 'function') {
+                score = this.calculateScore();
+            } else if (typeof calculateScore === 'function') {
+                score = calculateScore();
+            } else {
+                // Fallback: utiliser le score par défaut
+                console.warn('⚠️ calculateScore() non trouvée - utilisation du score par défaut');
+                score = 0;
+            }
+            window.lastScore = score;
+        }
+        
+        console.log(`📊 Score soumis: ${window.lastScore}%`);
+        
+        // Marquer la tentative
+        const state = this.markStepAttempted(chapitreId, stepIndex, score);
+        
+        // Récupérer la modal et les éléments
+        const resultSection = document.getElementById('result-section');
+        const resultTitle = document.getElementById('result-title');
+        const resultMessage = document.getElementById('result-message');
+        const btnValidate = document.getElementById('btn-validate');
+        const btnNext = document.getElementById('btn-next');
+        const btnRetry = document.getElementById('btn-retry');
+        
+        const chapter = CHAPITRES.find(c => c.id === chapitreId);
+        const step = chapter?.etapes[stepIndex];
+        const points = step?.points || 0;
+        
+        // Afficher le résultat
+        if (state.status === "completed") {
+            // ✅ RÉUSSI (score >= 80%)
+            resultTitle.textContent = '🎉 Bravo!';
+            resultMessage.innerHTML = `
+                <p style="margin: 8px 0;">Score: <strong style="font-size: 1.2em; color: #2ECC71;">${score}%</strong></p>
+                <p style="margin: 8px 0;">💰 + ${points} points</p>
+            `;
+            resultSection.style.background = '#d4edda';
+            resultSection.style.borderLeftColor = '#28a745';
+            resultSection.style.display = 'block';
+            
+            btnValidate.style.display = 'none';
+            btnRetry.style.display = 'none';
+            btnNext.style.display = 'block';
+            
+            console.log(`✅ RÉUSSI! Score ${score}% >= 80% | +${points} points`);
+        } else {
+            // ❌ ÉCHOUÉ (score < 80%)
+            resultTitle.textContent = '❌ Score insuffisant';
+            resultMessage.innerHTML = `
+                <p style="margin: 8px 0;">Votre score: <strong style="font-size: 1.2em; color: #dc3545;">${score}%</strong></p>
+                <p style="margin: 8px 0;">Minimum requis: <strong>80%</strong></p>
+                <p style="margin: 12px 0 0 0; font-style: italic; opacity: 0.8;">Réessayez pour obtenir les points.</p>
+            `;
+            resultSection.style.background = '#f8d7da';
+            resultSection.style.borderLeftColor = '#dc3545';
+            resultSection.style.display = 'block';
+            
+            btnValidate.style.display = 'none';
+            btnNext.style.display = 'none';
+            btnRetry.style.display = 'block';
+            
+            console.log(`❌ ÉCHOUÉ. Score ${score}% < 80% - Réessai possible`);
+        }
+    },
+    
+    /**
+     * Affiche une étape (Router Type A vs Type B)
+     * @param {string} chapitreId - ID du chapitre
+     * @param {number} stepIndex - Index de l'étape
+     */
+    afficherEtape(chapitreId, stepIndex) {
+        // Vérifier l'accès
+        if (!this.canAccessStep(chapitreId, stepIndex)) {
+            alert("🔒 Cette étape est verrouillée. Complétez l'étape précédente d'abord.");
+            console.warn(`⛔ Accès refusé à l'étape ${stepIndex} du chapitre ${chapitreId}`);
+            return;
+        }
+        
+        // Récupérer le chapitre et l'étape
+        const chapter = CHAPITRES.find(c => c.id === chapitreId);
+        if (!chapter) {
+            console.error(`❌ Chapitre ${chapitreId} non trouvé`);
+            return;
+        }
+        
+        const step = chapter.etapes[stepIndex];
+        if (!step) {
+            console.error(`❌ Étape non trouvée: ${chapitreId} - ${stepIndex}`);
+            return;
+        }
+        
+        // 🔧 AUTO-MAP: Si typeCategory n'existe pas, mapper depuis type d'exercice
+        if (!step.typeCategory) {
+            if (step.exercices && step.exercices.length > 0) {
+                const exoType = step.exercices[0].type;
+                console.log(`📋 Auto-mapping: exercice type="${exoType}"`);
+                
+                const consultExoTypes = ["video", "lecture", "objectives", "portfolio"];
+                step.typeCategory = consultExoTypes.includes(exoType) ? "consult" : "score";
+                console.log(`✅ Mapped to typeCategory="${step.typeCategory}"`);
+            } else {
+                step.typeCategory = "consult"; // fallback
+                console.log(`⚠️ Pas d'exercice - typeCategory par défaut: "consult"`);
+            }
+        }
+        
+        // Mettre à jour currentChapitreId et currentStepId pour les autres fonctions
+        window.currentChapitreId = chapitreId;
+        window.currentStepId = step.id;
+        
+        // Router selon le type d'étape
+        if (step.typeCategory === "consult") {
+            // Type A: Objectifs, Vidéos, Lectures, Portfolio
+            console.log(`📖 Affichage Type A (consult): ${step.title}`);
+            this.renderConsultModal(chapitreId, stepIndex, step);
+        } else if (step.typeCategory === "score") {
+            // Type B: QCM, Flashcards, Quiz, Exercices
+            console.log(`✏️ Affichage Type B (score): ${step.title}`);
+            this.renderExerciseModal(chapitreId, stepIndex, step);
+        } else {
+            console.error(`❌ Type d'étape inconnu: ${step.typeCategory}`);
+            alert(`Type d'étape inconnu: ${step.typeCategory}`);
+        }
     },
 
     /**
@@ -1920,36 +3685,19 @@ const App = {
      * ✅ FIX: Utilise StorageManager + met à jour la propriété en mémoire
      */
     nextEtape(chapitreId, etapeIndex) {
-        // 🔧 BUG #1 FIX: Mettre à jour la propriété .completed en mémoire
-        let chapitre = null;
-        if (CHAPITRES && Array.isArray(CHAPITRES)) {
-            chapitre = CHAPITRES.find(ch => ch.id === chapitreId);
-        }
-        if (!chapitre && window.allNiveaux) {
-            for (let niveauId in window.allNiveaux) {
-                const chapitres = window.allNiveaux[niveauId];
-                if (Array.isArray(chapitres)) {
-                    chapitre = chapitres.find(ch => ch.id === chapitreId);
-                    if (chapitre) break;
-                }
-            }
-        }
+        // Fermer les modals (Type A et Type B)
+        const consultModal = document.getElementById('consult-modal');
+        if (consultModal) consultModal.remove();
         
-        if (chapitre && chapitre.etapes[etapeIndex]) {
-            chapitre.etapes[etapeIndex].completed = true;
-            console.log(`✅ BUG #1 FIX: Propriété chapitre.etapes[${etapeIndex}].completed = true`);
-        }
+        const exerciseModal = document.getElementById('exercise-modal');
+        if (exerciseModal) exerciseModal.remove();
         
-        // 🔧 BUG #2 FIX: Utiliser StorageManager au lieu de localStorage direct
-        StorageManager.saveEtapeState(chapitreId, etapeIndex, {
-            visited: true,
-            completed: true,
-            status: 'completed'
-        });
-        console.log(`✅ BUG #2 FIX: Étape ${etapeIndex} sauvegardée via StorageManager`);
+        // Retourner au chemin
+        this.afficherChapitre(chapitreId);
         
-        // ✅ Avancer à l'étape suivante
-        this.afficherEtape(chapitreId, etapeIndex + 1);
+        // Mettre à jour la progression
+        const progress = this.getChapterProgress(chapitreId);
+        console.log(`📊 Progression: ${progress.completed}/${progress.total} (${progress.percentage}%)`);
     },
 
     /**
@@ -2223,7 +3971,6 @@ const App = {
                                 font-size: 18px;
                                 font-weight: 600;
                                 box-shadow: 0 8px 16px rgba(0,0,0,0.2);
-                                transform: rotateY(180deg);
                                 backface-visibility: hidden;
                                 -webkit-backface-visibility: hidden;
                             ">
@@ -2245,9 +3992,6 @@ const App = {
                     <div id="flashcard-container" style="perspective: 1000px;">
                         ${cardsHtml}
                     </div>
-                    <button class="btn btn--primary" style="width: 100%; margin-top: 20px;" onclick="App.validerExercice('${exercice.id}', 'flashcards')">
-                        ✅ J'ai maîtrisé ces cartes
-                    </button>
                 </div>
             `;
         }
@@ -2428,6 +4172,12 @@ const App = {
             StorageManager.updateChapterProgress(chapitreId, 100);
         }
 
+        // ✅ FIX #1: Refresh visual state after marking all complete
+        // Use setTimeout to ensure DOM is ready
+        setTimeout(() => {
+            updateStepIcons(chapitreId, chapitre);
+        }, 100);
+
         console.log(`✅ Bravo! "${chapitre.titre}" terminé!`);
         this.afficherChapitreContenu(chapitreId);
     },
@@ -2540,24 +4290,31 @@ const App = {
             this.afficherEtape(chapitreId, stepId);
         } else {
             // C'est le dernier exercice - Tous les exercices complétés
-            console.log(`✅ Dernier exercice complété - Marquant l'étape ${stepId} comme complétée`);
+            console.log(`✅ Dernier exercice complété`);
             
-            // Chercher l'index de l'étape
-            const etapeIndex = chapitre.etapes.findIndex(e => e.id === stepId);
+            // FIX FLASHCARDS: Ne pas appeler marquerEtapeComplete() de nouveau
+            // (déjà appelé dans validerExercice() au début)
+            // marquerEtapeComplete() est un double appel - à eviter
             
-            // IMPORTANT: Utiliser marquerEtapeComplete pour mettre à jour la progression
-            this.marquerEtapeComplete(chapitreId, stepId);
-            
-            const maxPoints = etape?.points || 10;
-            StorageManager.addPointsToStep(stepId, maxPoints, maxPoints);
-            this.updateHeader();
-            
-            showSuccessNotification('🎉 Étape complétée!', 'Retour au chemin des étapes...', '✅', 2000);
             window.currentExerciceIndex = 0; // Reset
+            showSuccessNotification('🎉 Étape complétée!', 'Passage à l\'étape suivante...', '✅', 2000);
+            
             setTimeout(() => {
                 App.fermerModal();
-                // Revenir à l'affichage du chapitre pour voir les autres étapes
-                App.afficherChapitre(chapitreId);
+                
+                // FIX FLASHCARDS: Passer à l'ÉTAPE SUIVANTE au lieu de revenir au menu
+                const etapeIndex = chapitre.etapes.findIndex(e => e.id === stepId);
+                const nextEtapeIndex = etapeIndex + 1;
+                
+                if (nextEtapeIndex < chapitre.etapes.length) {
+                    // Il y a une étape suivante - l'afficher immédiatement
+                    console.log(`✅ Passage à l'étape suivante (index ${nextEtapeIndex})`);
+                    App.afficherEtape(chapitreId, nextEtapeIndex);
+                } else {
+                    // C'est la dernière étape du chapitre - retour au menu
+                    console.log(`✅ Dernier étape atteinte - retour au menu du chapitre`);
+                    App.afficherChapitre(chapitreId);
+                }
             }, 2000);
         }
     },
@@ -3081,7 +4838,6 @@ const App = {
                     <p style="color: var(--color-text-light); font-size: 14px; margin-bottom: var(--spacing-md);">
                         Naviguez à travers les cartes et cliquez pour révéler les réponses
                     </p>
-                    <button class="btn btn--primary" style="width: 100%; padding: var(--spacing-md);" onclick="App.validerExercice('flashcards')">✅ J'ai maîtrisé ces cartes</button>
                 </div>
             </div>
         `;
@@ -3342,7 +5098,6 @@ ${content.summary}
         });
         
         html += `
-                <button class="btn btn--primary" style="width: 100%;" onclick="App.validerQuiz()">Soumettre le quiz</button>
                 <div id="quiz-feedback" style="margin-top: var(--spacing-lg); padding: var(--spacing-md); border-radius: var(--radius-md); display: none;"></div>
             </div>
         `;
@@ -4086,6 +5841,34 @@ ${content.summary}
     },
 
     /**
+     * ✅ CHARGE les états de TOUTES les étapes d'un chapitre depuis StorageManager
+     * FIX #1: Synchronise chapitre.etapes[].completed avec les données persistées
+     * CRITIQUE: À appeler quand on affiche un chapitre, sinon les étapes réapparaissent incomplètes après reload
+     */
+    loadChapitreEtapesStates(chapitreId) {
+        const chapitre = this.findChapitreById(chapitreId);
+        if (!chapitre || !chapitre.etapes) {
+            console.warn(`⚠️ loadChapitreEtapesStates: Chapitre ${chapitreId} invalide`);
+            return;
+        }
+        
+        console.log(`🔄 FIX #1: Chargement des états des étapes pour ${chapitreId}...`);
+        
+        chapitre.etapes.forEach((etape, index) => {
+            const etapeState = StorageManager.getEtapeState(chapitreId, index);
+            if (etapeState && etapeState.completed === true) {
+                etape.completed = true;
+                console.log(`  ✅ Étape ${index} (${etape.id}): loaded as COMPLETED`);
+            } else {
+                etape.completed = false;
+                console.log(`  ⏳ Étape ${index} (${etape.id}): loaded as IN_PROGRESS`);
+            }
+        });
+        
+        console.log(`✅ Tous les états chargés pour ${chapitreId}`);
+    },
+
+    /**
      * Calcule la progression d'un chapitre (0-100%)
      * AMÉLIORÉ: Utilise findChapitreById pour chercher dans tous les niveaux
      */
@@ -4224,85 +6007,128 @@ ${content.summary}
 
     /**
      * Marque une étape comme complétée - Améliorée avec SVG re-render
+     * ✅ AVEC PROTECTION CONTRE RACE CONDITIONS
      */
     marquerEtapeComplete(chapitreId, stepId) {
         console.log(`✅ Marquer complète: ${stepId} du chapitre ${chapitreId}`);
         
-        // 🌉 Utiliser la fonction bridge pour trouver le chapitre
-        const chapitre = this.findChapitreById(chapitreId);
-        const etape = chapitre?.etapes.find(e => e.id === stepId);
+        // 🔒 FIX: Prévenir appels simultanés (race condition)
+        if (isEtapeProcessing) {
+            console.warn('⚠️ Étape déjà en cours de validation. Double-click ignoré.');
+            return;
+        }
+        isEtapeProcessing = true;
         
-        if (etape) {
-            etape.completed = true;
-            
-            // 1️⃣ Sauvegarder dans localStorage (ancien système)
-            const stepProgress = {
-                completed: true,
-                timestamp: new Date().toISOString(),
-                score: 100
-            };
-            localStorage.setItem(`step_${stepId}`, JSON.stringify(stepProgress));
-            
-            // 🔧 NOUVEAU: Sauvegarder via StorageManager avec status 'completed'
-            // Chercher l'index de l'étape
-            const etapeIndex = chapitre.etapes.findIndex(e => e.id === stepId);
-            StorageManager.saveEtapeState(chapitreId, etapeIndex, {
-                visited: true,
-                completed: true,
-                status: 'completed',
-                completedAt: new Date().toISOString()
+        // 🔒 Désactiver TOUS les boutons de navigation pendant le traitement
+        const allNavButtons = document.querySelectorAll('[onclick*="afficherEtape"], [onclick*="allerExercice"], .btn-next, .btn-previous, [data-action="next"], [data-action="previous"]');
+        const disableButtons = () => {
+            allNavButtons.forEach(btn => {
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+                btn.style.pointerEvents = 'none';
             });
-            console.log(`✅ StorageManager: Étape ${stepId} marquée COMPLETED`);
+        };
+        
+        // 🔓 RÉACTIVER les boutons après traitement
+        const enableButtons = () => {
+            allNavButtons.forEach(btn => {
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.style.pointerEvents = 'auto';
+            });
+        };
+        
+        disableButtons();
+        
+        try {
+            // 🌉 Utiliser la fonction bridge pour trouver le chapitre
+            const chapitre = this.findChapitreById(chapitreId);
+            const etape = chapitre?.etapes.find(e => e.id === stepId);
             
-            // Calculer la progression du chapitre
-            const completedCount = chapitre.etapes.filter(e => e.completed).length;
-            chapitre.progression = Math.round((completedCount / chapitre.etapes.length) * 100);
-            
-            // 🔄 NOUVEAU: Mettre à jour la barre de progression visuelle
-            this.updateChapterProgressBar(chapitreId);
-            
-            // 📊 NOUVEAU: Tracker les points de l'étape
-            const points = etape.points || 10;
-            const data = JSON.parse(localStorage.getItem('douanelmsv2'));
-            if (data && data.stepsPoints) {
-                data.stepsPoints[stepId] = points;
-                data.user.totalPoints = calculateTotalPoints(data.stepsPoints);
-                localStorage.setItem('douanelmsv2', JSON.stringify(data));
-                console.log(`📊 Points mis à jour: +${points}pts (Total: ${data.user.totalPoints}pts)`);
-            }
-            
-            // 2️⃣ Sauvegarder dans le localStorage
-            const chaptersProgress = StorageManager.getChaptersProgress();
-            if (!chaptersProgress[chapitreId]) {
-                chaptersProgress[chapitreId] = {
-                    title: chapitre.titre,
-                    completion: 0,
-                    stepsCompleted: []
+            if (etape) {
+                etape.completed = true;
+                
+                // 1️⃣ Sauvegarder dans localStorage (ancien système)
+                const stepProgress = {
+                    completed: true,
+                    timestamp: new Date().toISOString(),
+                    score: 100
                 };
-            }
-            chaptersProgress[chapitreId].completion = chapitre.progression;
-            if (!chaptersProgress[chapitreId].stepsCompleted.includes(stepId)) {
-                chaptersProgress[chapitreId].stepsCompleted.push(stepId);
-            }
-            StorageManager.update('chaptersProgress', chaptersProgress);
-            
-            // ➕ NOUVEAU: Recalculer la progression depuis les données persistées
-            // Cela garantit que la progression est toujours synchronisée avec les étapes réelles
-            const recalculatedCompletion = this.calculateChapterCompletionFromStorage(chapitreId);
-            console.log(`✅ Étape ${stepId} marquée comme complétée`);
-            console.log(`📊 Progression du chapitre: ${chapitre.progression}% (calculé: ${recalculatedCompletion}%)`);
-            
-            // ➕ SYNCHRONISER: Forcer la progression mise à jour dans StorageManager
-            StorageManager.updateChapterProgress(chapitreId, {
-                completion: recalculatedCompletion,
-                stepsCompleted: chaptersProgress[chapitreId].stepsCompleted
-            });
-            console.log(`✅ Synchronisation StorageManager: ${chapitreId} = ${recalculatedCompletion}%`);
+                localStorage.setItem(`step_${stepId}`, JSON.stringify(stepProgress));
+                
+                // 🔧 NOUVEAU: Sauvegarder via StorageManager avec status 'completed'
+                // Chercher l'index de l'étape
+                const etapeIndex = chapitre.etapes.findIndex(e => e.id === stepId);
+                StorageManager.saveEtapeState(chapitreId, etapeIndex, {
+                    visited: true,
+                    completed: true,
+                    status: 'completed',
+                    completedAt: new Date().toISOString()
+                });
+                console.log(`✅ StorageManager: Étape ${stepId} marquée COMPLETED`);
+                
+                // ⏸️ Attendre que localStorage soit écrit avant de continuer
+                // Cela évite que updateStepIcons() lise des données incohérentes
+                const savedState = StorageManager.loadEtapeState(chapitreId, etapeIndex);
+                if (!savedState?.completed) {
+                    console.warn('⚠️ Attention: localStorage n\'a pas bien persisté completed: true');
+                }
+                
+                // Calculer la progression du chapitre
+                const completedCount = chapitre.etapes.filter(e => e.completed).length;
+                chapitre.progression = Math.round((completedCount / chapitre.etapes.length) * 100);
+                
+                // 🔄 NOUVEAU: Mettre à jour la barre de progression visuelle
+                this.updateChapterProgressBar(chapitreId);
+                
+                // 📊 NOUVEAU: Tracker les points de l'étape
+                const points = etape.points || 10;
+                const data = JSON.parse(localStorage.getItem('douanelmsv2'));
+                if (data && data.stepsPoints) {
+                    data.stepsPoints[stepId] = points;
+                    data.user.totalPoints = calculateTotalPoints(data.stepsPoints);
+                    localStorage.setItem('douanelmsv2', JSON.stringify(data));
+                    console.log(`📊 Points mis à jour: +${points}pts (Total: ${data.user.totalPoints}pts)`);
+                }
+                
+                // 2️⃣ Sauvegarder dans le localStorage
+                const chaptersProgress = StorageManager.getChaptersProgress();
+                if (!chaptersProgress[chapitreId]) {
+                    chaptersProgress[chapitreId] = {
+                        title: chapitre.titre,
+                        completion: 0,
+                        stepsCompleted: []
+                    };
+                }
+                chaptersProgress[chapitreId].completion = chapitre.progression;
+                if (!chaptersProgress[chapitreId].stepsCompleted.includes(stepId)) {
+                    chaptersProgress[chapitreId].stepsCompleted.push(stepId);
+                }
+                StorageManager.update('chaptersProgress', chaptersProgress);
+                
+                // ➕ NOUVEAU: Recalculer la progression depuis les données persistées
+                // Cela garantit que la progression est toujours synchronisée avec les étapes réelles
+                const recalculatedCompletion = this.calculateChapterCompletionFromStorage(chapitreId);
+                console.log(`✅ Étape ${stepId} marquée comme complétée`);
+                console.log(`📊 Progression du chapitre: ${chapitre.progression}% (calculé: ${recalculatedCompletion}%)`);
+                
+                // ➕ SYNCHRONISER: Forcer la progression mise à jour dans StorageManager
+                StorageManager.updateChapterProgress(chapitreId, {
+                    completion: recalculatedCompletion,
+                    stepsCompleted: chaptersProgress[chapitreId].stepsCompleted
+                });
+                console.log(`✅ Synchronisation StorageManager: ${chapitreId} = ${recalculatedCompletion}%`);
+                
+                // 🔓 SYSTÈME DE VERROUS: Mettre à jour les icônes visuelles après completion
+                // AUGMENTÉ de 100ms → 300ms pour GARANTIR localStorage sync (FIX race condition)
+                setTimeout(() => {
+                    updateStepIcons(chapitreId, chapitre);
+                }, 300);
 
-            // 🔓 NOUVEAU: Déverrouiller l'étape suivante si elle existe
-            const currentIndex = etapeIndex;
-            if (currentIndex + 1 < chapitre.etapes.length) {
-                const nextEtape = chapitre.etapes[currentIndex + 1];
+                // 🔓 NOUVEAU: Déverrouiller l'étape suivante si elle existe
+                const currentIndex = etapeIndex;
+                if (currentIndex + 1 < chapitre.etapes.length) {
+                    const nextEtape = chapitre.etapes[currentIndex + 1];
                 
                 StorageManager.saveEtapeState(chapitreId, currentIndex + 1, {
                     isLocked: false,        // Déverrouiller
@@ -4330,28 +6156,30 @@ ${content.summary}
             if (pathContainer && chapitre) {
                 console.log(`🎨 Re-générant SVG pour ${chapitreId}...`);
                 
-                // Charger les états depuis localStorage avant de régénérer
-                chapitre.etapes.forEach(etp => {
-                    const progress = localStorage.getItem(`step_${etp.id}`);
-                    if (progress) {
-                        const parsed = JSON.parse(progress);
-                        etp.completed = parsed.completed === true;
-                    }
-                });
+                // 🔧 FIX: Do NOT reload from localStorage - we just updated storage!
+                // Directly regenerate SVG with current in-memory state
+                // (generatePathSVG will read localStorage if needed, which is fine)
                 
                 // Régénérer le SVG avec les nouveaux états
                 const newSVG = generatePathSVG(chapitre.etapes, chapitre);
                 pathContainer.innerHTML = newSVG;
                 
-                // Re-attacher les événements click sur les nouvelles étapes
-                pathContainer.querySelectorAll('.path-item').forEach(item => {
-                    item.addEventListener('click', (e) => {
+                // ✅ Re-attacher les événements click sur les nouvelles étapes SVG
+                pathContainer.querySelectorAll('.step-group').forEach(step => {
+                    step.style.cursor = 'pointer';
+                    step.addEventListener('click', (e) => {
                         e.stopPropagation();
-                        const itemStepId = item.dataset.stepId;
-                        if (itemStepId) {
-                            // Extraire l'ID du chapitre de l'ID de l'étape (ex: "ch1_step1" → "ch1")
-                            const chapId = itemStepId.split('_')[0];
-                            App.afficherEtape(chapId);
+                        const stepId = step.getAttribute('data-step-id');
+                        if (stepId) {
+                            // Si c'est les objectifs ou portfolio, les traiter spécialement
+                            if (stepId.includes('objectives')) {
+                                App.afficherModalObjectives(chapitreId);
+                            } else if (stepId.includes('portfolio')) {
+                                App.afficherPortfolioModal(chapitreId);
+                            } else {
+                                // Pour les étapes normales, afficher l'étape
+                                App.afficherEtape(chapitreId, stepId);
+                            }
                         }
                     });
                 });
@@ -4359,19 +6187,29 @@ ${content.summary}
                 console.log(`✅ SVG régénéré avec nouveaux états`);
             }
 
-            // Si c'est la dernière étape, afficher le portfolio
-            // ✅ CONDITION: Uniquement si on n'est PAS dans l'onglet "pratique"
+            // 🔧 FIX: DO NOT AUTO-DISPLAY PORTFOLIO
+            // Portfolio should only display when user clicks on it or after explicitly completing swipes
+            // NOT when all etapes are marked complete (because Portfolio is NOT in chapitre.etapes[])
             const estDerniere = chapitre.etapes.every(e => e.completed);
             const estEnPratique = window.currentPageName === 'pratique';
             
             if (estDerniere && !estEnPratique) {
-                console.log('🎉 Tous les objectifs atteints! Affichage portfolio...');
-                setTimeout(() => {
-                    this.afficherPortfolioModal(chapitreId);
-                }, 1500);
+                console.log('✅ Tous les objectifs atteints! Portfolio est maintenant accessible.');
+                // Do NOT call afficherPortfolioModal() here - let user click on it
+                // This prevents the auto-display bug where Portfolio appears before user can swipe
             } else if (estDerniere && estEnPratique) {
-                console.log('📚 Tous les objectifs atteints mais on est en révision (pratique) - pas d\'ouverture du portfolio');
+                console.log('📚 Tous les objectifs atteints mais on est en révision (pratique)');
             }
+            } // Ferme if(etape)
+        } catch (error) {
+            console.error('❌ Erreur dans marquerEtapeComplete():', error);
+        } finally {
+            // 🔓 RÉACTIVER les boutons après tout traitement (CRITIQUE FIX)
+            setTimeout(() => {
+                enableButtons();
+                isEtapeProcessing = false;
+                console.log('✅ marquerEtapeComplete: Traitement terminé - boutons réactivés et flag reset');
+            }, 500);  // 500ms = délai suffisant pour tout le traitement
         }
     },
     
@@ -4384,6 +6222,241 @@ ${content.summary}
                 this.afficherChapitre(window.currentChapitreId);
             }, 500);
         }
+    },
+
+    /**
+     * ✅ COMPLÈTE une étape CONSULTATION (Type A)
+     * Utilisée pour: Vidéos, Lectures, Contenus théoriques sans scoring
+     * 
+     * @param {string} chapitreId - ID du chapitre
+     * @param {number} etapeIndex - Index de l'étape
+     * @param {object} metadata - { viewed, timeSpent, etc. }
+     */
+    completerEtapeConsultation(chapitreId, etapeIndex, metadata = {}) {
+        console.log(`[📖 CONSULTATION] Complétant étape ${chapitreId}:${etapeIndex}`, metadata);
+        
+        try {
+            const chapter = CHAPITRES.find(c => c.id === chapitreId);
+            const etape = chapter?.etapes[etapeIndex];
+            
+            if (!etape) {
+                console.error(`❌ Étape ${chapitreId}:${etapeIndex} non trouvée`);
+                showErrorNotification('Étape non trouvée');
+                return { success: false };
+            }
+            
+            // 1. SAUVEGARDER comme COMPLÉTÉE (Consultation = score 100%)
+            this.markStepAttempted(chapitreId, etapeIndex, 100);
+            
+            // 2. Mettre à jour localStorage legacy
+            localStorage.setItem(`step_${etape.id}`, JSON.stringify({
+                completed: true,
+                timestamp: new Date().toISOString(),
+                score: 100,
+                type: 'consultation'
+            }));
+            
+            // 3. Afficher notification
+            showSuccessNotification('✅ Étape de consultation complétée!');
+            
+            console.log(`[✅] Étape ${etape.titre} marquée COMPLÉTÉE (Consultation)`);
+            
+            return {
+                success: true,
+                message: 'Étape complétée',
+                nextStepUnlocked: etapeIndex + 1 < chapter.etapes.length
+            };
+            
+        } catch (error) {
+            console.error(`[❌] Erreur completerEtapeConsultation:`, error);
+            showErrorNotification('Erreur lors de la sauvegarde');
+            return { success: false, message: error.message };
+        }
+    },
+
+    /**
+     * 🎯 VALIDE une étape VALIDATION (Type B)
+     * Utilisée pour: QCM, Quiz, Assessments avec seuil ≥ 80%
+     * 
+     * @param {string} chapitreId - ID du chapitre
+     * @param {number} etapeIndex - Index de l'étape
+     * @param {number} score - Score obtenu (0-100)
+     * @param {object} metadata - { answers, duration, etc. }
+     */
+    validerEtapeAvecSeuil(chapitreId, etapeIndex, score, metadata = {}) {
+        const MIN_SCORE = 80;
+        
+        console.log(`[🎯 VALIDATION] Étape ${chapitreId}:${etapeIndex} | Score: ${score}%`);
+        
+        try {
+            const chapter = CHAPITRES.find(c => c.id === chapitreId);
+            const etape = chapter?.etapes[etapeIndex];
+            
+            if (!etape) {
+                console.error(`❌ Étape ${chapitreId}:${etapeIndex} non trouvée`);
+                return { success: false, passed: false };
+            }
+            
+            // DÉTERMINER si score ≥ 80%
+            const passed = score >= MIN_SCORE;
+            
+            // SAUVEGARDER la tentative
+            const state = this.markStepAttempted(chapitreId, etapeIndex, score);
+            
+            if (passed) {
+                // ✅ SUCCÈS!
+                console.log(`[🎉] SUCCÈS! Score ${score}% ≥ ${MIN_SCORE}%`);
+                showSuccessNotification(`✅ RÉUSSI! Score: ${score}%`);
+                
+                // Note: unlockNextStep() est déjà appelé dans markStepAttempted()
+                
+                return {
+                    success: true,
+                    passed: true,
+                    score: score,
+                    message: `✅ Réussi avec ${score}%`
+                };
+            } else {
+                // ❌ ÉCHOUÉ
+                const attempts = (state.attempts || 0) + 1;
+                const attemptsRemaining = Math.max(0, 3 - attempts);
+                
+                console.log(`[❌] ÉCHOUÉ. Score ${score}% < ${MIN_SCORE}%`);
+                console.log(`[📍] Tentatives: ${attempts}/3, Restantes: ${attemptsRemaining}`);
+                
+                if (attemptsRemaining > 0) {
+                    showErrorNotification(
+                        `❌ Score insuffisant: ${score}% < ${MIN_SCORE}%\n` +
+                        `Tentatives restantes: ${attemptsRemaining}/3`
+                    );
+                } else {
+                    showErrorNotification(
+                        `❌ Score insuffisant: ${score}%\n` +
+                        `Tentatives épuisées (3/3)`
+                    );
+                }
+                
+                return {
+                    success: true,  // Opération réussie (mais test échoué)
+                    passed: false,
+                    score: score,
+                    attemptsRemaining: attemptsRemaining,
+                    message: `Score insuffisant: ${score}% < ${MIN_SCORE}%`
+                };
+            }
+            
+        } catch (error) {
+            console.error(`[❌] Erreur validerEtapeAvecSeuil:`, error);
+            showErrorNotification('Erreur validation');
+            return { success: false, message: error.message, passed: false };
+        }
+    },
+
+    /**
+     * Valide un exercice depuis la modal renderExerciseModal
+     * DÉTECTE automatiquement: CONSULTATION vs VALIDATION
+     * Routes vers completerEtapeConsultation() ou validerEtapeAvecSeuil()
+     */
+    validerExerciceRenderModal(typeExo, chapitreId, stepIndex) {
+        console.log(`[🔀 EXERCICE] Type: ${typeExo} | Ch: ${chapitreId} | Step: ${stepIndex}`);
+        
+        // Récupérer l'étape et l'exercice
+        const chapter = CHAPITRES.find(c => c.id === chapitreId);
+        const step = chapter?.etapes[stepIndex];
+        if (!step || !step.exercices || step.exercices.length === 0) {
+            console.error('❌ Étape/Exercice non trouvé');
+            return;
+        }
+        
+        const exercice = step.exercices[0];
+        
+        // ========== DÉTERMINER TYPE D'ÉTAPE ==========
+        // CONSULTATION: video, lecture, objectives, portfolio, flashcards (libre)
+        // VALIDATION: qcm, qcm_scenario, quiz, assessment, scenario, calculation (seuil ≥ 80%)
+        const CONSULTATION_TYPES = ['video', 'lecture', 'objectives', 'portfolio'];
+        const VALIDATION_TYPES = ['qcm', 'qcm_scenario', 'quiz', 'assessment', 'scenario', 'calculation', 'flashcards'];
+        
+        const isConsultation = CONSULTATION_TYPES.includes(typeExo) || step.consultation === true;
+        const isValidation = VALIDATION_TYPES.includes(typeExo) || step.validation === true;
+        
+        console.log(`[🎯] Détection: Consultation=${isConsultation}, Validation=${isValidation}`);
+        
+        // ========== CAS 1: CONSULTATION (Type A) ==========
+        if (isConsultation) {
+            console.log(`[📖] MODE CONSULTATION: Marquer simplement comme complétée`);
+            const result = this.completerEtapeConsultation(chapitreId, stepIndex, {
+                viewed: true,
+                type: typeExo
+            });
+            
+            if (result.success) {
+                // Fermer la modal et aller à l'étape suivante
+                const modal = document.getElementById('exercise-modal');
+                if (modal) modal.remove();
+                
+                // Recharger le chapitre pour montrer progression
+                setTimeout(() => {
+                    this.afficherChapitre(chapitreId);
+                }, 1000);
+            }
+            return;
+        }
+        
+        // ========== CAS 2: VALIDATION (Type B) ==========
+        if (isValidation) {
+            console.log(`[🎯] MODE VALIDATION: Calculer le score`);
+            
+            let score = 0;
+            
+            if (typeExo === 'quiz') {
+                // ✅ Validation QUIZ: appeler validerQuiz directement
+                console.log(`[📋] Quiz Validation: Appel à validerQuiz()`);
+                this.validerQuiz();
+                return;
+                
+            } else if (typeExo === 'qcm' || typeExo === 'qcm_scenario') {
+                // ✅ Validation QCM/QCM_Scenario
+                const selectedRadio = document.querySelector('input[name="qcm_answer"]:checked');
+                if (!selectedRadio) {
+                    showErrorNotification('⚠️ Veuillez sélectionner une réponse');
+                    return;
+                }
+                
+                const correctAnswer = parseInt(exercice.content.correctAnswer);
+                const selectedIndex = parseInt(selectedRadio.value);
+                const isCorrect = selectedIndex === correctAnswer;
+                
+                score = isCorrect ? 100 : 0;
+                
+                console.log(`[🔍] QCM Validation:
+  Correct: ${correctAnswer}, Selected: ${selectedIndex}
+  Result: ${isCorrect ? '✅' : '❌'}
+  Score: ${score}%`);
+                
+            } else if (typeExo === 'flashcards') {
+                // Flashcards: Score automatique 100% si étudié
+                score = 100;
+                
+            } else {
+                // Autres types: score 100% par défaut
+                score = 100;
+            }
+            
+            // VALIDER avec seuil ≥ 80%
+            const result = this.validerEtapeAvecSeuil(chapitreId, stepIndex, score, {
+                type: typeExo,
+                duration: 0
+            });
+            
+            // Afficher le résultat dans submitExercise (pour cohérence avec ancienne UI)
+            window.lastScore = score;
+            this.submitExercise(chapitreId, stepIndex);
+            return;
+        }
+        
+        // ========== CAS 3: TYPE INCONNU ==========
+        console.warn(`[⚠️] Type d'exercice non géré: ${typeExo}`);
+        showErrorNotification(`Type d'exercice non supporté: ${typeExo}`);
     },
 
     /**
@@ -4407,11 +6480,45 @@ ${content.summary}
         }
 
         const selectedIndex = parseInt(selectedInput.value);
+        
+        // 🔍 DEBUG: Afficher les types et valeurs pour diagnostiquer le bug "réponse juste = faux"
+        console.log('🔍 DEBUG validerQCMSecurise:');
+        console.log('  selectedInput.value:', selectedInput.value, '| typeof:', typeof selectedInput.value);
+        console.log('  selectedIndex:', selectedIndex, '| typeof:', typeof selectedIndex);
+        console.log('  qcmData.correctAnswer:', qcmData.correctAnswer, '| typeof:', typeof qcmData.correctAnswer);
+        console.log('  Comparaison (===):', selectedIndex === qcmData.correctAnswer);
+        console.log('  Comparaison (==):', selectedIndex == qcmData.correctAnswer);
+        console.log('  qcmData complet:', qcmData);
+        console.log('  selectedInput Element:', selectedInput);
+        
+        // 🔴 HYPOTHÈSE 1: window.currentChapitreId est NULL?
+        console.log('🔴 HYPOTHÈSE 1 - Variables globales window:');
+        console.log('  window.currentChapitreId:', window.currentChapitreId);
+        console.log('  window.currentStepId:', window.currentStepId);
+        console.log('  window.lastScore (avant affectation):', window.lastScore);
+        
+        // 🔴 HYPOTHÈSE 2: qcmData.correctAnswer n'existe pas?
+        console.log('🔴 HYPOTHÈSE 2 - qcmData:');
+        console.log('  qcmData existe?', !!qcmData);
+        console.log('  qcmData.correctAnswer existe?', qcmData?.correctAnswer !== undefined);
+        console.log('  qcmData.correctAnswer === null?', qcmData?.correctAnswer === null);
+        console.log('  qcmData.correctAnswer === undefined?', qcmData?.correctAnswer === undefined);
+        
+        // 🔴 HYPOTHÈSE 3: Type mismatch string vs number?
+        console.log('🔴 HYPOTHÈSE 3 - Type mismatch:');
+        console.log('  selectedIndex est NUMBER?', typeof selectedIndex === 'number');
+        console.log('  qcmData.correctAnswer est NUMBER?', typeof qcmData?.correctAnswer === 'number');
+        console.log('  Si on force les deux en nombres: parseInt(selectedIndex) === parseInt(qcmData.correctAnswer):', parseInt(selectedIndex) === parseInt(qcmData?.correctAnswer));
+        
         const isCorrect = selectedIndex === qcmData.correctAnswer;
 
         const feedback = document.getElementById(`feedback_${qcmId}`);
         
         if (isCorrect) {
+            // 🎯 SCORE: Réponse correcte = 100%
+            window.lastScore = 100;
+            console.log('✅ QCM Correct! Score: 100%');
+            
             feedback.innerHTML = `
                 <div style="background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 12px; border-radius: 6px;">
                     <strong>✅ Correct!</strong><br/>
@@ -4446,6 +6553,10 @@ ${content.summary}
 
             showSuccessNotification('✅ Excellent!', `Bonne réponse!`, '✅', 1500);
         } else {
+            // 🎯 SCORE: Réponse incorrecte = 0%
+            window.lastScore = 0;
+            console.log('❌ QCM Incorrect! Score: 0%');
+            
             feedback.innerHTML = `
                 <div style="background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; padding: 12px; border-radius: 6px;">
                     <strong>❌ Incorrect.</strong><br/>
@@ -4805,7 +6916,7 @@ ${content.summary}
     },
 
     /**
-     * Valide un quiz
+     * Valide un quiz et affiche les résultats (NE complète PAS l'étape)
      */
     validerQuiz(exerciceId = null) {
         // Déterminer quel feedback utiliser
@@ -4831,6 +6942,9 @@ ${content.summary}
             }
         });
         
+        // Calculer le pourcentage
+        const percentage = Math.round((correctAnswers / totalQuestions) * 100);
+        
         // Afficher les réponses correctes
         const feedback = document.getElementById(feedbackId);
         let feedbackHtml = `
@@ -4839,7 +6953,7 @@ ${content.summary}
                     ${correctAnswers === totalQuestions ? '✅ Excellent!' : '⚠️ Résultats'}
                 </h4>
                 <p style="margin: var(--spacing-sm) 0; color: ${correctAnswers === totalQuestions ? '#155724' : '#856404'};">
-                    Vous avez réussi <strong>${correctAnswers}/${totalQuestions}</strong> questions
+                    Vous avez réussi <strong>${correctAnswers}/${totalQuestions}</strong> questions (${percentage}%)
                 </p>
         `;
         
@@ -4874,62 +6988,92 @@ ${content.summary}
             `;
         });
         
-        feedbackHtml += `</div></div>`;
+        feedbackHtml += `</div>`;
+        
+        // 🔷 Ajouter le bouton "Marquer comme terminé" ou message d'erreur
+        if (correctAnswers >= Math.ceil(totalQuestions / 2)) {
+            // Quiz réussi
+            feedbackHtml += `
+                <div style="margin-top: var(--spacing-md); padding-top: var(--spacing-md); border-top: 1px solid rgba(0,0,0,0.1); text-align: center;">
+                    <button class="btn btn--primary" style="width: 100%; background-color: #28a745;" onclick="App.completerQuizEtape(${correctAnswers}, ${totalQuestions})">
+                        ✅ Marquer comme terminé
+                    </button>
+                </div>
+            `;
+        } else {
+            // Quiz échoué - afficher message d'erreur
+            feedbackHtml += `
+                <div style="margin-top: var(--spacing-md); padding: var(--spacing-md); background: #f8d7da; border: 1px solid #f5c6cb; border-radius: var(--radius-md); color: #721c24;">
+                    <strong>⚠️ Résultat insuffisant</strong><br/>
+                    Vous avez besoin d'au moins 50% pour passer ce quiz.<br/>
+                    Veuillez réessayer.
+                </div>
+            `;
+        }
+        
+        feedbackHtml += `</div>`;
         
         feedback.innerHTML = feedbackHtml;
         feedback.style.display = 'block';
         
-        // Désactiver le bouton et les inputs
-        const submitBtn = document.querySelector(`button[onclick="App.validerQuiz('${exerciceId}')"]`) || 
-                         document.querySelector('button[onclick="App.validerQuiz()"]');
-        if (submitBtn) submitBtn.disabled = true;
+        // Masquer le bouton "Soumettre réponses" et désactiver les inputs
+        const submitBtn = document.getElementById('btn-validate');
+        if (submitBtn) {
+            submitBtn.style.display = 'none';
+        }
         allInputs.forEach(input => input.disabled = true);
         
-        console.log(`Quiz soumis: ${correctAnswers}/${totalQuestions}`);
-        
-        // 🔧 DEBUG: Afficher l'état AVANT
-        const chapitre = CHAPITRES.find(ch => ch.id === window.currentChapitreId);
-        const etape = chapitre?.etapes.find(e => e.id === window.currentStepId);
-        const etapeIndex = chapitre?.etapes.findIndex(e => e.id === window.currentStepId);
-        const stateBefore = StorageManager.getEtapeState(window.currentChapitreId, etapeIndex);
-        console.log(`🔍 AVANT validation - État étape: ${stateBefore?.status || 'undefined'}`);
-        
-        // Marquer l'étape comme complétée si au moins 50% sont correctes
-        if (correctAnswers >= Math.ceil(totalQuestions / 2)) {
-            if (window.currentStepId && window.currentChapitreId) {
-                const chapitre = CHAPITRES.find(ch => ch.id === window.currentChapitreId);
-                const etape = chapitre?.etapes.find(e => e.id === window.currentStepId);
-                const maxPoints = etape?.points || 20;
-                
-                App.marquerEtapeComplete(window.currentChapitreId, window.currentStepId);
-                
-                // Calculer les points en fonction du pourcentage obtenu
-                const percentage = Math.round((correctAnswers / totalQuestions) * 100);
-                const pointsEarned = Math.round((percentage / 100) * maxPoints);
-                
-                const result = StorageManager.addPointsToStep(window.currentStepId, pointsEarned, maxPoints);
-                App.updateHeader();
-                console.log(`✅ ${result.message} (${result.totalForStep}/${result.maxPoints} points)`);
-                
-                // 🔧 FIX: Activer le bouton "Étape suivante"
-                App.activerBoutonEtapeSuivante();
-                
-                // 🔧 DEBUG: Afficher l'état APRÈS
-                const stateAfter = StorageManager.getEtapeState(window.currentChapitreId, etapeIndex);
-                console.log(`✅ APRÈS validation - État étape: ${stateAfter?.status || 'undefined'}`);
-                console.log(`✅ ÉTAPE ${window.currentStepId} COMPLÉTÉE avec ${correctAnswers}/${totalQuestions} bonnes réponses`);
+        console.log(`📋 Quiz soumis: ${correctAnswers}/${totalQuestions} (${percentage}%)`);
+    },
 
-            }
-            
-            setTimeout(() => {
-                const percentage = Math.round((correctAnswers / totalQuestions) * 100);
-                showSuccessNotification('🎊 Quiz complété!', `${percentage}% (${correctAnswers}/${totalQuestions} bonnes réponses)`, '🎊', 2500);
-                App.fermerModal();
-                App.rafraichirAffichage();
-            }, 500);
-        } else {
-            showSuccessNotification('⚠️ Résultat insuffisant', `Vous avez besoin de plus de 50% pour passer.\nVous avez ${correctAnswers}/${totalQuestions} bonnes réponses.`, '📚', 2500);
+    /**
+     * Complète le quiz et déverrouille l'étape suivante
+     * @param {number} correctAnswers - Nombre de réponses correctes
+     * @param {number} totalQuestions - Nombre total de questions
+     */
+    completerQuizEtape(correctAnswers, totalQuestions) {
+        console.log(`🎯 Complétude du quiz: ${correctAnswers}/${totalQuestions}`);
+        
+        if (!window.currentStepId || !window.currentChapitreId) {
+            console.error('❌ Contexte étape non disponible');
+            return;
         }
+        
+        const chapitre = CHAPITRES.find(ch => ch.id === window.currentChapitreId);
+        const etapeIndex = chapitre?.etapes.findIndex(e => e.id === window.currentStepId);
+        const etape = chapitre?.etapes[etapeIndex];
+        
+        if (!etape) {
+            console.error(`❌ Étape non trouvée: ${window.currentChapitreId} / ${window.currentStepId}`);
+            return;
+        }
+        
+        // Marquer comme complétée
+        const percentage = Math.round((correctAnswers / totalQuestions) * 100);
+        const maxPoints = etape.points || 20;
+        const pointsEarned = Math.round((percentage / 100) * maxPoints);
+        
+        // 🔷 Utiliser markStepAttempted pour enregistrer et dérouiller automatiquement
+        this.markStepAttempted(window.currentChapitreId, etapeIndex, percentage);
+        
+        // Calculer et ajouter les points
+        const result = StorageManager.addPointsToStep(window.currentStepId, pointsEarned, maxPoints);
+        this.updateHeader();
+        
+        console.log(`✅ Quiz complété: ${percentage}% → ${pointsEarned}/${maxPoints} points`);
+        console.log(`✅ ${result.message}`);
+        
+        // Animation de succès puis retour au chapitre
+        showSuccessNotification('🎊 Quiz terminé!', `${percentage}% (${correctAnswers}/${totalQuestions} bonnes réponses)`, '🎊', 2000);
+        
+        setTimeout(() => {
+            // Fermer la modal exercice
+            const exerciseModal = document.getElementById('exercise-modal');
+            if (exerciseModal) exerciseModal.remove();
+            
+            // Retourner au chapitre
+            this.afficherChapitre(window.currentChapitreId);
+        }, 2100);
     },
 
     /**
@@ -5052,6 +7196,36 @@ ${content.summary}
      * Ferme le modal objectifs
      */
     fermerModalObjectives() {
+        // 🔓 NOUVEAU: Marquer les objectifs comme complétés automatiquement
+        const chapitreId = this.chapitreActuel;
+        const chapitre = CHAPITRES.find(ch => ch.id === chapitreId);
+        
+        if (chapitre && chapitre.etapes.length > 0) {
+            const firstEtape = chapitre.etapes[0];
+            
+            // Ne marquer comme complet que si pas déjà complet
+            if (firstEtape.completed !== true) {
+                firstEtape.completed = true;
+                
+                // Sauvegarder via StorageManager
+                if (window.StorageManager) {
+                    StorageManager.saveEtapeState(chapitreId, 0, {
+                        visited: true,
+                        completed: true,
+                        status: 'completed',
+                        completedAt: new Date().toISOString()
+                    });
+                    console.log(`✅ Objectifs marqués comme complétés (fermeture modal)`);
+                }
+                
+                // Mettre à jour les icônes visuelles
+                setTimeout(() => {
+                    updateStepIcons(chapitreId, chapitre);
+                    console.log(`✅ Icônes mises à jour après objectifs fermés`);
+                }, 50);
+            }
+        }
+        
         const modal = document.getElementById('objectives-modal');
         modal.classList.add('hidden');
         console.log('✕ Modal objectifs fermé');
@@ -5085,10 +7259,11 @@ ${content.summary}
         const nom = document.getElementById('profile-nom').value.trim();
         const prenom = document.getElementById('profile-prenom').value.trim();
         const matricule = document.getElementById('profile-matricule').value.trim();
+        const email = document.getElementById('profile-email').value.trim();
 
         // Validation
         if (!nom || !prenom || !matricule) {
-            console.warn('⚠️ Veuillez remplir tous les champs');
+            console.warn('⚠️ Veuillez remplir tous les champs obligatoires');
             return;
         }
 
@@ -5097,6 +7272,7 @@ ${content.summary}
             nom: nom,
             prenom: prenom,
             matricule: matricule,
+            email: email || null,
             profileCreated: true
         });
 
@@ -5118,6 +7294,32 @@ ${content.summary}
      * Lance le chapitre après visualisation des objectifs
      */
     commencerChapitre() {
+        // 🔓 NOUVEAU: Marquer les objectifs (etapes[0]) comme complétés
+        const chapitre = CHAPITRES.find(ch => ch.id === this.chapitreActuel);
+        if (chapitre && chapitre.etapes.length > 0) {
+            const firstEtape = chapitre.etapes[0];
+            
+            // Marquer les objectifs comme complétés
+            firstEtape.completed = true;
+            
+            // Mettre à jour localStorage via StorageManager
+            if (window.StorageManager) {
+                StorageManager.saveEtapeState(this.chapitreActuel, 0, {
+                    visited: true,
+                    completed: true,
+                    status: 'completed',
+                    completedAt: new Date().toISOString()
+                });
+                console.log(`✅ Objectifs marqués comme complétés`);
+            }
+            
+            // Mettre à jour les icônes visuelles
+            setTimeout(() => {
+                updateStepIcons(this.chapitreActuel, chapitre);
+                console.log(`✅ Icônes des étapes mises à jour après objectifs`);
+            }, 100);
+        }
+        
         // ✅ SUPPRIMER L'APPEL AU MODAL - LES OBJECTIFS SONT MAINTENANT UN JALON DANS LE CHEMIN
         // this.fermerModalObjectives();
         this.afficherChapitreContenu(this.chapitreActuel);
@@ -5128,13 +7330,28 @@ ${content.summary}
      * @param {string} chapitreId - ID du chapitre
      */
     afficherChapitreContenu(chapitreId) {
-        const chapitre = CHAPITRES.find(ch => ch.id === chapitreId);
-        if (!chapitre) return;
+        // 🌉 BRIDGE: Chercher le chapitre dans TOUS les niveaux
+        const chapitre = this.findChapitreById(chapitreId);
+        if (!chapitre) {
+            console.error(`❌ Chapitre ${chapitreId} non trouvé`);
+            return;
+        }
         
-        // 🔄 Recalculer la progression au moment de l'affichage
+        // � FIX: Initialiser le flag portfolioCompleted si pas exists
+        if (chapitre.portfolioCompleted === undefined) {
+            const portfolioStatus = StorageManager.getPortfolioStatus(chapitreId);
+            chapitre.portfolioCompleted = portfolioStatus?.completed || false;
+        }
+        
+        // FIX #1: CHARGER les états des étapes depuis StorageManager
+        // CRITIQUE: Sans cela, après reload la page, les étapes réapparaissent comme incomplètes
+        this.loadChapitreEtapesStates(chapitreId);
+        
+        // Recalculer la progression au moment de l'affichage
         const progress = this.calculateChapterProgress(chapitreId);
         chapitre.progression = progress;
         console.log(`📊 Affichage du chapitre ${chapitreId}: ${progress}% complété`);
+
         
         // ✅ PASSER LE CHAPITRE À generatePathSVG POUR AJOUTER LES OBJECTIFS
         const svg = generatePathSVG(chapitre.etapes, chapitre);
@@ -5178,7 +7395,10 @@ ${content.summary}
         // Injecter dans #app-content, pas dans #chapitre-detail
         document.getElementById('app-content').innerHTML = html;
         
-        // ✅ GÉRER LES CLICS SUR LES ÉTAPES, OBJECTIFS ET PORTFOLIO
+        // ✅ INITIALISER LES ÉTATS DE VERROUS VISUELS
+        updateStepIcons(chapitreId, chapitre);
+        
+        // ✅ GÉRER LES CLICS SUR LES ÉTAPES, OBJECTIFS ET PORTFOLIO (AVEC SYSTÈME DE VERROUS)
         document.querySelectorAll('.step-group').forEach((el, index) => {
             const isObjectives = el.dataset.isObjectives === 'true';
             const isPortfolio = el.dataset.isPortfolio === 'true';
@@ -5195,11 +7415,17 @@ ${content.summary}
                 
                 // Si c'est le portfolio
                 if (isPortfolio) {
+                    // Vérifier que toutes les étapes normales sont complétées
+                    const toutesEtapesCompletes = chapitre.etapes.every(e => e.completed === true);
+                    if (!toutesEtapesCompletes) {
+                        showErrorNotification('⛔ Vous devez compléter toutes les étapes avant d\'accéder au portfolio!');
+                        return;
+                    }
                     App.afficherPortfolioModal(chapitreId);
                     return;
                 }
                 
-                // Si c'est une étape normale, gérer le verrouillage
+                // Si c'est une étape normale, vérifier le verrouillage
                 // Compter les étapes non-portfolio/non-objectives avant cet index
                 const allStepGroups = Array.from(document.querySelectorAll('.step-group'));
                 let etapeIndex = 0;
@@ -5212,10 +7438,10 @@ ${content.summary}
                     }
                 }
                 
-                const etapeActuelle = chapitre.etapes[etapeIndex];
+                // ✅ UTILISER getStepLockState POUR VÉRIFIER L'ÉTAT
+                const etat = getStepLockState(chapitre, etapeIndex, chapitreId);
                 
-                // ✅ Seulement refuse si étape > 0 ET étape précédente non complétée
-                if (etapeIndex > 0 && chapitre.etapes[etapeIndex - 1] && !chapitre.etapes[etapeIndex - 1].completed) {
+                if (etat === 'locked') {
                     // Ajouter une animation visuelle au cadenas
                     const lockEmoji = el.querySelector('.step-emoji');
                     if (lockEmoji) {
@@ -5224,15 +7450,15 @@ ${content.summary}
                             lockEmoji.style.animation = '';
                         }, 500);
                     }
-                    showErrorNotification('⛔ Vous devez compléter l\'étape précédente d\'abord!');
+                    showErrorNotification('🔒 Cette étape est verrouillée. Complétez l\'étape précédente d\'abord!');
                     return;
                 }
                 
-                // ✅ Si c'est la première étape, afficher directement. Sinon, afficher avec l'index
+                // ✅ L'étape est déverrouillée ou déjà complétée, on l'affiche
                 App.afficherEtape(chapitreId, etapeIndex);
             });
             
-            // ✅ AJOUTER LE STYLE DE CURSEUR - GÉRER LES ÉTAPES VERROUILLÉES
+            // ✅ APPLIQUER LE STYLE DE CURSEUR SELON L'ÉTAT DE VERROU
             if (!isObjectives && !isPortfolio) {
                 // Compter les étapes avant cet index
                 const allStepGroups = Array.from(document.querySelectorAll('.step-group'));
@@ -5246,14 +7472,21 @@ ${content.summary}
                     }
                 }
                 
-                if (chapitre.etapes[etapeIndex] && etapeIndex > 0 && !chapitre.etapes[etapeIndex - 1].completed) {
+                const etat = getStepLockState(chapitre, etapeIndex, chapitreId);
+                
+                if (etat === 'locked') {
                     el.style.cursor = 'not-allowed';
-                    el.style.opacity = '0.7';
+                    el.style.opacity = '0.6';
+                    el.style.filter = 'grayscale(1)';
                 } else {
                     el.style.cursor = 'pointer';
+                    el.style.opacity = '1';
+                    el.style.filter = 'grayscale(0)';
                 }
             } else {
                 el.style.cursor = 'pointer';
+                el.style.opacity = '1';
+                el.style.filter = 'grayscale(0)';
             }
         });
         
@@ -5476,6 +7709,7 @@ ${content.summary}
         // Charger les chapitres du niveau
         try {
             CHAPITRES = await loadChapitres(niveauId);
+            window.CHAPITRES = CHAPITRES;
             
             if (!CHAPITRES || CHAPITRES.length === 0) {
                 alert(`Aucun chapitre trouvé pour le niveau ${niveauId}`);
@@ -5738,103 +7972,30 @@ ${content.summary}
     },
     
     renderJournal() {
-        // Récupérer les entrées du journal depuis localStorage
-        const journalEntries = JSON.parse(localStorage.getItem('journal_apprentissage') || '[]');
-        
-        // Verbes Bloom pour aider à la réflexion
-        const bloomVerbs = {
-            appris: ['Mémoriser', 'Comprendre', 'Analyser'],
-            application: ['Appliquer', 'Analyser', 'Évaluer'],
-            impact: ['Évaluer', 'Créer']
-        };
-        
+        // Mode avancé Bloom uniquement
         let html = `
             <div class="page active">
                 <div class="page-title">
                     <span>📔</span>
-                    <h2>Mon Journal d'Apprentissage</h2>
+                    <h2 class="journal-header">Mon Journal d'Apprentissage</h2>
                 </div>
                 
-                <div class="container journal-container">
-                    <!-- FORMULAIRE NOUVELLE ENTRÉE -->
-                    <div class="journal-form-section">
-                        <h3>📝 Nouvelle Entrée</h3>
-                        
-                        <div class="journal-form">
-                            <div class="form-group">
-                                <label>Qu'ai-je appris aujourd'hui?</label>
-                                <textarea id="journal-appris" placeholder="Décrivez vos apprentissages..." maxlength="500"></textarea>
-                                <div class="bloom-buttons">
-                                    ${bloomVerbs.appris.map(v => `<button class="bloom-btn" onclick="document.getElementById('journal-appris').value += '\\n[${v}] '">${v}</button>`).join('')}
-                                </div>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>Comment l'appliquer?</label>
-                                <textarea id="journal-application" placeholder="Cas d'usage pratique..." maxlength="500"></textarea>
-                                <div class="bloom-buttons">
-                                    ${bloomVerbs.application.map(v => `<button class="bloom-btn" onclick="document.getElementById('journal-application').value += '\\n[${v}] '">${v}</button>`).join('')}
-                                </div>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>Quel impact personnel?</label>
-                                <textarea id="journal-impact" placeholder="Votre réflexion personnelle..." maxlength="500"></textarea>
-                                <div class="bloom-buttons">
-                                    ${bloomVerbs.impact.map(v => `<button class="bloom-btn" onclick="document.getElementById('journal-impact').value += '\\n[${v}] '">${v}</button>`).join('')}
-                                </div>
-                            </div>
-                            
-                            <button class="btn btn--primary" onclick="App.sauvegarderJournalEntree()">
-                                💾 Enregistrer l'entrée
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <!-- HISTORIQUE ENTRÉES -->
-                    <div class="journal-history-section">
-                        <h3>📚 Historique (${journalEntries.length} entrées)</h3>
-                        
-                        ${journalEntries.length === 0 ? `
-                            <div class="empty-state">
-                                <p>Aucune entrée de journal pour le moment</p>
-                                <p style="color: var(--color-text-light); font-size: 14px;">Commencez à réfléchir à votre apprentissage</p>
-                            </div>
-                        ` : `
-                            <div class="entries-list">
-                                ${journalEntries.reverse().map((entry, idx) => `
-                                    <div class="journal-entry">
-                                        <div class="entry-header">
-                                            <div class="entry-date">${new Date(entry.date).toLocaleDateString('fr-FR')}</div>
-                                            <button class="btn-delete" onclick="App.supprimerJournalEntree(${journalEntries.length - 1 - idx})">🗑️</button>
-                                        </div>
-                                        <div class="entry-content">
-                                            <div class="entry-section">
-                                                <h4>📖 Appris</h4>
-                                                <p>${entry.reflexion.appris || '(vide)'}</p>
-                                            </div>
-                                            <div class="entry-section">
-                                                <h4>⚙️ Application</h4>
-                                                <p>${entry.reflexion.application || '(vide)'}</p>
-                                            </div>
-                                            <div class="entry-section">
-                                                <h4>💡 Impact</h4>
-                                                <p>${entry.reflexion.impact || '(vide)'}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        `}
-                    </div>
-                </div>
+                <!-- CONTENU JOURNAL AVANCÉ (Bloom) -->
+                <div id="journal-advanced-content" class="container"></div>
             </div>
         `;
         
-        // Auto-focus sur première textarea après rendu
+        // Auto-initialiser le module journal avancé après rendu
         setTimeout(() => {
-            const ta = document.getElementById('journal-appris');
-            if (ta) ta.focus();
+            // Initialiser le module journal avancé
+            if (typeof JournalAdvanceUI !== 'undefined' && JournalAdvanceUI.init) {
+                JournalAdvanceUI.init();
+                
+                // Rendre le contenu avancé directement
+                if (typeof JournalAdvanceUI.renderAdvancedJournal !== 'undefined') {
+                    JournalAdvanceUI.renderAdvancedJournal();
+                }
+            }
         }, 100);
         
         return html;
@@ -6264,8 +8425,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Charger les chapitres
     CHAPITRES = await loadChapitres();
-    // Mettre à jour alias
-    window.CHAPTERS = CHAPITRES;
+    // Mettre à jour global window reference
+    window.CHAPITRES = CHAPITRES;
+    window.CHAPTERS = CHAPITRES;  // Keep alias for backward compatibility
     console.log('✅ CHAPITRES et CHAPTERS alias initialisés');
     
     // 🌉 PRÉ-CHARGER LES DONNÉES POUR LES BRIDGE FUNCTIONS
@@ -6491,5 +8653,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialize Tutoring Module
     if (typeof TutoringModule !== 'undefined') {
         TutoringModule.init();
+    }
+    
+    // Initialize Advanced Journal Module (Bloom Taxonomy)
+    if (typeof JournalAvance !== 'undefined') {
+        JournalAvance.init();
     }
 });

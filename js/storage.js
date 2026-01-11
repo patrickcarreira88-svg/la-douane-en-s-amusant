@@ -25,6 +25,67 @@ const StorageManager = {
         
         if (!this.exists()) {
             this.setDefault();
+        } else {
+            // Même si localStorage existe, s'assurer que chaptersProgress a les chapitres
+            const chaptersProgress = this.get('chaptersProgress') || {};
+            const requiredChapters = {
+                ch1: {
+                    title: 'Introduction Douane',
+                    completion: 0,
+                    stepsCompleted: [],
+                    stepsLocked: [],
+                    badgeEarned: false
+                },
+                '101BT': {
+                    title: 'Marchandises & Processus: Mise en Pratique',
+                    completion: 0,
+                    stepsCompleted: [],
+                    stepsLocked: [],
+                    badgeEarned: false
+                },
+                ch2: {
+                    title: 'Législation Douanière',
+                    completion: 0,
+                    stepsCompleted: [],
+                    stepsLocked: [],
+                    badgeEarned: false
+                },
+                ch3: {
+                    title: 'Procédures Douanières',
+                    completion: 0,
+                    stepsCompleted: [],
+                    stepsLocked: [],
+                    badgeEarned: false
+                },
+                ch4: {
+                    title: 'Commerce International',
+                    completion: 0,
+                    stepsCompleted: [],
+                    stepsLocked: [],
+                    badgeEarned: false
+                },
+                ch5: {
+                    title: 'Sécurité et Fiscalité',
+                    completion: 0,
+                    stepsCompleted: [],
+                    stepsLocked: [],
+                    badgeEarned: false
+                }
+            };
+            
+            // Ajouter les chapitres manquants
+            let updated = false;
+            for (const [chId, chData] of Object.entries(requiredChapters)) {
+                if (!chaptersProgress[chId]) {
+                    chaptersProgress[chId] = chData;
+                    updated = true;
+                }
+            }
+            
+            if (updated) {
+                this.update('chaptersProgress', chaptersProgress);
+                console.log('✅ Chapitres manquants ajoutés à localStorage');
+            }
         }
         
         console.log('✅ StorageManager initialisé');
@@ -56,6 +117,7 @@ const StorageManager = {
                 nom: null,
                 prenom: null,
                 matricule: null,
+                email: null,
                 profileCreated: false,
                 // Structure multi-niveaux (N1-N4)
                 niveaux: {
@@ -83,10 +145,59 @@ const StorageManager = {
                     completion: 0,
                     stepsCompleted: [],
                     stepsLocked: [],
+                    steps: {},
+                    badgeEarned: false
+                },
+                '101BT': {
+                    title: 'Marchandises & Processus: Mise en Pratique',
+                    completion: 0,
+                    stepsCompleted: [],
+                    stepsLocked: [],
+                    steps: {},
+                    badgeEarned: false
+                },
+                ch2: {
+                    title: 'Législation Douanière',
+                    completion: 0,
+                    stepsCompleted: [],
+                    stepsLocked: [],
+                    steps: {},
+                    badgeEarned: false
+                },
+                ch3: {
+                    title: 'Procédures Douanières',
+                    completion: 0,
+                    stepsCompleted: [],
+                    stepsLocked: [],
+                    steps: {},
+                    badgeEarned: false
+                },
+                ch4: {
+                    title: 'Commerce International',
+                    completion: 0,
+                    stepsCompleted: [],
+                    stepsLocked: [],
+                    steps: {},
+                    badgeEarned: false
+                },
+                ch5: {
+                    title: 'Sécurité et Fiscalité',
+                    completion: 0,
+                    stepsCompleted: [],
+                    stepsLocked: [],
+                    steps: {},
+                    badgeEarned: false
+                },
+                ch6: {
+                    title: 'Pratiques et Cas d\'Étude',
+                    completion: 0,
+                    stepsCompleted: [],
+                    stepsLocked: [],
+                    steps: {},
                     badgeEarned: false
                 }
             },
-            stepsPoints: {},  // Tracker les points gagnés par étape: {ch1_step1: 10, ch1_step2: 8, ...}
+            stepsPoints: {},
             exercisesCompleted: {},
             badges: [],
             spacedRepetition: [],
@@ -577,15 +688,87 @@ const StorageManager = {
      * - Initialise la structure d'étape si nécessaire
      * Retour: état sauvegardé
      */
-    saveEtapeState(chapterId, etapeIndex, state = {}) {
+    saveEtapeState: function(chapitreId, etapeIndex, stateData) {
+        if (!this.exists()) {
+            this.init();
+        }
+        
+        const data = this.getAll();
+        
+        // Initialize structure
+        if (!data.chaptersProgress) data.chaptersProgress = {};
+        if (!data.chaptersProgress[chapitreId]) {
+            data.chaptersProgress[chapitreId] = {
+                completion: 0,
+                stepsCompleted: [],
+                stepsLocked: [],
+                steps: {},
+                badgeEarned: false
+            };
+        }
+        if (!data.chaptersProgress[chapitreId].steps) {
+            data.chaptersProgress[chapitreId].steps = {};
+        }
+        
+        // MERGE: Récupérer l'état ancien et le fusionner avec le nouveau
+        const oldState = data.chaptersProgress[chapitreId].steps[etapeIndex] || {};
+        data.chaptersProgress[chapitreId].steps[etapeIndex] = {
+            ...oldState,
+            ...stateData
+        };
+        
+        // Update stepsCompleted
+        if (stateData.completed && !data.chaptersProgress[chapitreId].stepsCompleted.includes(etapeIndex)) {
+            data.chaptersProgress[chapitreId].stepsCompleted.push(etapeIndex);
+        }
+        
+        this.set(data);
+        console.log(`✅ [saveEtapeState] ${chapitreId}:${etapeIndex} saved`);
+        return true;
+    },
+
+    /**
+     * 8. Récupère l'état d'une étape
+     */
+    getEtapeState: function(chapitreId, etapeIndex) {
+        try {
+            const data = this.getAll();
+            
+            if (!data?.chaptersProgress?.[chapitreId]?.steps) {
+                return null;
+            }
+            
+            const etapeState = data.chaptersProgress[chapitreId].steps[etapeIndex];
+            return etapeState || null;
+            
+        } catch (error) {
+            console.error('❌ [getEtapeState] Error:', error.message);
+            return null;
+        }
+    },
+
+    /**
+     * 8b. ALIAS: loadEtapeState = getEtapeState (pour compatibilité)
+     * Utilisé par app.js updateStepIcons() et marquerEtapeComplete()
+     * FIX: Refactoring race condition a changé le nom, mais 4 appels n'ont pas été mis à jour
+     */
+    loadEtapeState(chapterId, etapeIndex) {
+        return this.getEtapeState(chapterId, etapeIndex);
+    },
+
+    /**
+     * 9. Sauvegarde le statut du portfolio pour un chapitre
+     * Portfolio n'est pas une étape régulière, donc on le track séparément
+     */
+    savePortfolioStatus(chapterId, isCompleted) {
         const user = this.getUser();
         
-        if (!user.niveaux) {
-            console.warn('⚠️ Structure niveaux non initialisée');
+        if (!user || !user.niveaux) {
+            console.error('❌ Utilisateur ou niveaux non trouvés');
             return null;
         }
         
-        // Trouver le niveau qui contient ce chapitre
+        // Trouver le chapitre
         let foundNiveauId = null;
         for (const niveauId in user.niveaux) {
             if (user.niveaux[niveauId].chapters[chapterId]) {
@@ -595,59 +778,45 @@ const StorageManager = {
         }
         
         if (!foundNiveauId) {
-            console.warn(`⚠️ Chapitre ${chapterId} non trouvé dans aucun niveau`);
+            console.error(`❌ Chapitre ${chapterId} non trouvé`);
             return null;
         }
         
         const chapter = user.niveaux[foundNiveauId].chapters[chapterId];
         
-        // Initialiser stepsCompleted si nécessaire
-        if (!chapter.stepsCompleted) {
-            chapter.stepsCompleted = [];
+        // Initialiser la structure si nécessaire
+        if (!chapter.portfolioStatus) {
+            chapter.portfolioStatus = {};
         }
         
-        // Initialiser la structure des étapes si nécessaire
-        if (!chapter.etapesState) {
-            chapter.etapesState = {};
-        }
-        
-        // Créer une clé unique pour l'étape (chapterId_etapeIndex)
-        const etapeKey = `${chapterId}_${etapeIndex}`;
-        
-        // Sauvegarder l'état (visited, completed, status, timestamp, etc.)
-        chapter.etapesState[etapeKey] = {
-            index: etapeIndex,
-            visited: state.visited !== undefined ? state.visited : true,
-            completed: state.completed !== undefined ? state.completed : false,
-            status: state.status || 'in_progress',
-            visitedAt: state.visitedAt || new Date().toISOString(),
-            completedAt: state.completedAt || null,
-            ...state  // Fusionner autres propriétés
+        // Sauvegarder le statut du portfolio
+        chapter.portfolioStatus = {
+            completed: isCompleted,
+            completedAt: isCompleted ? new Date().toISOString() : null
         };
         
         // Sauvegarder l'utilisateur mis à jour
         this.updateUser(user);
         
-        console.log(`📍 Étape ${etapeKey} marquée comme: ${chapter.etapesState[etapeKey].status}`);
-        return chapter.etapesState[etapeKey];
+        console.log(`📍 Portfolio ${chapterId} marqué comme: ${isCompleted ? 'complété' : 'non-complété'}`);
+        return chapter.portfolioStatus;
     },
 
     /**
-     * 8. Récupère l'état d'une étape
+     * 10. Récupère le statut du portfolio pour un chapitre
      */
-    getEtapeState(chapterId, etapeIndex) {
+    getPortfolioStatus(chapterId) {
         const user = this.getUser();
         
-        if (!user.niveaux) {
+        if (!user || !user.niveaux) {
             return null;
         }
         
-        // Trouver le niveau
+        // Trouver le chapitre
         for (const niveauId in user.niveaux) {
             const chapter = user.niveaux[niveauId].chapters[chapterId];
-            if (chapter && chapter.etapesState) {
-                const etapeKey = `${chapterId}_${etapeIndex}`;
-                return chapter.etapesState[etapeKey] || null;
+            if (chapter && chapter.portfolioStatus) {
+                return chapter.portfolioStatus;
             }
         }
         
