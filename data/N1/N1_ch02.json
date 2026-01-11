@@ -6,7 +6,7 @@
     "description": "Voici des techniques d'apprentissage",
     "ordre": 2,
     "createdAt": "2026-01-11T11:19:32.433Z",
-    "lastModified": "2026-01-11T11:20:21.653Z"
+    "lastModified": "2026-01-11T11:20:48.605Z"
   },
   "etapes": [
     {
@@ -17,7 +17,18 @@
       "ordre": 1,
       "type": "diagnostic",
       "createdAt": "2026-01-11T11:19:32.433Z",
-      "exercices": []
+      "exercices": [
+        {
+          "id": "N1_ch02_step01_ex001",
+          "etapeId": "N1_ch02_step01",
+          "type": "vrai-faux",
+          "titre": "Que Savez vous",
+          "points": 10,
+          "content": {},
+          "createdAt": "2026-01-11T11:20:48.605Z",
+          "lastModified": "2026-01-11T11:20:48.605Z"
+        }
+      ]
     },
     {
       "id": "N1_ch02_step02",
