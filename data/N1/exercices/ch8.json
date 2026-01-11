@@ -1,3 +1,27 @@
 {
-  "exercices": []
+  "exercices": [
+    {
+      "id": "N1_ch8_step01_ex001",
+      "etapeId": "N1_ch8_step01",
+      "type": "qcm",
+      "titre": "Objectifs",
+      "points": 10,
+      "content": {
+        "question": "",
+        "options": [
+          {
+            "label": "Option 1",
+            "correct": true
+          },
+          {
+            "label": "Option 2",
+            "correct": false
+          }
+        ],
+        "correctAnswer": 0,
+        "explanation": ""
+      },
+      "createdAt": "2026-01-11T19:37:02.795Z"
+    }
+  ]
 }
