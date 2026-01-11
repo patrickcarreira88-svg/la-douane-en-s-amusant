@@ -1,0 +1,99 @@
+{
+  "chapitres": [
+    {
+      "id": "101BT",
+      "numero": 2,
+      "titre": "Marchandises & Processus: Mise en Pratique",
+      "description": "Appliquer les fondamentaux douaniers à des cas concrets. Identification marchandises, flux processus, documents déclaration.",
+      "couleur": "FF6B9D",
+      "emoji": "📋",
+      "progression": 0,
+      "objectifs": [
+        "Identifier correctement le statut des marchandises (commercial/personnel/touristique)",
+        "Appliquer les 5 étapes du processus à un import réel",
+        "Remplir les données clés d'une déclaration douanière",
+        "Détecter erreurs fréquentes et risques en douane"
+      ],
+      "etapes": [
+        {
+          "id": "101BT_01_diagnostic",
+          "numero": 1,
+          "titre": "📋 Pré-test",
+          "type": "exercise_group",
+          "duree": "8 min",
+          "points": 50,
+          "exercices": []
+        },
+        {
+          "id": "101BT_02_videos",
+          "numero": 2,
+          "titre": "🎬 Révision Vidéos",
+          "type": "exercise_group",
+          "duree": "10 min",
+          "points": 75,
+          "exercices": []
+        },
+        {
+          "id": "101BT_03_cas_simples",
+          "numero": 3,
+          "titre": "📦 Cas Simples",
+          "type": "exercise_group",
+          "duree": "12 min",
+          "points": 75,
+          "exercices": []
+        },
+        {
+          "id": "101BT_04_processus_guide",
+          "numero": 4,
+          "titre": "⚙️ Cas Guidé",
+          "type": "exercise_group",
+          "duree": "12 min",
+          "points": 100,
+          "exercices": []
+        },
+        {
+          "id": "101BT_05_documents",
+          "numero": 5,
+          "titre": "📄 Documents",
+          "type": "exercise_group",
+          "duree": "12 min",
+          "points": 75,
+          "exercices": []
+        },
+        {
+          "id": "101BT_06_cas_complexes",
+          "numero": 6,
+          "titre": "🔴 Cas Complexes",
+          "type": "exercise_group",
+          "duree": "12 min",
+          "points": 100,
+          "exercices": []
+        },
+        {
+          "id": "101BT_07_revision",
+          "numero": 7,
+          "titre": "🔄 Révision",
+          "type": "exercise_group",
+          "duree": "10 min",
+          "points": 75,
+          "exercices": []
+        },
+        {
+          "id": "101BT_08_portfolio",
+          "numero": 8,
+          "titre": "🎖️ Portfolio",
+          "type": "portfolio_swipe",
+          "duree": "5 min",
+          "points": 25,
+          "exercices": []
+        }
+      ],
+      "badge": {
+        "id": "badge_101bt",
+        "titre": "Expert en Mise en Pratique",
+        "emoji": "🏆",
+        "description": "Vous avez maîtrisé marchandises, processus et déclarations!"
+      }
+    }
+  ]
+}

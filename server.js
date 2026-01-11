@@ -11,7 +11,7 @@ const { execSync } = require('child_process');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const HOST = 'localhost';
+const HOST = '::1';
 const DATA_DIR = path.join(__dirname, 'data');
 
 // Middleware
@@ -115,25 +115,51 @@ app.post('/api/save-exercise', (req, res) => {
 // ✅ 15 ROUTES AUTHORING SYSTEM
 // ===================================
 
-// ✅ ROUTE 1: Charger tous les niveaux
+// ✅ ROUTE 1: Charger tous les niveaux (N1, N2, N3, N4)
 app.get('/api/niveaux', (req, res) => {
     try {
-        const chapetrsMasterPath = path.join(DATA_DIR, 'chapitres-master.json');
+        const validNiveaux = ['N1', 'N2', 'N3', 'N4'];
+        const niveaux = [];
         
-        if (!fs.existsSync(chapetrsMasterPath)) {
-            return res.status(404).json({
-                success: false,
-                error: 'Fichier chapitres-master.json non trouvé'
-            });
+        // Charger chaque niveau
+        for (const niveauId of validNiveaux) {
+            const niveauPath = path.join(DATA_DIR, niveauId, 'chapitres.json');
+            
+            if (fs.existsSync(niveauPath)) {
+                try {
+                    const content = fs.readFileSync(niveauPath, 'utf8');
+                    const data = JSON.parse(content);
+                    const chapitres = data.chapitres || [];
+                    
+                    niveaux.push({
+                        id: niveauId,
+                        nom: `Niveau ${niveauId}`,
+                        chapitres: chapitres.length,
+                        status: 'chargé'
+                    });
+                } catch (e) {
+                    console.warn(`⚠️ Erreur lecture ${niveauId}:`, e.message);
+                    niveaux.push({
+                        id: niveauId,
+                        nom: `Niveau ${niveauId}`,
+                        chapitres: 0,
+                        status: 'erreur'
+                    });
+                }
+            } else {
+                niveaux.push({
+                    id: niveauId,
+                    nom: `Niveau ${niveauId}`,
+                    chapitres: 0,
+                    status: 'vide'
+                });
+            }
         }
-        
-        const content = fs.readFileSync(chapetrsMasterPath, 'utf8');
-        const data = JSON.parse(content);
         
         res.json({
             success: true,
-            niveaux: data.niveaux || [],
-            count: (data.niveaux || []).length,
+            niveaux: niveaux,
+            count: niveaux.length,
             message: 'Niveaux chargés avec succès'
         });
     } catch (error) {
@@ -146,6 +172,51 @@ app.get('/api/niveaux', (req, res) => {
 });
 
 // ✅ ROUTE 2: Charger les chapitres d'un niveau
+// Route pour charger les exercices d'un chapitre spécifique
+app.get('/api/niveaux/:niveauId/exercices/:chapterId', (req, res) => {
+    try {
+        const niveauId = req.params.niveauId.toUpperCase();
+        const chapterId = req.params.chapterId;
+        
+        // Charger depuis /data/N1/exercices/ch1.json, etc.
+        const exercicesPath = path.join(DATA_DIR, niveauId, 'exercices', `${chapterId}.json`);
+        
+        if (!fs.existsSync(exercicesPath)) {
+            return res.json({
+                success: true,
+                exercices: [],
+                count: 0,
+                message: `Aucun exercice trouvé pour ${niveauId}/${chapterId}`
+            });
+        }
+        
+        try {
+            const content = fs.readFileSync(exercicesPath, 'utf8');
+            const data = JSON.parse(content);
+            const exercices = data.exercices || [];
+            
+            res.json({
+                success: true,
+                exercices: exercices,
+                count: exercices.length,
+                message: `Exercices ${chapterId} chargés avec succès`
+            });
+        } catch (parseError) {
+            console.error(`❌ Erreur parsing ${exercicesPath}:`, parseError.message);
+            return res.status(500).json({
+                success: false,
+                error: 'Erreur parsing JSON: ' + parseError.message
+            });
+        }
+    } catch (error) {
+        console.error('❌ Erreur chargement exercices:', error.message);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
 app.get('/api/niveaux/:niveauId/chapitres', (req, res) => {
     try {
         const niveauId = req.params.niveauId.toUpperCase();
@@ -159,10 +230,10 @@ app.get('/api/niveaux/:niveauId/chapitres', (req, res) => {
             });
         }
         
-        const niveauDir = path.join(DATA_DIR, niveauId);
+        // Charger depuis /data/N1/chapitres.json, /data/N2/chapitres.json, etc.
+        const chapitresPath = path.join(DATA_DIR, niveauId, 'chapitres.json');
         
-        // Si le dossier n'existe pas, retourner array vide
-        if (!fs.existsSync(niveauDir)) {
+        if (!fs.existsSync(chapitresPath)) {
             return res.json({
                 success: true,
                 chapitres: [],
@@ -171,31 +242,24 @@ app.get('/api/niveaux/:niveauId/chapitres', (req, res) => {
             });
         }
         
-        // Lire tous les fichiers JSON du dossier
-        const files = fs.readdirSync(niveauDir).filter(f => f.endsWith('.json'));
-        const chapitres = [];
-        
-        files.forEach(file => {
-            try {
-                const content = fs.readFileSync(path.join(niveauDir, file), 'utf8');
-                const data = JSON.parse(content);
-                if (data.chapitre) {
-                    chapitres.push(data.chapitre);
-                }
-            } catch (e) {
-                console.warn(`⚠️ Erreur lecture ${file}:`, e.message);
-            }
-        });
-        
-        // Trier par ordre
-        chapitres.sort((a, b) => a.ordre - b.ordre);
-        
-        res.json({
-            success: true,
-            chapitres: chapitres,
-            count: chapitres.length,
-            message: `Chapitres ${niveauId} chargés avec succès`
-        });
+        try {
+            const content = fs.readFileSync(chapitresPath, 'utf8');
+            const data = JSON.parse(content);
+            const chapitres = data.chapitres || [];
+            
+            res.json({
+                success: true,
+                chapitres: chapitres,
+                count: chapitres.length,
+                message: `Chapitres ${niveauId} chargés avec succès`
+            });
+        } catch (parseError) {
+            console.error(`❌ Erreur parsing ${chapitresPath}:`, parseError.message);
+            return res.status(500).json({
+                success: false,
+                error: 'Erreur parsing JSON: ' + parseError.message
+            });
+        }
     } catch (error) {
         console.error('❌ Erreur chargement chapitres:', error.message);
         res.status(500).json({
@@ -205,142 +269,135 @@ app.get('/api/niveaux/:niveauId/chapitres', (req, res) => {
     }
 });
 
+// ✅ ROUTE 2.5: Charger les exercices d'un chapitre
+app.get('/api/niveaux/:niveauId/exercices/:chapterId', (req, res) => {
+    try {
+        const niveauId = req.params.niveauId.toUpperCase();
+        const chapterId = req.params.chapterId;
+        
+        // Charger depuis /data/N1/exercices/ch1.json, etc.
+        const exercicesPath = path.join(DATA_DIR, niveauId, 'exercices', `${chapterId}.json`);
+        
+        if (!fs.existsSync(exercicesPath)) {
+            return res.json({
+                success: true,
+                exercices: [],
+                count: 0,
+                message: `Aucun exercice trouvé pour ${niveauId}/${chapterId}`
+            });
+        }
+        
+        try {
+            const content = fs.readFileSync(exercicesPath, 'utf8');
+            const data = JSON.parse(content);
+            const exercices = data.exercices || [];
+            
+            res.json({
+                success: true,
+                exercices: exercices,
+                count: exercices.length,
+                message: `Exercices de ${chapterId} chargés avec succès`
+            });
+        } catch (parseError) {
+            console.error(`❌ Erreur parsing ${exercicesPath}:`, parseError.message);
+            return res.status(500).json({
+                success: false,
+                error: 'Erreur parsing JSON: ' + parseError.message
+            });
+        }
+    } catch (error) {
+        console.error('❌ Erreur chargement exercices:', error.message);
+        res.status(500).json({
+            success: false,
+            error: 'Erreur chargement exercices: ' + error.message
+        });
+    }
+});
+
+// ✅ ROUTE 3: Créer un nouveau chapitre
 // ✅ ROUTE 3: Créer un nouveau chapitre
 app.post('/api/niveaux/:niveauId/chapitres', (req, res) => {
     try {
         const niveauId = req.params.niveauId.toUpperCase();
         const { titre, description } = req.body;
         
-        // Validation 1: Niveau valide
+        // Validation
         const validNiveaux = ['N1', 'N2', 'N3', 'N4'];
         if (!validNiveaux.includes(niveauId)) {
-            return res.status(400).json({
-                success: false,
-                error: `Niveau invalide: ${niveauId}`
-            });
+            return res.status(400).json({ success: false, error: `Niveau invalide: ${niveauId}` });
         }
-        
-        // Validation 2: Titre présent
         if (!titre || titre.trim() === '') {
-            return res.status(400).json({
-                success: false,
-                error: 'Titre du chapitre requis'
-            });
+            return res.status(400).json({ success: false, error: 'Titre requis' });
         }
         
         const niveauDir = path.join(DATA_DIR, niveauId);
+        const chapitresPath = path.join(niveauDir, 'chapitres.json');
         
         // Créer dossier niveau s'il n'existe pas
         if (!fs.existsSync(niveauDir)) {
             fs.mkdirSync(niveauDir, { recursive: true });
         }
         
-        // Trouver le prochain numéro de chapitre
-        const files = fs.readdirSync(niveauDir).filter(f => f.endsWith('.json'));
-        let maxNum = 0;
+        // Créer dossier exercices
+        const exercicesDir = path.join(niveauDir, 'exercices');
+        if (!fs.existsSync(exercicesDir)) {
+            fs.mkdirSync(exercicesDir, { recursive: true });
+        }
         
-        files.forEach(file => {
-            const match = file.match(/ch(\d+)/);
-            if (match) {
-                const num = parseInt(match[1]);
-                if (num > maxNum) maxNum = num;
+        // Lire chapitres.json existant
+        let chapitresData = { chapitres: [] };
+        if (fs.existsSync(chapitresPath)) {
+            try {
+                chapitresData = JSON.parse(fs.readFileSync(chapitresPath, 'utf8'));
+            } catch (e) {
+                console.warn('⚠️ Erreur parsing chapitres.json, création nouveau');
             }
-        });
+        }
         
-        const nextNum = maxNum + 1;
-        const chapterId = `${niveauId}_ch${String(nextNum).padStart(2, '0')}`;
-        const fileName = `${chapterId}.json`;
-        const filePath = path.join(niveauDir, fileName);
+        // Générer ID unique (format simple ch1, ch2, etc. pour cohérence avec chapitres existants)
+        const chapterId = `ch${String(chapitresData.chapitres.length + 1).padStart(1, '0')}`;
         
-        // Créer structure chapitre + 4 étapes standard
-        const chapitre = {
-            chapitre: {
-                id: chapterId,
-                niveauId: niveauId,
-                titre: titre,
-                description: description || '',
-                ordre: nextNum,
-                createdAt: new Date().toISOString(),
-                lastModified: new Date().toISOString()
-            },
-            etapes: [
-                {
-                    id: `${chapterId}_step01`,
-                    chapterId: chapterId,
-                    titre: 'Diagnostic',
-                    description: 'Étape de diagnostic initial',
-                    ordre: 1,
-                    type: 'diagnostic',
-                    createdAt: new Date().toISOString(),
-                    exercices: []
-                },
-                {
-                    id: `${chapterId}_step02`,
-                    chapterId: chapterId,
-                    titre: 'Apprentissage',
-                    description: 'Étape d\'apprentissage et contenus',
-                    ordre: 2,
-                    type: 'apprentissage',
-                    createdAt: new Date().toISOString(),
-                    exercices: []
-                },
-                {
-                    id: `${chapterId}_step03`,
-                    chapterId: chapterId,
-                    titre: 'Entraînement',
-                    description: 'Étape d\'entraînement et pratique',
-                    ordre: 3,
-                    type: 'entrainement',
-                    createdAt: new Date().toISOString(),
-                    exercices: []
-                },
-                {
-                    id: `${chapterId}_step04`,
-                    chapterId: chapterId,
-                    titre: 'Évaluation',
-                    description: 'Étape d\'évaluation et validation',
-                    ordre: 4,
-                    type: 'evaluation',
-                    createdAt: new Date().toISOString(),
-                    exercices: []
-                }
-            ]
+        // Créer entrée chapitre
+        const newChapitre = {
+            id: chapterId,
+            niveauId: niveauId,
+            titre: titre,
+            description: description || '',
+            ordre: chapitresData.chapitres.length + 1,
+            createdAt: new Date().toISOString()
         };
         
-        // Sauvegarder fichier
-        fs.writeFileSync(filePath, JSON.stringify(chapitre, null, 2), 'utf8');
+        chapitresData.chapitres.push(newChapitre);
+        
+        // Sauvegarder chapitres.json
+        fs.writeFileSync(chapitresPath, JSON.stringify(chapitresData, null, 2), 'utf8');
+        
+        // Créer fichier exercices vide
+        const exerciceFile = path.join(exercicesDir, `${chapterId}.json`);
+        fs.writeFileSync(exerciceFile, JSON.stringify({ exercices: [] }, null, 2), 'utf8');
+        
         console.log(`✅ Chapitre créé: ${chapterId}`);
         
-        // Auto-commit et push vers GitHub
+        // Git sync
         let gitSync = false;
         try {
-            execSync(`git add "${filePath}"`, { cwd: __dirname, stdio: 'pipe' });
-            execSync(`git commit -m "Add chapter ${chapterId} via authoring tool"`, {
-                cwd: __dirname,
-                stdio: 'pipe'
-            });
+            execSync(`git add "${chapitresPath}" "${exerciceFile}"`, { cwd: __dirname, stdio: 'pipe' });
+            execSync(`git commit -m "Add chapter ${chapterId} via authoring tool"`, { cwd: __dirname, stdio: 'pipe' });
             execSync('git push origin main', { cwd: __dirname, stdio: 'pipe' });
-            console.log('✅ Chapitre synchronisé vers GitHub');
             gitSync = true;
-        } catch (gitError) {
-            console.warn('⚠️ Git sync échoué:', gitError.message);
-        }
+        } catch (e) { console.warn('⚠️ Git sync échoué'); }
         
         res.json({
             success: true,
-            message: `Chapitre ${chapterId} créé avec succès`,
-            chapitre: chapitre.chapitre,
+            message: `Chapitre ${chapterId} créé`,
+            chapitre: newChapitre,
             chapterId: chapterId,
-            gitSync: gitSync,
-            timestamp: new Date().toISOString()
+            gitSync: gitSync
         });
         
     } catch (error) {
         console.error('❌ Erreur création chapitre:', error.message);
-        res.status(500).json({
-            success: false,
-            error: 'Erreur création chapitre: ' + error.message
-        });
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
@@ -349,40 +406,64 @@ app.get('/api/chapitre/:chapterId', (req, res) => {
     try {
         const chapterId = req.params.chapterId;
         
-        // Extraire niveau et numéro
-        const match = chapterId.match(/^(N\d)_ch(\d+)$/);
+        // Extraire niveau et numéro: chapterId peut être "ch1" ou "N1_ch1"
+        const match = chapterId.match(/^(?:N\d_)?(ch\d+)$/) || chapterId.match(/^(N\d)_ch(\d+)$/);
         if (!match) {
-            return res.status(400).json({
-                success: false,
-                error: `Format chapterId invalide: ${chapterId}`
-            });
+            return res.status(400).json({ success: false, error: `Format invalide: ${chapterId}` });
         }
         
-        const niveauId = match[1];
-        const filePath = path.join(DATA_DIR, niveauId, `${chapterId}.json`);
-        
-        if (!fs.existsSync(filePath)) {
-            return res.status(404).json({
-                success: false,
-                error: `Chapitre ${chapterId} non trouvé`
-            });
+        // Déterminer niveauId et chapitre ID
+        let niveauId, chapId;
+        if (chapterId.includes('_')) {
+            // Format: N1_ch1
+            niveauId = chapterId.split('_')[0];
+            chapId = chapterId.split('_')[1];
+        } else {
+            // Format: ch1 - besoin de le trouver dans les niveaux
+            chapId = chapterId;
+            // Chercher dans tous les niveaux
+            let found = false;
+            for (const level of ['N1', 'N2', 'N3', 'N4']) {
+                const chapitresPath = path.join(DATA_DIR, level, 'chapitres.json');
+                if (fs.existsSync(chapitresPath)) {
+                    try {
+                        const data = JSON.parse(fs.readFileSync(chapitresPath, 'utf8'));
+                        const ch = data.chapitres.find(c => c.id === chapId);
+                        if (ch) {
+                            niveauId = level;
+                            found = true;
+                            break;
+                        }
+                    } catch (e) {}
+                }
+            }
+            if (!found) {
+                return res.status(404).json({ success: false, error: `Chapitre ${chapId} non trouvé` });
+            }
         }
         
-        const content = fs.readFileSync(filePath, 'utf8');
-        const data = JSON.parse(content);
+        const chapitresPath = path.join(DATA_DIR, niveauId, 'chapitres.json');
+        
+        if (!fs.existsSync(chapitresPath)) {
+            return res.status(404).json({ success: false, error: `Chapitres non trouvés pour ${niveauId}` });
+        }
+        
+        const chapitresData = JSON.parse(fs.readFileSync(chapitresPath, 'utf8'));
+        const chapitre = chapitresData.chapitres.find(c => c.id === chapId);
+        
+        if (!chapitre) {
+            return res.status(404).json({ success: false, error: `Chapitre ${chapId} non trouvé` });
+        }
         
         res.json({
             success: true,
-            chapitre: data.chapitre,
-            etapes: data.etapes || [],
-            message: `Chapitre ${chapterId} chargé`
+            chapitre: chapitre,
+            etapes: chapitre.etapes || [],
+            message: `Chapitre ${chapId} chargé`
         });
     } catch (error) {
         console.error('❌ Erreur chargement chapitre:', error.message);
-        res.status(500).json({
-            success: false,
-            error: 'Erreur chargement chapitre: ' + error.message
-        });
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
@@ -392,70 +473,65 @@ app.put('/api/chapitre/:chapterId', (req, res) => {
         const chapterId = req.params.chapterId;
         const { titre, description } = req.body;
         
-        // Validation
         if (!titre || titre.trim() === '') {
-            return res.status(400).json({
-                success: false,
-                error: 'Titre du chapitre requis'
-            });
+            return res.status(400).json({ success: false, error: 'Titre requis' });
         }
         
-        // Extraire niveau
-        const match = chapterId.match(/^(N\d)_ch(\d+)$/);
-        if (!match) {
-            return res.status(400).json({
-                success: false,
-                error: `Format chapterId invalide: ${chapterId}`
-            });
+        // Déterminer niveau
+        let niveauId, chapId;
+        if (chapterId.includes('_')) {
+            niveauId = chapterId.split('_')[0];
+            chapId = chapterId.split('_')[1];
+        } else {
+            chapId = chapterId;
+            // Trouver le niveau
+            for (const level of ['N1', 'N2', 'N3', 'N4']) {
+                const path1 = path.join(DATA_DIR, level, 'chapitres.json');
+                if (fs.existsSync(path1)) {
+                    const data = JSON.parse(fs.readFileSync(path1, 'utf8'));
+                    if (data.chapitres.find(c => c.id === chapId)) {
+                        niveauId = level;
+                        break;
+                    }
+                }
+            }
+            if (!niveauId) {
+                return res.status(404).json({ success: false, error: `Chapitre non trouvé` });
+            }
         }
         
-        const niveauId = match[1];
-        const filePath = path.join(DATA_DIR, niveauId, `${chapterId}.json`);
+        const chapitresPath = path.join(DATA_DIR, niveauId, 'chapitres.json');
+        const chapitresData = JSON.parse(fs.readFileSync(chapitresPath, 'utf8'));
+        const chIndex = chapitresData.chapitres.findIndex(c => c.id === chapId);
         
-        if (!fs.existsSync(filePath)) {
-            return res.status(404).json({
-                success: false,
-                error: `Chapitre ${chapterId} non trouvé`
-            });
+        if (chIndex === -1) {
+            return res.status(404).json({ success: false, error: `Chapitre non trouvé` });
         }
         
-        // Lire, modifier, sauvegarder
-        const content = fs.readFileSync(filePath, 'utf8');
-        const data = JSON.parse(content);
+        chapitresData.chapitres[chIndex].titre = titre;
+        if (description) chapitresData.chapitres[chIndex].description = description;
         
-        data.chapitre.titre = titre;
-        data.chapitre.description = description || data.chapitre.description;
-        data.chapitre.lastModified = new Date().toISOString();
-        
-        fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
-        console.log(`✅ Chapitre modifié: ${chapterId}`);
+        fs.writeFileSync(chapitresPath, JSON.stringify(chapitresData, null, 2), 'utf8');
+        console.log(`✅ Chapitre modifié: ${chapId}`);
         
         // Git sync
         let gitSync = false;
         try {
-            execSync(`git add "${filePath}"`, { cwd: __dirname, stdio: 'pipe' });
-            execSync(`git commit -m "Update chapter ${chapterId} via authoring tool"`, {
-                cwd: __dirname,
-                stdio: 'pipe'
-            });
+            execSync(`git add "${chapitresPath}"`, { cwd: __dirname, stdio: 'pipe' });
+            execSync(`git commit -m "Update chapter ${chapId}"`, { cwd: __dirname, stdio: 'pipe' });
             execSync('git push origin main', { cwd: __dirname, stdio: 'pipe' });
             gitSync = true;
-        } catch (gitError) {
-            console.warn('⚠️ Git sync échoué:', gitError.message);
-        }
+        } catch (e) { console.warn('⚠️ Git sync échoué'); }
         
         res.json({
             success: true,
-            message: `Chapitre ${chapterId} modifié`,
-            chapitre: data.chapitre,
+            message: 'Chapitre modifié',
+            chapitre: chapitresData.chapitres[chIndex],
             gitSync: gitSync
         });
     } catch (error) {
         console.error('❌ Erreur modification chapitre:', error.message);
-        res.status(500).json({
-            success: false,
-            error: 'Erreur modification chapitre: ' + error.message
-        });
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
@@ -464,54 +540,58 @@ app.delete('/api/chapitre/:chapterId', (req, res) => {
     try {
         const chapterId = req.params.chapterId;
         
-        // Extraire niveau
-        const match = chapterId.match(/^(N\d)_ch(\d+)$/);
-        if (!match) {
-            return res.status(400).json({
-                success: false,
-                error: `Format chapterId invalide: ${chapterId}`
-            });
+        // Déterminer niveau
+        let niveauId, chapId;
+        if (chapterId.includes('_')) {
+            niveauId = chapterId.split('_')[0];
+            chapId = chapterId.split('_')[1];
+        } else {
+            chapId = chapterId;
+            for (const level of ['N1', 'N2', 'N3', 'N4']) {
+                const path1 = path.join(DATA_DIR, level, 'chapitres.json');
+                if (fs.existsSync(path1)) {
+                    const data = JSON.parse(fs.readFileSync(path1, 'utf8'));
+                    if (data.chapitres.find(c => c.id === chapId)) {
+                        niveauId = level;
+                        break;
+                    }
+                }
+            }
+            if (!niveauId) {
+                return res.status(404).json({ success: false, error: `Chapitre non trouvé` });
+            }
         }
         
-        const niveauId = match[1];
-        const filePath = path.join(DATA_DIR, niveauId, `${chapterId}.json`);
+        const chapitresPath = path.join(DATA_DIR, niveauId, 'chapitres.json');
+        const chapitresData = JSON.parse(fs.readFileSync(chapitresPath, 'utf8'));
+        chapitresData.chapitres = chapitresData.chapitres.filter(c => c.id !== chapId);
         
-        if (!fs.existsSync(filePath)) {
-            return res.status(404).json({
-                success: false,
-                error: `Chapitre ${chapterId} non trouvé`
-            });
+        // Supprimer aussi le fichier exercices
+        const exercicePath = path.join(DATA_DIR, niveauId, 'exercices', `${chapId}.json`);
+        if (fs.existsSync(exercicePath)) {
+            fs.unlinkSync(exercicePath);
         }
         
-        // Supprimer fichier
-        fs.unlinkSync(filePath);
-        console.log(`✅ Chapitre supprimé: ${chapterId}`);
+        fs.writeFileSync(chapitresPath, JSON.stringify(chapitresData, null, 2), 'utf8');
+        console.log(`✅ Chapitre supprimé: ${chapId}`);
         
         // Git sync
         let gitSync = false;
         try {
             execSync(`git add -A`, { cwd: __dirname, stdio: 'pipe' });
-            execSync(`git commit -m "Delete chapter ${chapterId} via authoring tool"`, {
-                cwd: __dirname,
-                stdio: 'pipe'
-            });
+            execSync(`git commit -m "Delete chapter ${chapId}"`, { cwd: __dirname, stdio: 'pipe' });
             execSync('git push origin main', { cwd: __dirname, stdio: 'pipe' });
             gitSync = true;
-        } catch (gitError) {
-            console.warn('⚠️ Git sync échoué:', gitError.message);
-        }
+        } catch (e) { console.warn('⚠️ Git sync échoué'); }
         
         res.json({
             success: true,
-            message: `Chapitre ${chapterId} supprimé`,
+            message: 'Chapitre supprimé',
             gitSync: gitSync
         });
     } catch (error) {
         console.error('❌ Erreur suppression chapitre:', error.message);
-        res.status(500).json({
-            success: false,
-            error: 'Erreur suppression chapitre: ' + error.message
-        });
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
@@ -521,61 +601,52 @@ app.post('/api/chapitre/:chapterId/etape', (req, res) => {
         const chapterId = req.params.chapterId;
         const { titre, type } = req.body;
         
-        // Validation
         if (!titre || titre.trim() === '') {
-            return res.status(400).json({
-                success: false,
-                error: 'Titre de l\'étape requis'
-            });
+            return res.status(400).json({ success: false, error: 'Titre requis' });
         }
         
-        const validTypes = ['diagnostic', 'apprentissage', 'entrainement', 'evaluation'];
+        const validTypes = ['diagnostic', 'apprentissage', 'entrainement', 'evaluation', 'objectives'];
         if (!type || !validTypes.includes(type.toLowerCase())) {
-            return res.status(400).json({
-                success: false,
-                error: `Type invalide. Types acceptés: ${validTypes.join(', ')}`
-            });
+            return res.status(400).json({ success: false, error: `Type invalide` });
         }
         
-        // Extraire niveau et charger chapitre
-        const match = chapterId.match(/^(N\d)_ch(\d+)$/);
-        if (!match) {
-            return res.status(400).json({
-                success: false,
-                error: `Format chapterId invalide`
-            });
-        }
-        
-        const niveauId = match[1];
-        const filePath = path.join(DATA_DIR, niveauId, `${chapterId}.json`);
-        
-        if (!fs.existsSync(filePath)) {
-            return res.status(404).json({
-                success: false,
-                error: `Chapitre ${chapterId} non trouvé`
-            });
-        }
-        
-        const content = fs.readFileSync(filePath, 'utf8');
-        const data = JSON.parse(content);
-        
-        // Trouver prochain numéro d'étape
-        let maxStepNum = 0;
-        data.etapes.forEach(e => {
-            const match = e.id.match(/step(\d+)$/);
-            if (match) {
-                const num = parseInt(match[1]);
-                if (num > maxStepNum) maxStepNum = num;
+        // Déterminer niveau
+        let niveauId;
+        if (chapterId.includes('_')) {
+            niveauId = chapterId.split('_')[0];
+        } else {
+            for (const level of ['N1', 'N2', 'N3', 'N4']) {
+                const path1 = path.join(DATA_DIR, level, 'chapitres.json');
+                if (fs.existsSync(path1)) {
+                    const data = JSON.parse(fs.readFileSync(path1, 'utf8'));
+                    if (data.chapitres.find(c => c.id === chapterId)) {
+                        niveauId = level;
+                        break;
+                    }
+                }
             }
-        });
+            if (!niveauId) {
+                return res.status(404).json({ success: false, error: 'Chapitre non trouvé' });
+            }
+        }
         
-        const nextStepNum = maxStepNum + 1;
-        const etapeId = `${chapterId}_step${String(nextStepNum).padStart(2, '0')}`;
+        const chapitresPath = path.join(DATA_DIR, niveauId, 'chapitres.json');
+        const chapitresData = JSON.parse(fs.readFileSync(chapitresPath, 'utf8'));
+        const chapitre = chapitresData.chapitres.find(c => c.id === chapterId);
         
-        // Créer nouvelle étape
+        if (!chapitre) {
+            return res.status(404).json({ success: false, error: 'Chapitre non trouvé' });
+        }
+        
+        // Générer ID étape (avec préfixe niveau pour compatibilité avec routes exercices)
+        const etapes = chapitre.etapes || [];
+        const nextStepNum = etapes.length + 1;
+        // Extraire le chapterId sans préfixe niveau
+        const chapterIdWithoutPrefix = chapterId.includes('_') ? chapterId.split('_').slice(1).join('_') : chapterId;
+        const etapeId = `${niveauId}_${chapterIdWithoutPrefix}_step${String(nextStepNum).padStart(2, '0')}`;
+        
         const nouvelleEtape = {
             id: etapeId,
-            chapterId: chapterId,
             titre: titre,
             description: req.body.description || '',
             ordre: nextStepNum,
@@ -584,38 +655,30 @@ app.post('/api/chapitre/:chapterId/etape', (req, res) => {
             exercices: []
         };
         
-        data.etapes.push(nouvelleEtape);
-        data.chapitre.lastModified = new Date().toISOString();
+        chapitre.etapes = chapitre.etapes || [];
+        chapitre.etapes.push(nouvelleEtape);
         
-        fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
+        fs.writeFileSync(chapitresPath, JSON.stringify(chapitresData, null, 2), 'utf8');
         console.log(`✅ Étape créée: ${etapeId}`);
         
         // Git sync
         let gitSync = false;
         try {
-            execSync(`git add "${filePath}"`, { cwd: __dirname, stdio: 'pipe' });
-            execSync(`git commit -m "Add step ${etapeId} via authoring tool"`, {
-                cwd: __dirname,
-                stdio: 'pipe'
-            });
+            execSync(`git add "${chapitresPath}"`, { cwd: __dirname, stdio: 'pipe' });
+            execSync(`git commit -m "Add step ${etapeId}"`, { cwd: __dirname, stdio: 'pipe' });
             execSync('git push origin main', { cwd: __dirname, stdio: 'pipe' });
             gitSync = true;
-        } catch (gitError) {
-            console.warn('⚠️ Git sync échoué:', gitError.message);
-        }
+        } catch (e) { console.warn('⚠️ Git sync échoué'); }
         
         res.json({
             success: true,
-            message: `Étape ${etapeId} créée`,
+            message: 'Étape créée',
             etape: nouvelleEtape,
             gitSync: gitSync
         });
     } catch (error) {
         console.error('❌ Erreur création étape:', error.message);
-        res.status(500).json({
-            success: false,
-            error: 'Erreur création étape: ' + error.message
-        });
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
@@ -624,37 +687,52 @@ app.get('/api/etape/:etapeId', (req, res) => {
     try {
         const etapeId = req.params.etapeId;
         
-        // Extraire chapterId et niveau
-        const match = etapeId.match(/^(N\d_ch\d+)_step\d+$/);
+        // Extraire chapterId: format peut être "ch1_step1" ou "N1_ch1_step1"
+        const match = etapeId.match(/^(?:N\d_)?(ch\d+)_step\d+$/) || etapeId.match(/^(N\d_ch\d+)_step\d+$/);
         if (!match) {
-            return res.status(400).json({
-                success: false,
-                error: 'Format etapeId invalide'
-            });
+            return res.status(400).json({ success: false, error: 'Format etapeId invalide' });
         }
         
-        const chapterId = match[1];
-        const niveauMatch = chapterId.match(/^(N\d)_/);
-        const niveauId = niveauMatch[1];
-        
-        const filePath = path.join(DATA_DIR, niveauId, `${chapterId}.json`);
-        
-        if (!fs.existsSync(filePath)) {
-            return res.status(404).json({
-                success: false,
-                error: `Chapitre ${chapterId} non trouvé`
-            });
+        let chapterId, niveauId;
+        if (etapeId.includes('_ch')) {
+            // Format: N1_ch1_step1
+            const parts = etapeId.split('_');
+            niveauId = parts[0];
+            chapterId = parts[0] + '_' + parts[1];
+        } else {
+            // Format: ch1_step1 - besoin de trouver le niveau
+            const chapId = etapeId.split('_')[0];
+            for (const level of ['N1', 'N2', 'N3', 'N4']) {
+                const path1 = path.join(DATA_DIR, level, 'chapitres.json');
+                if (fs.existsSync(path1)) {
+                    const data = JSON.parse(fs.readFileSync(path1, 'utf8'));
+                    if (data.chapitres.find(c => c.id === chapId)) {
+                        niveauId = level;
+                        chapterId = chapId;
+                        break;
+                    }
+                }
+            }
+            if (!niveauId) {
+                return res.status(404).json({ success: false, error: 'Chapitre non trouvé' });
+            }
         }
         
-        const content = fs.readFileSync(filePath, 'utf8');
-        const data = JSON.parse(content);
+        const chapitresPath = path.join(DATA_DIR, niveauId, 'chapitres.json');
+        if (!fs.existsSync(chapitresPath)) {
+            return res.status(404).json({ success: false, error: 'Chapitres non trouvés' });
+        }
         
-        const etape = data.etapes.find(e => e.id === etapeId);
+        const chapitresData = JSON.parse(fs.readFileSync(chapitresPath, 'utf8'));
+        const chapitre = chapitresData.chapitres.find(c => c.id === chapterId);
+        
+        if (!chapitre) {
+            return res.status(404).json({ success: false, error: 'Chapitre non trouvé' });
+        }
+        
+        const etape = (chapitre.etapes || []).find(e => e.id === etapeId);
         if (!etape) {
-            return res.status(404).json({
-                success: false,
-                error: `Étape ${etapeId} non trouvée`
-            });
+            return res.status(404).json({ success: false, error: 'Étape non trouvée' });
         }
         
         res.json({
@@ -664,10 +742,7 @@ app.get('/api/etape/:etapeId', (req, res) => {
         });
     } catch (error) {
         console.error('❌ Erreur chargement étape:', error.message);
-        res.status(500).json({
-            success: false,
-            error: 'Erreur chargement étape: ' + error.message
-        });
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
@@ -677,73 +752,74 @@ app.put('/api/etape/:etapeId', (req, res) => {
         const etapeId = req.params.etapeId;
         const { titre, description, type } = req.body;
         
-        // Extraire chapterId et niveau
-        const match = etapeId.match(/^(N\d_ch\d+)_step\d+$/);
-        if (!match) {
-            return res.status(400).json({
-                success: false,
-                error: 'Format etapeId invalide'
-            });
+        // Extraire chapterId
+        let chapterId, niveauId;
+        const match1 = etapeId.match(/^(?:N\d_)?(ch\d+)_step\d+$/);
+        const match2 = etapeId.match(/^(N\d_ch\d+)_step\d+$/);
+        
+        if (!match1 && !match2) {
+            return res.status(400).json({ success: false, error: 'Format etapeId invalide' });
         }
         
-        const chapterId = match[1];
-        const niveauMatch = chapterId.match(/^(N\d)_/);
-        const niveauId = niveauMatch[1];
-        
-        const filePath = path.join(DATA_DIR, niveauId, `${chapterId}.json`);
-        
-        if (!fs.existsSync(filePath)) {
-            return res.status(404).json({
-                success: false,
-                error: `Chapitre non trouvé`
-            });
+        if (match2) {
+            niveauId = match2[1].split('_')[0];
+            chapterId = match2[1];
+        } else {
+            chapterId = etapeId.split('_step')[0];
+            // Trouver niveau
+            for (const level of ['N1', 'N2', 'N3', 'N4']) {
+                const path1 = path.join(DATA_DIR, level, 'chapitres.json');
+                if (fs.existsSync(path1)) {
+                    const data = JSON.parse(fs.readFileSync(path1, 'utf8'));
+                    if (data.chapitres.find(c => c.id === chapterId)) {
+                        niveauId = level;
+                        break;
+                    }
+                }
+            }
+            if (!niveauId) {
+                return res.status(404).json({ success: false, error: 'Chapitre non trouvé' });
+            }
         }
         
-        const content = fs.readFileSync(filePath, 'utf8');
-        const data = JSON.parse(content);
+        const chapitresPath = path.join(DATA_DIR, niveauId, 'chapitres.json');
+        const chapitresData = JSON.parse(fs.readFileSync(chapitresPath, 'utf8'));
+        const chapitre = chapitresData.chapitres.find(c => c.id === chapterId);
         
-        const etapeIndex = data.etapes.findIndex(e => e.id === etapeId);
+        if (!chapitre) {
+            return res.status(404).json({ success: false, error: 'Chapitre non trouvé' });
+        }
+        
+        const etapeIndex = (chapitre.etapes || []).findIndex(e => e.id === etapeId);
         if (etapeIndex === -1) {
-            return res.status(404).json({
-                success: false,
-                error: `Étape non trouvée`
-            });
+            return res.status(404).json({ success: false, error: 'Étape non trouvée' });
         }
         
-        if (titre) data.etapes[etapeIndex].titre = titre;
-        if (description) data.etapes[etapeIndex].description = description;
-        if (type) data.etapes[etapeIndex].type = type;
-        data.chapitre.lastModified = new Date().toISOString();
+        if (titre) chapitre.etapes[etapeIndex].titre = titre;
+        if (description) chapitre.etapes[etapeIndex].description = description;
+        if (type) chapitre.etapes[etapeIndex].type = type;
         
-        fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
+        fs.writeFileSync(chapitresPath, JSON.stringify(chapitresData, null, 2), 'utf8');
         console.log(`✅ Étape modifiée: ${etapeId}`);
         
         // Git sync
         let gitSync = false;
         try {
-            execSync(`git add "${filePath}"`, { cwd: __dirname, stdio: 'pipe' });
-            execSync(`git commit -m "Update step ${etapeId} via authoring tool"`, {
-                cwd: __dirname,
-                stdio: 'pipe'
-            });
+            execSync(`git add "${chapitresPath}"`, { cwd: __dirname, stdio: 'pipe' });
+            execSync(`git commit -m "Update step ${etapeId}"`, { cwd: __dirname, stdio: 'pipe' });
             execSync('git push origin main', { cwd: __dirname, stdio: 'pipe' });
             gitSync = true;
-        } catch (gitError) {
-            console.warn('⚠️ Git sync échoué:', gitError.message);
-        }
+        } catch (e) { console.warn('⚠️ Git sync échoué'); }
         
         res.json({
             success: true,
-            message: `Étape modifiée`,
-            etape: data.etapes[etapeIndex],
+            message: 'Étape modifiée',
+            etape: chapitre.etapes[etapeIndex],
             gitSync: gitSync
         });
     } catch (error) {
         console.error('❌ Erreur modification étape:', error.message);
-        res.status(500).json({
-            success: false,
-            error: 'Erreur modification étape: ' + error.message
-        });
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
@@ -752,79 +828,66 @@ app.delete('/api/etape/:etapeId', (req, res) => {
     try {
         const etapeId = req.params.etapeId;
         
-        // Extraire chapterId et niveau
-        const match = etapeId.match(/^(N\d_ch\d+)_step\d+$/);
-        if (!match) {
-            return res.status(400).json({
-                success: false,
-                error: 'Format etapeId invalide'
-            });
+        // Extraire chapterId
+        let chapterId, niveauId;
+        const match1 = etapeId.match(/^(?:N\d_)?(ch\d+)_step\d+$/);
+        const match2 = etapeId.match(/^(N\d_ch\d+)_step\d+$/);
+        
+        if (!match1 && !match2) {
+            return res.status(400).json({ success: false, error: 'Format etapeId invalide' });
         }
         
-        const chapterId = match[1];
-        const niveauMatch = chapterId.match(/^(N\d)_/);
-        const niveauId = niveauMatch[1];
-        
-        const filePath = path.join(DATA_DIR, niveauId, `${chapterId}.json`);
-        
-        if (!fs.existsSync(filePath)) {
-            return res.status(404).json({
-                success: false,
-                error: `Chapitre non trouvé`
-            });
+        if (match2) {
+            niveauId = match2[1].split('_')[0];
+            chapterId = match2[1];
+        } else {
+            chapterId = etapeId.split('_step')[0];
+            for (const level of ['N1', 'N2', 'N3', 'N4']) {
+                const path1 = path.join(DATA_DIR, level, 'chapitres.json');
+                if (fs.existsSync(path1)) {
+                    const data = JSON.parse(fs.readFileSync(path1, 'utf8'));
+                    if (data.chapitres.find(c => c.id === chapterId)) {
+                        niveauId = level;
+                        break;
+                    }
+                }
+            }
+            if (!niveauId) {
+                return res.status(404).json({ success: false, error: 'Chapitre non trouvé' });
+            }
         }
         
-        const content = fs.readFileSync(filePath, 'utf8');
-        const data = JSON.parse(content);
+        const chapitresPath = path.join(DATA_DIR, niveauId, 'chapitres.json');
+        const chapitresData = JSON.parse(fs.readFileSync(chapitresPath, 'utf8'));
+        const chapitre = chapitresData.chapitres.find(c => c.id === chapterId);
+        
+        if (!chapitre) {
+            return res.status(404).json({ success: false, error: 'Chapitre non trouvé' });
+        }
         
         // Supprimer étape
-        data.etapes = data.etapes.filter(e => e.id !== etapeId);
+        chapitre.etapes = (chapitre.etapes || []).filter(e => e.id !== etapeId);
         
-        // Renumériser les étapes
-        data.etapes.forEach((etape, index) => {
-            const oldId = etape.id;
-            const newStepNum = index + 1;
-            etape.id = `${chapterId}_step${String(newStepNum).padStart(2, '0')}`;
-            etape.ordre = newStepNum;
-            
-            // Mettre à jour les exercices avec la nouvelle étapeId
-            if (etape.exercices) {
-                etape.exercices.forEach(ex => {
-                    ex.etapeId = etape.id;
-                });
-            }
-        });
-        
-        data.chapitre.lastModified = new Date().toISOString();
-        
-        fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
-        console.log(`✅ Étape supprimée et renumérisation effectuée`);
+        fs.writeFileSync(chapitresPath, JSON.stringify(chapitresData, null, 2), 'utf8');
+        console.log(`✅ Étape supprimée: ${etapeId}`);
         
         // Git sync
         let gitSync = false;
         try {
-            execSync(`git add -A`, { cwd: __dirname, stdio: 'pipe' });
-            execSync(`git commit -m "Delete step ${etapeId} and renumber via authoring tool"`, {
-                cwd: __dirname,
-                stdio: 'pipe'
-            });
+            execSync(`git add "${chapitresPath}"`, { cwd: __dirname, stdio: 'pipe' });
+            execSync(`git commit -m "Delete step ${etapeId}"`, { cwd: __dirname, stdio: 'pipe' });
             execSync('git push origin main', { cwd: __dirname, stdio: 'pipe' });
             gitSync = true;
-        } catch (gitError) {
-            console.warn('⚠️ Git sync échoué:', gitError.message);
-        }
+        } catch (e) { console.warn('⚠️ Git sync échoué'); }
         
         res.json({
             success: true,
-            message: `Étape supprimée et renumérisation effectuée`,
+            message: 'Étape supprimée',
             gitSync: gitSync
         });
     } catch (error) {
         console.error('❌ Erreur suppression étape:', error.message);
-        res.status(500).json({
-            success: false,
-            error: 'Erreur suppression étape: ' + error.message
-        });
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
@@ -834,90 +897,72 @@ app.post('/api/etape/:etapeId/reorder', (req, res) => {
         const etapeId = req.params.etapeId;
         const { newPosition } = req.body;
         
-        // Validation
         if (newPosition === undefined || newPosition < 1) {
-            return res.status(400).json({
-                success: false,
-                error: 'newPosition requis et doit être >= 1'
-            });
+            return res.status(400).json({ success: false, error: 'newPosition requis' });
         }
         
-        // Extraire chapterId et niveau
-        const match = etapeId.match(/^(N\d_ch\d+)_step\d+$/);
-        if (!match) {
-            return res.status(400).json({
-                success: false,
-                error: 'Format etapeId invalide'
-            });
+        // Extraire chapterId
+        let chapterId, niveauId;
+        const match2 = etapeId.match(/^(N\d_ch\d+)_step\d+$/);
+        if (match2) {
+            niveauId = match2[1].split('_')[0];
+            chapterId = match2[1];
+        } else {
+            const parts = etapeId.split('_step');
+            chapterId = parts[0];
+            for (const level of ['N1', 'N2', 'N3', 'N4']) {
+                const path1 = path.join(DATA_DIR, level, 'chapitres.json');
+                if (fs.existsSync(path1)) {
+                    const data = JSON.parse(fs.readFileSync(path1, 'utf8'));
+                    if (data.chapitres.find(c => c.id === chapterId)) {
+                        niveauId = level;
+                        break;
+                    }
+                }
+            }
+            if (!niveauId) {
+                return res.status(404).json({ success: false, error: 'Chapitre non trouvé' });
+            }
         }
         
-        const chapterId = match[1];
-        const niveauMatch = chapterId.match(/^(N\d)_/);
-        const niveauId = niveauMatch[1];
+        const chapitresPath = path.join(DATA_DIR, niveauId, 'chapitres.json');
+        const chapitresData = JSON.parse(fs.readFileSync(chapitresPath, 'utf8'));
+        const chapitre = chapitresData.chapitres.find(c => c.id === chapterId);
         
-        const filePath = path.join(DATA_DIR, niveauId, `${chapterId}.json`);
-        
-        if (!fs.existsSync(filePath)) {
-            return res.status(404).json({
-                success: false,
-                error: `Chapitre non trouvé`
-            });
+        if (!chapitre) {
+            return res.status(404).json({ success: false, error: 'Chapitre non trouvé' });
         }
         
-        const content = fs.readFileSync(filePath, 'utf8');
-        const data = JSON.parse(content);
-        
-        // Trouver l'étape
-        const etapeIndex = data.etapes.findIndex(e => e.id === etapeId);
+        const etapeIndex = (chapitre.etapes || []).findIndex(e => e.id === etapeId);
         if (etapeIndex === -1) {
-            return res.status(404).json({
-                success: false,
-                error: `Étape non trouvée`
-            });
+            return res.status(404).json({ success: false, error: 'Étape non trouvée' });
         }
         
         // Déplacer l'étape
-        const etape = data.etapes.splice(etapeIndex, 1);
-        data.etapes.splice(newPosition - 1, 0, ...etape);
+        const etape = chapitre.etapes.splice(etapeIndex, 1);
+        chapitre.etapes.splice(newPosition - 1, 0, ...etape);
         
-        // Renumériser toutes les étapes
-        data.etapes.forEach((e, index) => {
-            const newStepNum = index + 1;
-            e.id = `${chapterId}_step${String(newStepNum).padStart(2, '0')}`;
-            e.ordre = newStepNum;
-        });
-        
-        data.chapitre.lastModified = new Date().toISOString();
-        
-        fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
+        fs.writeFileSync(chapitresPath, JSON.stringify(chapitresData, null, 2), 'utf8');
         console.log(`✅ Étapes réordonnées`);
         
         // Git sync
         let gitSync = false;
         try {
-            execSync(`git add "${filePath}"`, { cwd: __dirname, stdio: 'pipe' });
-            execSync(`git commit -m "Reorder steps in ${chapterId} via authoring tool"`, {
-                cwd: __dirname,
-                stdio: 'pipe'
-            });
+            execSync(`git add "${chapitresPath}"`, { cwd: __dirname, stdio: 'pipe' });
+            execSync(`git commit -m "Reorder steps in ${chapterId}"`, { cwd: __dirname, stdio: 'pipe' });
             execSync('git push origin main', { cwd: __dirname, stdio: 'pipe' });
             gitSync = true;
-        } catch (gitError) {
-            console.warn('⚠️ Git sync échoué:', gitError.message);
-        }
+        } catch (e) { console.warn('⚠️ Git sync échoué'); }
         
         res.json({
             success: true,
-            message: `Étapes réordonnées`,
-            etapes: data.etapes,
+            message: 'Étapes réordonnées',
+            etapes: chapitre.etapes,
             gitSync: gitSync
         });
     } catch (error) {
         console.error('❌ Erreur réordonner étapes:', error.message);
-        res.status(500).json({
-            success: false,
-            error: 'Erreur réordonner étapes: ' + error.message
-        });
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
@@ -930,71 +975,41 @@ app.post('/api/etape/:etapeId/exercice', (req, res) => {
         // Validation
         const validTypes = ['qcm', 'vrai-faux', 'dragdrop', 'flashcards', 'video', 'lecture', 'scenario'];
         if (!type || !validTypes.includes(type.toLowerCase())) {
-            return res.status(400).json({
-                success: false,
-                error: `Type invalide. Types acceptés: ${validTypes.join(', ')}`
-            });
+            return res.status(400).json({ success: false, error: `Type invalide: ${validTypes.join(', ')}` });
         }
-        
         if (!titre || titre.trim() === '') {
-            return res.status(400).json({
-                success: false,
-                error: 'Titre de l\'exercice requis'
-            });
+            return res.status(400).json({ success: false, error: 'Titre requis' });
         }
-        
         if (!content) {
-            return res.status(400).json({
-                success: false,
-                error: 'Contenu de l\'exercice requis'
-            });
+            return res.status(400).json({ success: false, error: 'Contenu requis' });
         }
         
         // Extraire chapterId et niveau
         const match = etapeId.match(/^(N\d_ch\d+)_step\d+$/);
         if (!match) {
-            return res.status(400).json({
-                success: false,
-                error: 'Format etapeId invalide'
-            });
+            return res.status(400).json({ success: false, error: 'Format etapeId invalide' });
         }
         
         const chapterId = match[1];
         const niveauMatch = chapterId.match(/^(N\d)_/);
         const niveauId = niveauMatch[1];
         
-        const filePath = path.join(DATA_DIR, niveauId, `${chapterId}.json`);
+        // Charger exercices.json pour ce chapitre
+        const exercicesPath = path.join(DATA_DIR, niveauId, 'exercices', `${chapterId}.json`);
         
-        if (!fs.existsSync(filePath)) {
-            return res.status(404).json({
-                success: false,
-                error: `Chapitre non trouvé`
-            });
+        if (!fs.existsSync(exercicesPath)) {
+            return res.status(404).json({ success: false, error: 'Chapitre exercices non trouvé' });
         }
         
-        const content_file = fs.readFileSync(filePath, 'utf8');
-        const data = JSON.parse(content_file);
-        
-        // Trouver l'étape
-        const etapeIndex = data.etapes.findIndex(e => e.id === etapeId);
-        if (etapeIndex === -1) {
-            return res.status(404).json({
-                success: false,
-                error: `Étape non trouvée`
-            });
+        let exercicesData = { exercices: [] };
+        try {
+            exercicesData = JSON.parse(fs.readFileSync(exercicesPath, 'utf8'));
+        } catch (e) {
+            console.warn('⚠️ Erreur parsing exercices.json');
         }
         
         // Générer ID exercice
-        let maxExNum = 0;
-        data.etapes[etapeIndex].exercices.forEach(ex => {
-            const match = ex.id.match(/ex(\d+)$/);
-            if (match) {
-                const num = parseInt(match[1]);
-                if (num > maxExNum) maxExNum = num;
-            }
-        });
-        
-        const nextExNum = maxExNum + 1;
+        const nextExNum = exercicesData.exercices.length + 1;
         const exerciceId = `${etapeId}_ex${String(nextExNum).padStart(3, '0')}`;
         
         // Créer exercice
@@ -1005,29 +1020,21 @@ app.post('/api/etape/:etapeId/exercice', (req, res) => {
             titre: titre,
             points: points || 10,
             content: content,
-            createdAt: new Date().toISOString(),
-            lastModified: new Date().toISOString()
+            createdAt: new Date().toISOString()
         };
         
-        data.etapes[etapeIndex].exercices.push(nouvelExercice);
-        data.chapitre.lastModified = new Date().toISOString();
-        
-        fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
+        exercicesData.exercices.push(nouvelExercice);
+        fs.writeFileSync(exercicesPath, JSON.stringify(exercicesData, null, 2), 'utf8');
         console.log(`✅ Exercice créé: ${exerciceId}`);
         
         // Git sync
         let gitSync = false;
         try {
-            execSync(`git add "${filePath}"`, { cwd: __dirname, stdio: 'pipe' });
-            execSync(`git commit -m "Add exercise ${exerciceId} via authoring tool"`, {
-                cwd: __dirname,
-                stdio: 'pipe'
-            });
+            execSync(`git add "${exercicesPath}"`, { cwd: __dirname, stdio: 'pipe' });
+            execSync(`git commit -m "Add exercise ${exerciceId}"`, { cwd: __dirname, stdio: 'pipe' });
             execSync('git push origin main', { cwd: __dirname, stdio: 'pipe' });
             gitSync = true;
-        } catch (gitError) {
-            console.warn('⚠️ Git sync échoué:', gitError.message);
-        }
+        } catch (e) { console.warn('⚠️ Git sync échoué'); }
         
         res.json({
             success: true,
@@ -1037,10 +1044,7 @@ app.post('/api/etape/:etapeId/exercice', (req, res) => {
         });
     } catch (error) {
         console.error('❌ Erreur création exercice:', error.message);
-        res.status(500).json({
-            success: false,
-            error: 'Erreur création exercice: ' + error.message
-        });
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
@@ -1048,60 +1052,32 @@ app.post('/api/etape/:etapeId/exercice', (req, res) => {
 app.get('/api/exercice/:exerciceId', (req, res) => {
     try {
         const exerciceId = req.params.exerciceId;
-        
-        // Extraire etapeId et chapterId
-        const match = exerciceId.match(/^(N\d_ch\d+_step\d+)_ex\d+$/);
+        const match = exerciceId.match(/^(N\d_ch\d+)_step\d+_ex\d+$/);
         if (!match) {
-            return res.status(400).json({
-                success: false,
-                error: 'Format exerciceId invalide'
-            });
+            return res.status(400).json({ success: false, error: 'Format exerciceId invalide' });
         }
         
-        const etapeId = match[1];
-        const chapterId = etapeId.split('_step')[0];
+        const chapterId = match[1];
         const niveauMatch = chapterId.match(/^(N\d)_/);
         const niveauId = niveauMatch[1];
         
-        const filePath = path.join(DATA_DIR, niveauId, `${chapterId}.json`);
+        const exercicesPath = path.join(DATA_DIR, niveauId, 'exercices', `${chapterId}.json`);
         
-        if (!fs.existsSync(filePath)) {
-            return res.status(404).json({
-                success: false,
-                error: `Fichier non trouvé`
-            });
+        if (!fs.existsSync(exercicesPath)) {
+            return res.status(404).json({ success: false, error: 'Exercices non trouvés' });
         }
         
-        const content = fs.readFileSync(filePath, 'utf8');
-        const data = JSON.parse(content);
+        const exercicesData = JSON.parse(fs.readFileSync(exercicesPath, 'utf8'));
+        const exercice = exercicesData.exercices.find(ex => ex.id === exerciceId);
         
-        // Trouver l'étape et l'exercice
-        const etape = data.etapes.find(e => e.id === etapeId);
-        if (!etape) {
-            return res.status(404).json({
-                success: false,
-                error: `Étape non trouvée`
-            });
-        }
-        
-        const exercice = etape.exercices.find(ex => ex.id === exerciceId);
         if (!exercice) {
-            return res.status(404).json({
-                success: false,
-                error: `Exercice non trouvé`
-            });
+            return res.status(404).json({ success: false, error: 'Exercice non trouvé' });
         }
         
-        res.json({
-            success: true,
-            exercice: exercice
-        });
+        res.json({ success: true, exercice: exercice });
     } catch (error) {
         console.error('❌ Erreur chargement exercice:', error.message);
-        res.status(500).json({
-            success: false,
-            error: 'Erreur chargement exercice: ' + error.message
-        });
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
@@ -1111,84 +1087,53 @@ app.put('/api/exercice/:exerciceId', (req, res) => {
         const exerciceId = req.params.exerciceId;
         const { titre, points, content } = req.body;
         
-        // Extraire IDs
-        const match = exerciceId.match(/^(N\d_ch\d+_step\d+)_ex\d+$/);
+        const match = exerciceId.match(/^(N\d_ch\d+)_step\d+_ex\d+$/);
         if (!match) {
-            return res.status(400).json({
-                success: false,
-                error: 'Format exerciceId invalide'
-            });
+            return res.status(400).json({ success: false, error: 'Format exerciceId invalide' });
         }
         
-        const etapeId = match[1];
-        const chapterId = etapeId.split('_step')[0];
+        const chapterId = match[1];
         const niveauMatch = chapterId.match(/^(N\d)_/);
         const niveauId = niveauMatch[1];
         
-        const filePath = path.join(DATA_DIR, niveauId, `${chapterId}.json`);
+        const exercicesPath = path.join(DATA_DIR, niveauId, 'exercices', `${chapterId}.json`);
         
-        if (!fs.existsSync(filePath)) {
-            return res.status(404).json({
-                success: false,
-                error: `Fichier non trouvé`
-            });
+        if (!fs.existsSync(exercicesPath)) {
+            return res.status(404).json({ success: false, error: 'Exercices non trouvés' });
         }
         
-        const content_file = fs.readFileSync(filePath, 'utf8');
-        const data = JSON.parse(content_file);
+        const exercicesData = JSON.parse(fs.readFileSync(exercicesPath, 'utf8'));
+        const exIndex = exercicesData.exercices.findIndex(ex => ex.id === exerciceId);
         
-        // Trouver et modifier
-        const etape = data.etapes.find(e => e.id === etapeId);
-        if (!etape) {
-            return res.status(404).json({
-                success: false,
-                error: `Étape non trouvée`
-            });
+        if (exIndex === -1) {
+            return res.status(404).json({ success: false, error: 'Exercice non trouvé' });
         }
         
-        const exerciceIndex = etape.exercices.findIndex(ex => ex.id === exerciceId);
-        if (exerciceIndex === -1) {
-            return res.status(404).json({
-                success: false,
-                error: `Exercice non trouvé`
-            });
-        }
+        if (titre) exercicesData.exercices[exIndex].titre = titre;
+        if (points !== undefined) exercicesData.exercices[exIndex].points = points;
+        if (content) exercicesData.exercices[exIndex].content = content;
         
-        if (titre) etape.exercices[exerciceIndex].titre = titre;
-        if (points !== undefined) etape.exercices[exerciceIndex].points = points;
-        if (content) etape.exercices[exerciceIndex].content = content;
-        etape.exercices[exerciceIndex].lastModified = new Date().toISOString();
-        data.chapitre.lastModified = new Date().toISOString();
-        
-        fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
+        fs.writeFileSync(exercicesPath, JSON.stringify(exercicesData, null, 2), 'utf8');
         console.log(`✅ Exercice modifié: ${exerciceId}`);
         
         // Git sync
         let gitSync = false;
         try {
-            execSync(`git add "${filePath}"`, { cwd: __dirname, stdio: 'pipe' });
-            execSync(`git commit -m "Update exercise ${exerciceId} via authoring tool"`, {
-                cwd: __dirname,
-                stdio: 'pipe'
-            });
+            execSync(`git add "${exercicesPath}"`, { cwd: __dirname, stdio: 'pipe' });
+            execSync(`git commit -m "Update exercise ${exerciceId}"`, { cwd: __dirname, stdio: 'pipe' });
             execSync('git push origin main', { cwd: __dirname, stdio: 'pipe' });
             gitSync = true;
-        } catch (gitError) {
-            console.warn('⚠️ Git sync échoué:', gitError.message);
-        }
+        } catch (e) { console.warn('⚠️ Git sync échoué'); }
         
         res.json({
             success: true,
-            message: `Exercice modifié`,
-            exercice: etape.exercices[exerciceIndex],
+            message: 'Exercice modifié',
+            exercice: exercicesData.exercices[exIndex],
             gitSync: gitSync
         });
     } catch (error) {
         console.error('❌ Erreur modification exercice:', error.message);
-        res.status(500).json({
-            success: false,
-            error: 'Erreur modification exercice: ' + error.message
-        });
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
@@ -1197,72 +1142,44 @@ app.delete('/api/exercice/:exerciceId', (req, res) => {
     try {
         const exerciceId = req.params.exerciceId;
         
-        // Extraire IDs
-        const match = exerciceId.match(/^(N\d_ch\d+_step\d+)_ex\d+$/);
+        const match = exerciceId.match(/^(N\d_ch\d+)_step\d+_ex\d+$/);
         if (!match) {
-            return res.status(400).json({
-                success: false,
-                error: 'Format exerciceId invalide'
-            });
+            return res.status(400).json({ success: false, error: 'Format exerciceId invalide' });
         }
         
-        const etapeId = match[1];
-        const chapterId = etapeId.split('_step')[0];
+        const chapterId = match[1];
         const niveauMatch = chapterId.match(/^(N\d)_/);
         const niveauId = niveauMatch[1];
         
-        const filePath = path.join(DATA_DIR, niveauId, `${chapterId}.json`);
+        const exercicesPath = path.join(DATA_DIR, niveauId, 'exercices', `${chapterId}.json`);
         
-        if (!fs.existsSync(filePath)) {
-            return res.status(404).json({
-                success: false,
-                error: `Fichier non trouvé`
-            });
+        if (!fs.existsSync(exercicesPath)) {
+            return res.status(404).json({ success: false, error: 'Exercices non trouvés' });
         }
         
-        const content = fs.readFileSync(filePath, 'utf8');
-        const data = JSON.parse(content);
+        const exercicesData = JSON.parse(fs.readFileSync(exercicesPath, 'utf8'));
+        exercicesData.exercices = exercicesData.exercices.filter(ex => ex.id !== exerciceId);
         
-        // Trouver et supprimer
-        const etape = data.etapes.find(e => e.id === etapeId);
-        if (!etape) {
-            return res.status(404).json({
-                success: false,
-                error: `Étape non trouvée`
-            });
-        }
-        
-        etape.exercices = etape.exercices.filter(ex => ex.id !== exerciceId);
-        data.chapitre.lastModified = new Date().toISOString();
-        
-        fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
+        fs.writeFileSync(exercicesPath, JSON.stringify(exercicesData, null, 2), 'utf8');
         console.log(`✅ Exercice supprimé: ${exerciceId}`);
         
         // Git sync
         let gitSync = false;
         try {
-            execSync(`git add -A`, { cwd: __dirname, stdio: 'pipe' });
-            execSync(`git commit -m "Delete exercise ${exerciceId} via authoring tool"`, {
-                cwd: __dirname,
-                stdio: 'pipe'
-            });
+            execSync(`git add "${exercicesPath}"`, { cwd: __dirname, stdio: 'pipe' });
+            execSync(`git commit -m "Delete exercise ${exerciceId}"`, { cwd: __dirname, stdio: 'pipe' });
             execSync('git push origin main', { cwd: __dirname, stdio: 'pipe' });
             gitSync = true;
-        } catch (gitError) {
-            console.warn('⚠️ Git sync échoué:', gitError.message);
-        }
+        } catch (e) { console.warn('⚠️ Git sync échoué'); }
         
         res.json({
             success: true,
-            message: `Exercice supprimé`,
+            message: 'Exercice supprimé',
             gitSync: gitSync
         });
     } catch (error) {
         console.error('❌ Erreur suppression exercice:', error.message);
-        res.status(500).json({
-            success: false,
-            error: 'Erreur suppression exercice: ' + error.message
-        });
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
@@ -1278,7 +1195,7 @@ app.use((req, res) => {
 });
 
 // Démarrer le serveur
-app.listen(PORT, HOST, () => {
+const server = app.listen(PORT, HOST, () => {
     console.log('🚀 SERVEUR LMS DOUANE LANCÉ!');
     console.log('📍 Local: http://' + HOST + ':' + PORT);
     console.log('🌐 Version: 2.1.0');
@@ -1287,6 +1204,26 @@ app.listen(PORT, HOST, () => {
     console.log('✏️  Exercices: GET /api/exercises/:type');
     console.log('💾 Sauvegarder: POST /api/save-exercise');
     console.log('⏸️  Ctrl+C pour arrêter');
+}).on('error', (err) => {
+    console.error('Server error:', err);
+    process.exit(1);
+});
+
+// Keep process alive - prevent auto-exit
+process.stdin.resume();
+
+process.on('SIGINT', () => {
+    console.log('\n✅ SERVEUR ARRÊTÉ');
+    server.close(() => {
+        process.exit(0);
+    });
+});
+
+process.on('SIGTERM', () => {
+    console.log('\n✅ SERVEUR ARRÊTÉ (SIGTERM)');
+    server.close(() => {
+        process.exit(0);
+    });
 });
 
 module.exports = app;

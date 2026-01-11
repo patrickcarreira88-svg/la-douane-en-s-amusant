@@ -21,29 +21,85 @@ let isEtapeProcessing = false;       // Prévient double-click navigation
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * Charge les données des chapitres depuis chapitres-N1N4.json
+ * Charge les données des chapitres depuis les nouvelles API
  */
 async function loadChapitres(niveauId = 'N1') {
     try {
-        const response = await fetch('data/chapitres-N1N4.json');
-        if (!response.ok) throw new Error('Erreur chargement chapitres-N1N4.json');
+        // Charger depuis la nouvelle API: GET /api/niveaux/:niveauId/chapitres
+        const response = await fetch(`/api/niveaux/${niveauId}/chapitres`);
+        if (!response.ok) throw new Error(`Erreur chargement chapitres: ${response.status}`);
         
         const data = await response.json();
+        if (!data.success) throw new Error(data.message || 'Erreur API');
         
-        // Extraire les chapitres du niveau spécifié
-        const niveau = data.niveaux.find(n => n.id === niveauId);
-        if (!niveau) {
-            console.warn(`⚠️ Niveau ${niveauId} non trouvé`);
-            return [];
-        }
-        
-        const chapitres = niveau.chapitres || [];
+        let chapitres = data.chapitres || [];
         console.log(`✅ Chapitres du niveau ${niveauId} chargés: ${chapitres.length} chapitres`);
         
-        // Charger les données externes pour les chapitres qui les requièrent
+        // ✅ CHARGER ET ATTACHER LES EXERCICES À CHAQUE CHAPITRE
+        console.log('📚 Chargement et attachement des exercices...');
         for (let chapitre of chapitres) {
-            if (chapitre.externalDataFile) {
-                await loadExternalChapterData(chapitre);
+            try {
+                const exercicesResponse = await fetch(`/api/niveaux/${niveauId}/exercices/${chapitre.id}`);
+                if (exercicesResponse.ok) {
+                    const exercicesData = await exercicesResponse.json();
+                    const exercices = exercicesData.exercices || [];
+                    console.log(`  ✅ ${chapitre.id}: ${exercices.length} exercices chargés`);
+                    
+                    // Attacher les exercices aux étapes du chapitre
+                    if (chapitre.etapes && exercices.length > 0) {
+                        // Stratégie: attacher exercices aux étapes en fonction de la position/numéro
+                        // Un exercice par étape (format 1:1)
+                        const etapesCount = chapitre.etapes.length;
+                        const exercicesCount = exercices.length;
+                        
+                        if (etapesCount === exercicesCount) {
+                            // Cas idéal: nombre égal
+                            for (let i = 0; i < chapitre.etapes.length; i++) {
+                                chapitre.etapes[i].exercices = [exercices[i]];
+                                console.log(`    📌 Étape ${chapitre.etapes[i].id}: exercice ${exercices[i].id} attaché`);
+                            }
+                        } else if (exercicesCount > etapesCount) {
+                            // Plus d'exercices que d'étapes: grouper les exercices
+                            const exercicesPerStep = Math.ceil(exercicesCount / etapesCount);
+                            for (let i = 0; i < chapitre.etapes.length; i++) {
+                                const startIdx = i * exercicesPerStep;
+                                const endIdx = Math.min((i + 1) * exercicesPerStep, exercicesCount);
+                                chapitre.etapes[i].exercices = exercices.slice(startIdx, endIdx);
+                                console.log(`    📌 Étape ${chapitre.etapes[i].id}: ${chapitre.etapes[i].exercices.length} exercice(s) attaché(s)`);
+                            }
+                        } else {
+                            // Moins d'exercices que d'étapes: attacher en ordre, laisser autres vides
+                            for (let i = 0; i < exercices.length; i++) {
+                                if (i < chapitre.etapes.length) {
+                                    chapitre.etapes[i].exercices = [exercices[i]];
+                                    console.log(`    📌 Étape ${chapitre.etapes[i].id}: exercice ${exercices[i].id} attaché`);
+                                }
+                            }
+                            // Les étapes restantes gardent leur tableau vide
+                            for (let i = exercices.length; i < chapitre.etapes.length; i++) {
+                                if (!chapitre.etapes[i].exercices) {
+                                    chapitre.etapes[i].exercices = [];
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    console.warn(`⚠️ ${chapitre.id}: Aucun exercice trouvé`);
+                    // Initialiser avec tableau vide
+                    if (chapitre.etapes) {
+                        for (let etape of chapitre.etapes) {
+                            if (!etape.exercices) etape.exercices = [];
+                        }
+                    }
+                }
+            } catch (exoError) {
+                console.error(`❌ Erreur chargement exercices pour ${chapitre.id}:`, exoError);
+                // Initialiser avec tableau vide
+                if (chapitre.etapes) {
+                    for (let etape of chapitre.etapes) {
+                        if (!etape.exercices) etape.exercices = [];
+                    }
+                }
             }
         }
         
@@ -54,23 +110,11 @@ async function loadChapitres(niveauId = 'N1') {
             validateAndCleanStorage(chapitre);
         }
         
-        // Nouveau: Charger tous les exercices
-        console.log('📚 Chargement exercices...');
-        const allExercises = await exerciseLoader.loadAll();
-        console.log(`✅ ${allExercises.length} exercices chargés`);
-        
-        // Valider
-        const validation = await exerciseValidator.validateAllFiles(allExercises);
-        if (!validation.valid) {
-            console.error('❌ Erreurs validation:', validation.errors);
-        } else {
-            console.log('✅ Validation OK');
-        }
-        
-        // Normaliser (compat ancien format)
+        // ✅ NORMALISER LES EXERCICES ATTACHÉS
+        console.log('🔄 Normalisation des exercices attachés...');
         const chapitresNormalises = exerciseNormalizer.normalizeAll(chapitres);
         console.log('✅ Normalisation complète');
-        console.log(`📊 Chapitres du niveau ${niveauId} normalisés:`, chapitresNormalises);
+        console.log(`📊 Chapitres du niveau ${niveauId} avec exercices:`, chapitresNormalises);
         
         return chapitresNormalises;
     } catch (error) {
@@ -113,8 +157,8 @@ function isNiveauUnlocked(niveauId) {
  */
 async function getChapitresCount(niveauId) {
     try {
-        const response = await fetch('data/chapitres-N1N4.json');
-        if (!response.ok) throw new Error('Erreur chargement chapitres-N1N4.json');
+        const response = await fetch(`/api/niveaux/${niveauId}/chapitres`);
+        if (!response.ok) throw new Error(`Erreur chargement chapitres niveau ${niveauId}`);
         
         const data = await response.json();
         const niveau = data.niveaux.find(n => n.id === niveauId);
@@ -167,9 +211,9 @@ function getNiveauState(niveauId) {
  */
 async function afficherNiveaux() {
     try {
-        // 1. Charger JSON
-        const response = await fetch('data/chapitres-N1N4.json');
-        if (!response.ok) throw new Error('Erreur chargement chapitres-N1N4.json');
+        // 1. Charger depuis API
+        const response = await fetch('/api/niveaux');
+        if (!response.ok) throw new Error('Erreur chargement niveaux');
         
         const data = await response.json();
         
@@ -3774,6 +3818,15 @@ const App = {
                 }
             }
             
+            // ✅ DÉTERMINER SI C'EST UNE VIDÉO LOCALE OU DISTANTE
+            // Si pas déjà détecté par le manifest, vérifier l'URL
+            if (!isLocalVideo && finalVideoUrl) {
+                if (finalVideoUrl.endsWith('.mp4') || finalVideoUrl.endsWith('.webm') || finalVideoUrl.endsWith('.ogg') || 
+                    finalVideoUrl.includes('/assets/videos/') || finalVideoUrl.startsWith('/videos/')) {
+                    isLocalVideo = true;
+                }
+            }
+            
             const iframeUrl = this.convertToEmbed(finalVideoUrl);
             
             // Pour les vidéos locales, utiliser <video> tag
@@ -4042,6 +4095,22 @@ const App = {
                     ${questionsHtml}
                     <button class="btn btn--primary" style="width: 100%; margin-top: 20px;" onclick="App.validerQuiz('${exercice.id}')">Soumettre le quiz</button>
                     <div id="quiz-feedback-${exercice.id}" style="margin-top: 15px; padding: 15px; border-radius: 8px; display: none;"></div>
+                </div>
+            `;
+        }
+        else if (type === 'lecture') {
+            const texte = exercice.content?.text || exercice.text || '';
+            
+            return `
+                <div style="${baseStyle}">
+                    <h4 style="margin: 0 0 10px 0; color: var(--color-primary);">${titre}</h4>
+                    <p style="color: var(--color-text-light); margin-bottom: 15px;">${description}</p>
+                    <div style="padding: 20px; background: #fffacd; border-left: 4px solid #ff9800; border-radius: 8px;">
+                        <p style="margin: 0; line-height: 1.8; white-space: pre-wrap; color: #333;">${texte}</p>
+                    </div>
+                    <p style="margin-top: 15px; text-align: center; color: #666; font-style: italic; font-size: 14px;">
+                        Marquez l'étape comme complétée après avoir lu.
+                    </p>
                 </div>
             `;
         }
@@ -8432,7 +8501,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // 🌉 PRÉ-CHARGER LES DONNÉES POUR LES BRIDGE FUNCTIONS
     try {
-        const response = await fetch('data/chapitres-N1N4.json');
+        const response = await fetch('/api/niveaux');
         if (response.ok) {
             const data = await response.json();
             window.allNiveaux = {};

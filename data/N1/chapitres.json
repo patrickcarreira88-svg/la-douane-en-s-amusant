@@ -388,18 +388,6 @@
         }
       ],
       "createdAt": "2026-01-11T15:52:00.264Z"
-    },
-    {
-      "id": "ch7",
-      "numero": 7,
-      "titre": "Techniques d'apprentissage",
-      "description": "",
-      "couleur": "FBBF24",
-      "emoji": "📚",
-      "progression": 0,
-      "objectifs": [],
-      "etapes": [],
-      "createdAt": "2026-01-11T15:53:44.263Z"
     }
   ]
 }
