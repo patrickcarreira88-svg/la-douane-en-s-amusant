@@ -84,6 +84,19 @@
         "explanation": "bnbgi"
       },
       "createdAt": "2026-01-11T20:41:38.270Z"
+    },
+    {
+      "id": "N1_ch8_step02_ex006",
+      "etapeId": "N1_ch8_step02",
+      "type": "vrai-faux",
+      "titre": "Que Savez vous",
+      "points": 10,
+      "content": {
+        "statement": "",
+        "correctAnswer": true,
+        "explanation": ""
+      },
+      "createdAt": "2026-01-11T20:50:47.437Z"
     }
   ]
 }
