@@ -180,21 +180,13 @@ async function getChapitresCount(niveauId) {
  */
 function getNiveauState(niveauId) {
     try {
-        const user = StorageManager.getUser();
-        const niveau = user.niveaux?.[niveauId];
+        // 🔧 FIX: Calculer la completion en temps réel depuis chaptersProgress
+        const completion = StorageManager.calculateNiveauCompletion(niveauId);
         
-        if (!niveau) {
-            console.warn(`⚠️ Niveau ${niveauId} non trouvé dans storage`);
-            return { unlocked: false, completion: 0, chapitres: 0 };
-        }
-        
-        // ✅ NOUVEAU: Compter les chapitres depuis les données réelles (asynchrone)
-        // Pour maintenant, on retourne une valeur placeholder
-        // La mise à jour dynamique se fera via updateChapitresDisplay()
         return {
             unlocked: isNiveauUnlocked(niveauId),
-            completion: niveau.completion || 0,
-            chapitres: niveau.chapitres || 0  // Sera mis à jour dynamiquement
+            completion: completion,
+            chapitres: 0  // Sera mis à jour dynamiquement par afficherNiveaux
         };
     } catch (error) {
         console.error(`❌ Erreur récupération état ${niveauId}:`, error);
@@ -2080,11 +2072,7 @@ function validateStepWithThreshold(chapitreId, etapeIndex, score, metadata = {})
       StorageManager.updateChapterProgress(chapitreId);
       console.log(`[📊] Progression chapitre mise à jour`);
 
-      // d. VÉRIFIER badges gagnés (optionnel)
-      if (typeof checkAndUnlockBadges === 'function') {
-        checkAndUnlockBadges(chapitreId);
-        console.log(`[🏆] Badges vérifiés`);
-      }
+      // d. Badges vérifiés automatiquement via updateChapterProgress -> checkAndUnlockBadges
 
       // e. Construire message succès
       const successMsg = 
@@ -2410,6 +2398,28 @@ const App = {
         }
     },
     
+    /**
+     * Cache la barre de navigation (pendant les modaux d'exercices)
+     */
+    hideBottomNav() {
+        const nav = document.querySelector('.bottom-nav');
+        if (nav) {
+            nav.style.display = 'none';
+            console.log('🙈 Barre de navigation cachée');
+        }
+    },
+    
+    /**
+     * Affiche la barre de navigation
+     */
+    showBottomNav() {
+        const nav = document.querySelector('.bottom-nav');
+        if (nav) {
+            nav.style.display = 'flex';
+            console.log('👁️ Barre de navigation affichée');
+        }
+    },
+    
     setupNavigation() {
         console.log('🔗 Attachement événements navigation...');
         const navItems = document.querySelectorAll('.nav-item');
@@ -2448,23 +2458,75 @@ const App = {
     updateChapterProgress(chapterId) {
         console.log(`📊 Mise à jour progression: ${chapterId}`);
         
-        const user = StorageManager.getUser();
-        if (!user.chaptersProgress) user.chaptersProgress = {};
-        
         const chapitre = CHAPITRES.find(ch => ch.id === chapterId);
-        if (chapitre) {
-            const completedSteps = chapitre.etapes.filter(e => e.completed).length;
-            const totalSteps = chapitre.etapes.length;
-            const percentage = Math.round((completedSteps / totalSteps) * 100);
-            
-            user.chaptersProgress[chapterId] = {
-                completed: completedSteps,
-                total: totalSteps,
-                percentage: percentage,
-                lastUpdated: new Date().toISOString()
-            };
-            
-            StorageManager.updateUser(user);
+        if (!chapitre) return;
+        
+        // 🔧 FIX: Compter les étapes complétées depuis StorageManager (source de vérité)
+        let completedSteps = 0;
+        const totalSteps = chapitre.etapes.length;
+        
+        for (let i = 0; i < totalSteps; i++) {
+            const state = StorageManager.getEtapeState(chapterId, i);
+            if (state && (state.completed || state.status === 'completed')) {
+                completedSteps++;
+            }
+        }
+        
+        const percentage = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
+        
+        // Mettre à jour directement dans chaptersProgress (clé séparée)
+        const chapters = StorageManager.getChaptersProgress();
+        if (!chapters[chapterId]) {
+            chapters[chapterId] = { completion: 0, etapes: {} };
+        }
+        chapters[chapterId].completion = percentage;
+        chapters[chapterId].completedSteps = completedSteps;
+        chapters[chapterId].totalSteps = totalSteps;
+        chapters[chapterId].lastUpdated = new Date().toISOString();
+        StorageManager.update('chaptersProgress', chapters);
+        
+        console.log(`✅ Progression ${chapterId}: ${percentage}% (${completedSteps}/${totalSteps})`);
+        
+        // 🔧 FIX: Vérifier si badge à débloquer
+        if (percentage === 100) {
+            this.checkAndUnlockBadges(chapterId);
+        }
+    },
+    
+    /**
+     * Vérifie et débloque les badges pour un chapitre complété
+     * @param {string} chapitreId - ID du chapitre
+     */
+    checkAndUnlockBadges(chapitreId) {
+        const chaptersProgress = StorageManager.getChaptersProgress();
+        const progress = chaptersProgress[chapitreId];
+        
+        if (!progress) return;
+        
+        // Vérifier si chapitre à 100% et badge pas encore gagné
+        if (progress.completion === 100 && !progress.badgeEarned) {
+            console.log(`🏆 Chapitre ${chapitreId} complété à 100% - Déblocage badge!`);
+            this.deverrouillerBadge(chapitreId);
+        }
+        
+        // Vérifier badge "Expert Douanier" (tous chapitres complétés)
+        const allComplete = CHAPITRES.every(ch => {
+            const chProgress = chaptersProgress[ch.id];
+            return chProgress?.completion === 100;
+        });
+        
+        if (allComplete) {
+            const expertBadgeId = 'badge_expert_douanier';
+            const existingBadges = StorageManager.getBadges();
+            if (!existingBadges.includes(expertBadgeId)) {
+                StorageManager.addBadge(expertBadgeId);
+                this.afficherNotificationBadge({
+                    id: expertBadgeId,
+                    titre: 'Expert Douanier',
+                    emoji: '🏆'
+                });
+                console.log(`🏆 Badge Expert Douanier débloqué!`);
+            }
         }
     },
     
@@ -2765,47 +2827,36 @@ const App = {
             // 5. Boucler chapitres
             const chapitresArray = Array.isArray(CHAPITRES) ? CHAPITRES : Object.values(CHAPITRES);
             
+            // 🔧 FIX: Lire la progression depuis chaptersProgress (localStorage)
+            const chaptersProgress = StorageManager.getChaptersProgress();
+            console.log('🔍 DEBUG chaptersProgress:', JSON.stringify(chaptersProgress, null, 2));
+            
             chapitresArray.forEach(chapitre => {
                 if (!chapitre || !chapitre.id) return;
                 
-                const completion = chapitre.progression || 0;
                 const chapId = chapitre.id;
+                // 🔧 FIX: Priorité à chaptersProgress, fallback sur chapitre.progression
+                const progressData = chaptersProgress[chapId];
+                const completion = progressData?.completion || chapitre.progression || 0;
+                const completedSteps = progressData?.completedSteps || 0;
                 const titre = chapitre.titre || chapitre.id;
                 const description = chapitre.description || '';
-                const etapes = chapitre.etapes?.length || 0;
-                const exercices = chapitre.exercices?.length || 0;
-                
-                // Déterminer l'icône et le texte du bouton
-                let btnText = 'Commencer';
-                let btnIcon = '▶';
-                if (completion === 100) {
-                    btnText = 'Réviser';
-                    btnIcon = '🔄';
-                } else if (completion > 0) {
-                    btnText = 'Continuer';
-                    btnIcon = '▶';
-                }
+                const total = chapitre.etapes?.length || 0;
                 
                 html += `
-                    <div class="chapitre-card" data-chapitre="${chapId}" style="border-left: 5px solid ${chapitre.couleur || '#C77DFF'};">
-                        <div class="chapitre-header">
-                            <h3>${chapitre.emoji || '📖'} ${titre}</h3>
-                            <span class="chapitre-status">${completion}%</span>
+                    <div class="chapitre-card" onclick="App.afficherChapitre('${chapId}')" data-chapitre-id="${chapId}" style="cursor: pointer;">
+                        <div class="chapitre-card-header" style="background-color: ${chapitre.couleur || '#667eea'}; color: white; padding: 16px; border-radius: 12px 12px 0 0;">
+                            <h3 style="margin: 0; font-size: 18px;">${chapitre.emoji || '📖'} ${titre}</h3>
                         </div>
-                        <p class="chapitre-description">${description}</p>
-                        <div class="chapitre-meta">
-                            <span>📝 ${etapes} étapes</span>
-                            <span>•</span>
-                            <span>✏️ ${exercices} exercices</span>
-                        </div>
-                        <div class="chapitre-progress">
-                            <div class="progress-bar">
-                                <div class="progress-fill" style="width: ${completion}%;"></div>
+                        <div class="chapitre-card-body" style="padding: 16px;">
+                            <p style="margin: 0 0 12px 0; color: #666; font-size: 14px; line-height: 1.4;">${description}</p>
+                            <div style="margin-bottom: 8px; font-weight: 600; color: #333;">${completion}% (${completedSteps}/${total} étapes)</div>
+                            <div class="chapitre-progress">
+                                <div class="progress-bar" style="height: 8px; background: #e0e0e0; border-radius: 4px; overflow: hidden;">
+                                    <div class="progress-fill" style="width: ${completion}%; height: 100%; background: linear-gradient(90deg, ${chapitre.couleur || '#667eea'}, ${chapitre.couleur || '#667eea'}cc); border-radius: 4px;"></div>
+                                </div>
                             </div>
                         </div>
-                        <button class="btn btn--primary" onclick="App.afficherChapitre('${chapId}')" style="width: 100%;">
-                            ${btnIcon} ${btnText}
-                        </button>
                     </div>
                 `;
             });
@@ -2830,14 +2881,22 @@ const App = {
      * @param {number} stepIndex - Index de l'étape actuelle
      */
     addTutoringHelpButton(chapitreId, stepIndex) {
+        console.log('[Tutoring] 🔍 Appelée avec:', chapitreId, stepIndex);
+        
         // Ne créer qu'une seule fois
         if (document.querySelector('.tutoring-help-btn')) {
+            console.log('[Tutoring] Suppression bouton existant');
             document.querySelector('.tutoring-help-btn').remove();
         }
         
         // Récupérer les infos
+        console.log('[Tutoring] Recherche chapitre:', chapitreId);
         const chapitre = this.findChapitreById(chapitreId);
+        console.log('[Tutoring] Chapitre trouvé?', !!chapitre);
+        
         const etape = chapitre ? chapitre.etapes[stepIndex] : null;
+        console.log('[Tutoring] Étape trouvée?', !!etape);
+        
         const questionTitle = etape ? `${etape.titre}` : 'Aide sur cet exercice';
         
         // Créer le bouton
@@ -2846,6 +2905,8 @@ const App = {
         button.innerHTML = '❓ Demander aide';
         button.title = 'Cliquez pour demander de l\'aide sur cet exercice';
         button.type = 'button';
+        
+        console.log('[Tutoring] ✅ Bouton créé');
         
         // Ajouter l'événement click
         button.onclick = (e) => {
@@ -2873,8 +2934,11 @@ const App = {
         
         // Injecter le bouton dans le DOM
         document.body.appendChild(button);
+        console.log('[Tutoring] ✅ Bouton ajouté au DOM');
         
-        console.log('[Tutoring] Bouton "Demander aide" créé pour', chapitreId, stepIndex);
+        // Vérification
+        const check = document.querySelector('.tutoring-help-btn');
+        console.log('[Tutoring] ✅ Bouton dans le DOM?', !!check);
     },
 
     /**
@@ -3041,6 +3105,9 @@ const App = {
         // Mettre à jour l'icône
         this.updateStepIcon(chapitreId, stepIndex);
         
+        // 🔧 FIX: Mettre à jour la progression du chapitre
+        this.updateChapterProgress(chapitreId);
+        
         console.log(`✅ Étape ${stepIndex} marquée comme complétée pour ${chapitreId}`);
     },
 
@@ -3118,6 +3185,9 @@ const App = {
         // Mettre à jour l'icône
         this.updateStepIcon(chapitreId, stepIndex);
         
+        // 🔧 FIX: Mettre à jour la progression du chapitre
+        this.updateChapterProgress(chapitreId);
+        
         return state;
     },
 
@@ -3178,16 +3248,19 @@ const App = {
         // Créer le contenu HTML de la modal
         const modalHTML = `
             <div class="modal-overlay consult-modal" id="consult-modal">
-                <div class="modal-content" style="max-width: 700px; max-height: 90vh; background: white; border-radius: 12px; overflow-y: auto; display: flex; flex-direction: column;">
-                    <div class="modal-header" style="background: linear-gradient(135deg, #4A3F87 0%, #6B5B95 100%); padding: 20px; display: flex; justify-content: space-between; align-items: center;">
+                <div class="modal-content" style="background: white; border-radius: 0; display: flex; flex-direction: column; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; margin: 0; padding: 0;">
+                    
+                    <!-- HEADER FIXE -->
+                    <div class="exercise-modal-header">
                         <div>
-                            <h2 style="margin: 0; color: white;">${titreTape}</h2>
-                            <p style="margin: 5px 0 0 0; color: rgba(255,255,255,0.9); font-size: 0.9em;">⏱️ ${step.duree || '-'}</p>
+                            <h2>${titreTape}</h2>
+                            <p>⏱️ ${step.duree || '-'}</p>
                         </div>
-                        <button class="btn-close" onclick="document.getElementById('consult-modal').remove()" style="background: none; border: none; color: white; font-size: 24px; cursor: pointer;">✕</button>
+                        <button class="btn-close" onclick="App.showBottomNav(); document.getElementById('consult-modal').remove()">✕</button>
                     </div>
                     
-                    <div class="modal-body" style="padding: 30px;">
+                    <!-- CONTENU SCROLLABLE -->
+                    <div class="modal-body" style="padding: 30px; padding-top: 80px; overflow-y: auto; flex: 1; margin-bottom: 80px;">
                         <!-- Afficher le texte de l'étape -->
                         ${contenuTexte ? `
                             <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #4A3F87;">
@@ -3201,13 +3274,19 @@ const App = {
                         </div>
                     </div>
                     
-                    <div class="modal-footer" style="background: #f5f5f5; padding: 20px; display: flex; gap: 12px; justify-content: flex-end; border-top: 1px solid #ddd;">
-                        <button class="btn btn--secondary" onclick="document.getElementById('consult-modal').remove()" style="padding: 10px 20px; border: 1px solid #ddd; border-radius: 6px; background: white; cursor: pointer;">
+                    <!-- FOOTER FIXE -->
+                    <div class="modal-footer" style="background: transparent; padding: 20px; display: flex; gap: 12px; justify-content: space-between; align-items: center; border-top: 1px solid #ddd; flex-shrink: 0; position: fixed; bottom: 0; left: 0; right: 0; z-index: 1001; margin: 0;">
+                        <button class="btn btn--secondary" onclick="App.showBottomNav(); document.getElementById('consult-modal').remove()" style="padding: 10px 20px; border: 1px solid #ddd; border-radius: 6px; background: white; cursor: pointer;">
                             ← Fermer
                         </button>
-                        <button class="btn btn--primary" onclick="App.markStepVisited('${chapitreId}', ${stepIndex}); document.getElementById('consult-modal')?.remove(); App.afficherChapitre('${chapitreId}');" style="padding: 10px 20px; background: #4A3F87; color: white; border: none; border-radius: 6px; cursor: pointer;">
-                            ✅ Marquer comme complétée
-                        </button>
+                        <div style="display: flex; gap: 12px;">
+                            <button class="btn btn--primary" onclick="App.showBottomNav(); App.markStepVisited('${chapitreId}', ${stepIndex}); document.getElementById('consult-modal')?.remove(); App.afficherChapitre('${chapitreId}');" style="padding: 10px 20px; background: #4A3F87; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                                ✅ Marquer comme complétée
+                            </button>
+                            <button class="btn btn--primary" onclick="if (typeof openTutoringModal !== 'undefined') { openTutoringModal(); } else if (typeof TutoringModule !== 'undefined' && TutoringModule.showModal) { TutoringModule.showModal(); } else { alert('Erreur: Module tutoring non chargé'); }" style="padding: 10px 20px; background: linear-gradient(135deg, #7c3aed, #6d28d9); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                                ❓ Demander aide
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -3215,6 +3294,9 @@ const App = {
         
         // Injecter dans le DOM
         document.body.insertAdjacentHTML('beforeend', modalHTML);
+        
+        // 🙈 Cacher la barre de navigation pendant l'exercice
+        this.hideBottomNav();
         
         // Styliser l'overlay (fond semi-transparent)
         const overlay = document.getElementById('consult-modal');
@@ -3225,10 +3307,10 @@ const App = {
             width: 100%;
             height: 100%;
             background: rgba(0, 0, 0, 0.6);
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            display: block;
             z-index: 1000;
+            margin: 0;
+            padding: 0;
         `;
         
         // 🔧 Remplir les exercices de consultation si présents
@@ -3309,7 +3391,7 @@ const App = {
                         <div style="margin-bottom: 30px; padding: 20px; background: #f0f0f0; border-radius: 8px;">
                             <h3 style="margin: 0 0 10px 0; color: #4A3F87;">🎬 ${titre}</h3>
                             ${description ? `<p style="margin: 0 0 15px 0; font-size: 0.9em; color: #666;">${description}</p>` : ''}
-                            <iframe width="100%" height="300" src="${iframeUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="border-radius: 8px;"></iframe>
+                            <iframe width="100%" height="550" src="${iframeUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="border-radius: 8px;"></iframe>
                         </div>
                     `;
                 } else if (videoType === 'local') {
@@ -3318,7 +3400,7 @@ const App = {
                         <div style="margin-bottom: 30px; padding: 20px; background: #f0f0f0; border-radius: 8px;">
                             <h3 style="margin: 0 0 10px 0; color: #4A3F87;">🎬 ${titre}</h3>
                             ${description ? `<p style="margin: 0 0 15px 0; font-size: 0.9em; color: #666;">${description}</p>` : ''}
-                            <video width="100%" height="300" controls style="border-radius: 8px; background: #000;">
+                            <video width="100%" height="550" controls style="border-radius: 8px; background: #000;">
                                 <source src="${videoUrl}" type="video/mp4">
                                 Votre navigateur ne supporte pas les vidéos.
                             </video>
@@ -3474,21 +3556,21 @@ const App = {
                 contenuExerciceHTML = `
                     <div style="margin-bottom: 20px;">
                         ${videoDescription ? `<p style="margin: 0 0 15px 0; color: #666;">${videoDescription}</p>` : ''}
-                        <iframe width="100%" height="400" src="${iframeUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="border-radius: 8px;"></iframe>
+                        <iframe width="100%" height="550" src="${iframeUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="border-radius: 8px;"></iframe>
                     </div>
                     <p style="margin-top: 15px; text-align: center; color: #666; font-style: italic;">Marquez l'étape comme complétée après avoir regardé.</p>
-                `;
+                `
             } else if (videoType === 'local') {
                 contenuExerciceHTML = `
                     <div style="margin-bottom: 20px;">
                         ${videoDescription ? `<p style="margin: 0 0 15px 0; color: #666;">${videoDescription}</p>` : ''}
-                        <video width="100%" height="400" controls style="border-radius: 8px; background: #000;">
+                        <video width="100%" height="550" controls style="border-radius: 8px; background: #000;">
                             <source src="${videoUrl}" type="video/mp4">
                             Votre navigateur ne supporte pas les vidéos.
                         </video>
                     </div>
                     <p style="margin-top: 15px; text-align: center; color: #666; font-style: italic;">Marquez l'étape comme complétée après avoir regardé.</p>
-                `;
+                `
             } else {
                 contenuExerciceHTML = `<p style="color: #666;">⚠️ Vidéo non trouvée ou format non supporté</p>`;
             }
@@ -3500,16 +3582,19 @@ const App = {
         // Créer la modal HTML
         const modalHTML = `
             <div class="modal-overlay exercise-modal" id="exercise-modal">
-                <div class="modal-content" style="max-width: 800px; max-height: 90vh; background: white; border-radius: 12px; overflow-y: auto; display: flex; flex-direction: column;">
-                    <div class="modal-header" style="background: linear-gradient(135deg, #4A3F87 0%, #6B5B95 100%); padding: 20px; display: flex; justify-content: space-between; align-items: center;">
+                <div class="modal-content" style="background: white; border-radius: 0; display: flex; flex-direction: column; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;">
+                    
+                    <!-- HEADER FIXE -->
+                    <div class="exercise-modal-header">
                         <div>
-                            <h2 style="margin: 0; color: white;">${titreTape}</h2>
-                            <p style="margin: 5px 0 0 0; color: rgba(255,255,255,0.9); font-size: 0.9em;">⏱️ ${step.duree || '-'} | 🎯 ${step.points || 0} pts</p>
+                            <h2>${titreTape}</h2>
+                            <p>⏱️ ${step.duree || '-'} | 🎯 ${step.points || 0} pts</p>
                         </div>
-                        <button class="btn-close" onclick="document.getElementById('exercise-modal').remove()" style="background: none; border: none; color: white; font-size: 24px; cursor: pointer;">✕</button>
+                        <button class="btn-close" onclick="App.showBottomNav(); document.getElementById('exercise-modal').remove()">✕</button>
                     </div>
                     
-                    <div class="modal-body" style="padding: 30px;">
+                    <!-- CONTENU SCROLLABLE -->
+                    <div class="modal-body" style="padding: 30px; padding-top: 80px; overflow-y: auto; flex: 1; margin-bottom: 80px;">
                         <div id="exercise-content">
                             ${contenuExerciceHTML}
                         </div>
@@ -3520,26 +3605,31 @@ const App = {
                         </div>
                     </div>
                     
-                    <div class="modal-footer" style="background: #f5f5f5; padding: 20px; display: flex; gap: 12px; justify-content: flex-end; border-top: 1px solid #ddd;">
-                        <button class="btn btn--secondary" onclick="document.getElementById('exercise-modal').remove()" style="padding: 10px 20px; border: 1px solid #ddd; border-radius: 6px; background: white; cursor: pointer;">
+                    <!-- FOOTER FIXE -->
+                    <div class="modal-footer" style="background: transparent; padding: 20px; display: flex; gap: 12px; justify-content: space-between; align-items: center; border-top: 1px solid #ddd; flex-shrink: 0; position: fixed; bottom: 0; left: 0; right: 0; z-index: 1001;">
+                        <button class="btn btn--secondary" onclick="App.showBottomNav(); document.getElementById('exercise-modal').remove()" style="padding: 10px 20px; border: 1px solid #ddd; border-radius: 6px; background: white; cursor: pointer;">
                             ← Fermer
                         </button>
-                        ${isConsultation ? `
-                            <button class="btn btn--primary" id="btn-validate" onclick="completerEtapeConsultation('${chapitreId}', ${stepIndex}, {viewed: true}); document.getElementById('exercise-modal')?.remove(); setTimeout(() => App.afficherChapitre('${chapitreId}'), 500);" style="padding: 10px 20px; background: #4A3F87; color: white; border: none; border-radius: 6px; cursor: pointer;">
-                                ✅ Marquer comme complété
+                        <div style="display: flex; gap: 12px;">
+                            ${isConsultation ? `
+                                <button class="btn btn--primary" id="btn-validate" onclick="App.showBottomNav(); completerEtapeConsultation('${chapitreId}', ${stepIndex}, {viewed: true}); document.getElementById('exercise-modal')?.remove(); setTimeout(() => App.afficherChapitre('${chapitreId}'), 500);" style="padding: 10px 20px; background: #4A3F87; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                                    ✅ Marquer comme complété
+                                </button>
+                            ` : `
+                                <button class="btn btn--primary" id="btn-validate" onclick="App.validerExerciceRenderModal('${typeExo}', '${chapitreId}', ${stepIndex})" style="padding: 10px 20px; background: #4A3F87; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                                    🎯 Soumettre réponses
+                                </button>
+                            `}
+                            <button class="btn btn--primary" id="btn-next" style="display: none; padding: 10px 20px; background: #2ECC71; color: white; border: none; border-radius: 6px; cursor: pointer;" onclick="(function() { App.showBottomNav(); const m=document.getElementById('exercise-modal'); if(m)m.remove(); setTimeout(() => App.afficherChapitre('${chapitreId}'), 300); })()">
+                                ➜ Exercice suivant
                             </button>
-                        ` : `
-                            <button class="btn btn--primary" id="btn-validate" onclick="App.validerExerciceRenderModal('${typeExo}', '${chapitreId}', ${stepIndex})" style="padding: 10px 20px; background: #4A3F87; color: white; border: none; border-radius: 6px; cursor: pointer;">
-                                🎯 Soumettre réponses
+                            <button class="btn btn--secondary" id="btn-retry" style="display: none; padding: 10px 20px; border: 2px solid #ff9800; background: white; color: #ff9800; border-radius: 6px; cursor: pointer; font-weight: bold;" onclick="document.getElementById('exercise-content').innerHTML = window.lastExerciseHTML; document.getElementById('result-section').style.display = 'none'; document.getElementById('btn-validate').style.display = 'block'; document.getElementById('btn-next').style.display = 'none'; document.getElementById('btn-retry').style.display = 'none';">
+                                🔄 Réessayer
                             </button>
-                        `}
-                        <button class="btn btn--primary" id="btn-next" style="display: none; padding: 10px 20px; background: #2ECC71; color: white; border: none; border-radius: 6px; cursor: pointer;" onclick="App.markStepAttempted('${chapitreId}', ${stepIndex}, window.lastScore); document.getElementById('exercise-modal')?.remove(); App.afficherChapitre('${chapitreId}');">
-                            ➜ Exercice suivant
-                        </button>
-                        <button class="btn btn--secondary" id="btn-retry" style="display: none; padding: 10px 20px; border: 2px solid #ff9800; background: white; color: #ff9800; border-radius: 6px; cursor: pointer; font-weight: bold;" onclick="document.getElementById('exercise-content').innerHTML = window.lastExerciseHTML; document.getElementById('result-section').style.display = 'none'; document.getElementById('btn-validate').style.display = 'block'; document.getElementById('btn-next').style.display = 'none'; document.getElementById('btn-retry').style.display = 'none';">
-                            🔄 Réessayer
-                        </button>
-                    </div>
+                            <button class="btn btn--primary" onclick="if (typeof openTutoringModal !== 'undefined') { openTutoringModal(); } else if (typeof TutoringModule !== 'undefined' && TutoringModule.showModal) { TutoringModule.showModal(); } else { alert('Erreur: Module tutoring non chargé'); }" style="padding: 10px 20px; background: linear-gradient(135deg, #7c3aed, #6d28d9); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                                ❓ Demander aide
+                            </button>
+                        </div>
                 </div>
             </div>
         `;
@@ -3550,6 +3640,9 @@ const App = {
         // Injecter dans le DOM
         document.body.insertAdjacentHTML('beforeend', modalHTML);
         
+        // 🙈 Cacher la barre de navigation pendant l'exercice
+        this.hideBottomNav();
+        
         // Styliser l'overlay
         const overlay = document.getElementById('exercise-modal');
         overlay.style.cssText = `
@@ -3559,11 +3652,11 @@ const App = {
             width: 100%;
             height: 100%;
             background: rgba(0, 0, 0, 0.6);
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            display: block;
             z-index: 1000;
-        `;
+            margin: 0;
+            padding: 0;
+        `
         
         // ✅ Si c'est une flashcard, les événements auront été attachés dans renderExerciceFlashcards()
         // Mais on doit re-attacher après insertion dans le DOM de la modal
@@ -3747,6 +3840,9 @@ const App = {
         const exerciseModal = document.getElementById('exercise-modal');
         if (exerciseModal) exerciseModal.remove();
         
+        // 👁️ Réafficher la barre de navigation
+        this.showBottomNav();
+        
         // Retourner au chemin
         this.afficherChapitre(chapitreId);
         
@@ -3846,7 +3942,7 @@ const App = {
                     <div style="${baseStyle}">
                         <h4 style="margin: 0 0 10px 0; color: var(--color-primary);">${titre}</h4>
                         <p style="color: var(--color-text-light); margin-bottom: 15px;">${description}</p>
-                        <video width="100%" height="400" controls style="border-radius: 4px; background: #000;">
+                        <video width="100%" height="550" controls style="border-radius: 4px; background: #000;">
                             <source src="${finalVideoUrl}" type="video/mp4">
                             Votre navigateur ne supporte pas le tag vidéo.
                         </video>
@@ -3860,7 +3956,7 @@ const App = {
                     <div style="${baseStyle}">
                         <h4 style="margin: 0 0 10px 0; color: var(--color-primary);">${titre}</h4>
                         <p style="color: var(--color-text-light); margin-bottom: 15px;">${description}</p>
-                        <iframe width="100%" height="400" src="${iframeUrl}" title="${titre}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="border-radius: 4px;"></iframe>
+                        <iframe width="100%" height="550" src="${iframeUrl}" title="${titre}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="border-radius: 4px;"></iframe>
                     </div>
                 `;
             }
@@ -7239,6 +7335,8 @@ ${content.summary}
     fermerModal() {
         document.getElementById('etape-modal').classList.remove('active');
         document.getElementById('etape-detail').innerHTML = '';
+        // 👁️ Réafficher la barre de navigation
+        this.showBottomNav();
     },
 
     /**
@@ -7416,7 +7514,6 @@ ${content.summary}
         const nom = document.getElementById('profile-nom').value.trim();
         const prenom = document.getElementById('profile-prenom').value.trim();
         const matricule = document.getElementById('profile-matricule').value.trim();
-        const email = document.getElementById('profile-email').value.trim();
 
         // Validation
         if (!nom || !prenom || !matricule) {
@@ -7429,7 +7526,6 @@ ${content.summary}
             nom: nom,
             prenom: prenom,
             matricule: matricule,
-            email: email || null,
             profileCreated: true
         });
 
@@ -7831,30 +7927,14 @@ ${content.summary}
      * Basé sur les étapes complétées du niveau
      */
     calculateNiveauCompletion(niveauId) {
-        try {
-            // Obtenir les données du niveau depuis le fichier JSON
-            const userData = StorageManager.getUser();
-            if (!userData || !userData.niveaux || !userData.niveaux[niveauId]) {
-                console.log(`📊 ${niveauId}: Aucune donnée utilisateur, completion = 0%`);
-                return 0;
-            }
-
-            const niveauData = userData.niveaux[niveauId];
-            const stepsCompleted = niveauData.stepsCompleted ? Object.keys(niveauData.stepsCompleted).filter(k => niveauData.stepsCompleted[k]).length : 0;
-            const totalSteps = niveauData.totalSteps || 1;
-
-            const completion = totalSteps > 0 ? Math.round((stepsCompleted / totalSteps) * 100) : 0;
-            console.log(`📊 ${niveauId}: ${completion}% (${stepsCompleted}/${totalSteps} étapes)`);
-            return completion;
-        } catch (error) {
-            console.error(`❌ Erreur calculateNiveauCompletion(${niveauId}):`, error);
-            return 0;
-        }
+        // 🔧 FIX: Déléguer à StorageManager qui lit depuis chaptersProgress
+        return StorageManager.calculateNiveauCompletion(niveauId);
     },
 
     /**
      * Affiche les chapitres d'un niveau
      * Avec vérification de déblocage
+     * 🔧 FIX: Utilise chaptersProgress pour la progression (pas chapitre.etapes.completed)
      */
     async afficherNiveau(niveauId) {
         // Vérifier déblocage
@@ -7873,6 +7953,9 @@ ${content.summary}
                 return;
             }
 
+            // 🔧 FIX: Lire la progression depuis chaptersProgress (localStorage)
+            const chaptersProgress = StorageManager.getChaptersProgress();
+
             // Générer HTML des chapitres
             let html = `
                 <div class="page active">
@@ -7889,18 +7972,28 @@ ${content.summary}
 
             // Ajouter chaque chapitre
             CHAPITRES.forEach(chapitre => {
-                const completed = chapitre.etapes.filter(e => e.completed).length;
-                const total = chapitre.etapes.length;
-                const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+                const chapId = chapitre.id;
+                const total = chapitre.etapes?.length || 0;
+                
+                // 🔧 FIX: Lire depuis chaptersProgress, pas chapitre.etapes.completed
+                const progressData = chaptersProgress[chapId];
+                const completedSteps = progressData?.completedSteps || 0;
+                const percent = progressData?.completion || 0;
 
                 html += `
-                    <div class="chapitre-item" onclick="App.afficherChapitre('${chapitre.id}')" style="cursor: pointer; padding: 15px; margin: 10px 0; background: #f9f9f9; border-radius: 8px; border-left: 4px solid ${chapitre.couleur || '#667eea'};">
-                        <h3>${chapitre.emoji || '📖'} ${chapitre.titre}</h3>
-                        <p>${chapitre.description}</p>
-                        <div class="progress-bar" style="margin-top: 10px;">
-                            <div class="progress-fill" style="width: ${percent}%; background-color: ${chapitre.couleur || '#667eea'};"></div>
+                    <div class="chapitre-card" onclick="App.afficherChapitre('${chapitre.id}')" data-chapitre-id="${chapId}" style="cursor: pointer;">
+                        <div class="chapitre-card-header" style="background-color: ${chapitre.couleur || '#667eea'}; color: white; padding: 16px; border-radius: 12px 12px 0 0;">
+                            <h3 style="margin: 0; font-size: 18px;">${chapitre.emoji || '📖'} ${chapitre.titre}</h3>
                         </div>
-                        <span style="font-size: 12px; color: #999;">${percent}% (${completed}/${total})</span>
+                        <div class="chapitre-card-body" style="padding: 16px;">
+                            <p style="margin: 0 0 12px 0; color: #666; font-size: 14px; line-height: 1.4;">${chapitre.description}</p>
+                            <div style="margin-bottom: 8px; font-weight: 600; color: #333;">${percent}% (${completedSteps}/${total} étapes)</div>
+                            <div class="chapitre-progress">
+                                <div class="progress-bar" style="height: 8px; background: #e0e0e0; border-radius: 4px; overflow: hidden;">
+                                    <div class="progress-fill" style="width: ${percent}%; height: 100%; background: linear-gradient(90deg, ${chapitre.couleur || '#667eea'}, ${chapitre.couleur || '#667eea'}cc); border-radius: 4px;"></div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 `;
             });
@@ -7942,14 +8035,16 @@ ${content.summary}
 
         const chaptersProgress = StorageManager.getChaptersProgress();
         
-        // Filtrer les chapitres qui ont au moins 1% de progression
+        // 🔧 FIX: Filtrer les chapitres EN COURS (> 0% ET < 100%)
+        // Les chapitres à 100% sont terminés et ne doivent plus apparaître ici
         const commences = CHAPITRES.filter(chapitre => {
             const progress = chaptersProgress[chapitre.id];
-            // Un chapitre est "commencé" s'il a completion > 0
-            return progress && progress.completion && progress.completion > 0;
+            const completion = progress?.completion || 0;
+            // Un chapitre est "en cours" s'il a 0 < completion < 100
+            return completion > 0 && completion < 100;
         });
 
-        console.log(`📚 ${commences.length}/${CHAPITRES.length} chapitres commencés`, commences.map(c => `${c.id}:${chaptersProgress[c.id]?.completion || 0}%`).join(', '));
+        console.log(`📚 ${commences.length}/${CHAPITRES.length} chapitres en cours`, commences.map(c => `${c.id}:${chaptersProgress[c.id]?.completion || 0}%`).join(', '));
         return commences;
     },
 
@@ -8003,25 +8098,28 @@ ${content.summary}
 
         const chaptersProgress = StorageManager.getChaptersProgress();
         
-        // Afficher SEULEMENT les chapitres commencés
+        // Afficher SEULEMENT les chapitres EN COURS (pas terminés)
         chapitresCommences.forEach(chapitre => {
             const progress = chaptersProgress[chapitre.id];
-            const completion = progress && progress.completion ? progress.completion : 0;
-            const stepsCompleted = progress && progress.stepsCompleted ? progress.stepsCompleted.length : 0;
-            const total = chapitre.etapes.length;
-            const percent = total > 0 ? Math.round(completion) : 0;
+            const completion = progress?.completion || 0;
+            // 🔧 FIX: Utiliser completedSteps (nombre) au lieu de stepsCompleted (tableau)
+            const completedSteps = progress?.completedSteps || 0;
+            const total = chapitre.etapes?.length || 0;
+            const percent = Math.round(completion);
             
             html += `
-                <div class="chapitre-card" onclick="App.afficherChapitre('${chapitre.id}')" data-chapitre-id="${chapitre.id}">
-                    <div class="chapitre-card-header" style="background-color: ${chapitre.couleur}; color: white;">
-                        <h3>${chapitre.emoji} ${chapitre.titre}</h3>
+                <div class="chapitre-card" onclick="App.afficherChapitre('${chapitre.id}')" data-chapitre-id="${chapitre.id}" style="cursor: pointer;">
+                    <div class="chapitre-card-header" style="background-color: ${chapitre.couleur || '#667eea'}; color: white; padding: 16px; border-radius: 12px 12px 0 0;">
+                        <h3 style="margin: 0; font-size: 18px;">${chapitre.emoji || '📖'} ${chapitre.titre}</h3>
                     </div>
-                    <div class="chapitre-card-body">
-                        <p>${chapitre.description}</p>
-                        <div class="progress-bar">
-                            <div class="progress-fill" style="width: ${percent}%; background-color: ${chapitre.couleur};"></div>
+                    <div class="chapitre-card-body" style="padding: 16px;">
+                        <p style="margin: 0 0 12px 0; color: #666; font-size: 14px; line-height: 1.4;">${chapitre.description}</p>
+                        <div style="margin-bottom: 8px; font-weight: 600; color: #333;">${percent}% (${completedSteps}/${total} étapes)</div>
+                        <div class="chapitre-progress">
+                            <div class="progress-bar" style="height: 8px; background: #e0e0e0; border-radius: 4px; overflow: hidden;">
+                                <div class="progress-fill" style="width: ${percent}%; height: 100%; background: linear-gradient(90deg, ${chapitre.couleur || '#667eea'}, ${chapitre.couleur || '#667eea'}cc); border-radius: 4px;"></div>
+                            </div>
                         </div>
-                        <span class="progress-text">${percent}% (${stepsCompleted}/${total} étapes)</span>
                     </div>
                 </div>
             `;
@@ -8037,24 +8135,58 @@ ${content.summary}
     },
     
     renderPratique() {
-        // Récupérer les exercices validés (de chapitres complétés)
+        // 🔧 FIX: Récupérer les exercices depuis les étapes COMPLÉTÉES dans localStorage
         const exercicesValides = [];
-        let chapitreIdExercice = null;
         
+        // Vérifier que CHAPITRES est chargé
+        if (!CHAPITRES || CHAPITRES.length === 0) {
+            console.warn('⚠️ CHAPITRES non chargé pour renderPratique');
+            return `
+                <div class="page active">
+                    <div class="page-title">
+                        <span>🎯</span>
+                        <h2>Exercices de Révision</h2>
+                    </div>
+                    <div class="container">
+                        <div class="empty-state">
+                            <div class="empty-icon">📚</div>
+                            <h3>Chargement...</h3>
+                            <p>Veuillez d'abord accéder à un niveau pour charger les chapitres.</p>
+                            <button class="btn btn--primary" onclick="App.afficherAccueil()">Aller à l'accueil</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Parcourir tous les chapitres et leurs étapes
         CHAPITRES.forEach(ch => {
-            if (ch.etapes.some(e => e.completed)) {
-                ch.etapes.filter(e => e.completed).forEach(e => {
+            if (!ch || !ch.etapes) return;
+            
+            ch.etapes.forEach((etape, index) => {
+                // 🔧 FIX: Lire l'état depuis StorageManager (pas depuis l'objet JSON)
+                const etatEtape = StorageManager.getEtapeState(ch.id, index);
+                const isCompleted = etatEtape?.completed || etatEtape?.status === 'completed';
+                
+                // 🔧 FIX: Les vrais types sont exercise_group, diagnostic, apprentissage
+                // Les types individuels (qcm, flashcard) sont DANS les exercise_group
+                const isExercise = ['exercise_group', 'diagnostic', 'qcm', 'quiz', 'flashcard', 'flashcards', 'matching', 'ordering', 'fill-blank', 'drag-drop'].includes(etape.type);
+                
+                if (isCompleted && isExercise) {
                     exercicesValides.push({
-                        id: e.id,
-                        titre: e.titre,
+                        id: etape.id,
+                        titre: etape.titre || `Exercice ${index + 1}`,
                         chapitre: ch.titre,
                         chapitreId: ch.id,
-                        type: e.type,
-                        points: e.points
+                        etapeIndex: index,
+                        type: etape.type,
+                        points: etape.points || 10
                     });
-                });
-            }
+                }
+            });
         });
+        
+        console.log(`🎯 Pratique: ${exercicesValides.length} exercices complétés trouvés`);
         
         if (exercicesValides.length === 0) {
             return `
@@ -8107,7 +8239,7 @@ ${content.summary}
                             </div>
                             
                             <div class="exercice-actions">
-                                <button class="btn btn--primary" onclick="App.afficherEtape('${exerciceActuel.id}', '${exerciceActuel.chapitreId}')">
+                                <button class="btn btn--primary" onclick="App.afficherEtape('${exerciceActuel.chapitreId}', ${exerciceActuel.etapeIndex})">
                                     ▶ Commencer l'exercice
                                 </button>
                                 <button class="btn btn--secondary" onclick="App.loadPage('pratique')">
@@ -8163,20 +8295,33 @@ ${content.summary}
         const user = StorageManager.getUser();
         
         // Calculer statistiques
-        const totalEtapes = CHAPITRES.reduce((s, ch) => s + ch.etapes.length, 0);
-        const completedEtapes = CHAPITRES.reduce((s, ch) => s + ch.etapes.filter(e => e.completed).length, 0);
-        const chapitresComplets = CHAPITRES.filter(ch => ch.etapes.every(e => e.completed)).length;
+        // 🔧 FIX: Lire depuis chaptersProgress (localStorage) au lieu de e.completed (JSON)
+        const chaptersProgress = StorageManager.getChaptersProgress();
+        
+        const totalEtapes = CHAPITRES.reduce((s, ch) => s + (ch.etapes?.length || 0), 0);
+        const completedEtapes = CHAPITRES.reduce((s, ch) => {
+            const progress = chaptersProgress[ch.id];
+            return s + (progress?.completedSteps || 0);
+        }, 0);
+        const chapitresComplets = CHAPITRES.filter(ch => {
+            const progress = chaptersProgress[ch.id];
+            return progress?.completion === 100;
+        }).length;
         const points = user.totalPoints;
         
-        // Badges
+        // 🔧 FIX: Badges basés sur chaptersProgress.completion === 100
+        // Dynamique: 1 badge par chapitre + badge Expert global
         const badges = [
             { id: 'expert_global', nom: 'Expert Douanier', icon: '🏆', unlocked: chapitresComplets === CHAPITRES.length },
-            ...CHAPITRES.map((ch, idx) => ({
-                id: `ch${idx + 1}_maitre`,
-                nom: `Maître de ${ch.titre}`,
-                icon: '👑',
-                unlocked: ch.etapes.every(e => e.completed)
-            }))
+            ...CHAPITRES.map(ch => {
+                const progress = chaptersProgress[ch.id];
+                return {
+                    id: `badge_${ch.id}`,
+                    nom: `Maître de ${ch.titre}`,
+                    icon: ch.emoji || '👑',  // Utiliser l'emoji du chapitre
+                    unlocked: progress?.completion === 100
+                };
+            })
         ];
         
         const badgesUnlocked = badges.filter(b => b.unlocked).length;
@@ -8293,20 +8438,34 @@ ${content.summary}
         const chapitre = CHAPITRES.find(ch => ch.id === chapitreId);
         if (!chapitre) return;
 
+        const badgeId = `badge_${chapitreId}`;
+        
+        // 🔧 FIX: Vérifier si déjà débloqué pour éviter notification en double
+        const existingBadges = StorageManager.getBadges();
+        if (existingBadges.includes(badgeId)) {
+            console.log(`🏆 Badge ${badgeId} déjà débloqué`);
+            return;
+        }
+
         const badge = {
-            id: `badge_${chapitreId}`,
+            id: badgeId,
             titre: `Maître de ${chapitre.titre}`,
             emoji: chapitre.emoji || '🎖️',
             chapitre: chapitreId,
-            condition: 'plan_revision_created',
+            condition: 'chapter_completed',
             debloque: true,
             dateDeblocage: new Date().toISOString()
         };
 
-        // Sauvegarder dans localStorage
-        let badges = JSON.parse(localStorage.getItem('badges') || '{}');
-        badges[badge.id] = badge;
-        localStorage.setItem('badges', JSON.stringify(badges));
+        // 🔧 FIX: Utiliser StorageManager au lieu de localStorage direct
+        StorageManager.addBadge(badgeId);
+        
+        // Marquer badgeEarned dans chaptersProgress
+        const chaptersProgress = StorageManager.getChaptersProgress();
+        if (chaptersProgress[chapitreId]) {
+            chaptersProgress[chapitreId].badgeEarned = true;
+            StorageManager.update('chaptersProgress', chaptersProgress);
+        }
 
         // Animation notification
         this.afficherNotificationBadge(badge);
@@ -8344,13 +8503,28 @@ ${content.summary}
         const user = StorageManager.getUser();
         const badges = StorageManager.getBadges();
         
+        // 🔧 FIX: Compter aussi les badges basés sur chapitres complétés
+        const chaptersProgress = StorageManager.getChaptersProgress();
+        let badgeCount = badges.length;
+        
+        // Ajouter les badges de chapitres complétés (pour affichage cohérent)
+        if (CHAPITRES && CHAPITRES.length > 0) {
+            CHAPITRES.forEach(ch => {
+                const progress = chaptersProgress[ch.id];
+                if (progress?.completion === 100 && !badges.includes(`badge_${ch.id}`)) {
+                    // Badge mérité mais pas encore dans la liste
+                    badgeCount++;
+                }
+            });
+        }
+        
         const pointsEl = document.getElementById('pointsDisplay');
         const daysEl = document.getElementById('daysDisplay');
         const badgesEl = document.getElementById('badgesDisplay');
         
         if (pointsEl) pointsEl.textContent = user.totalPoints;
         if (daysEl) daysEl.textContent = user.consecutiveDays;
-        if (badgesEl) badgesEl.textContent = badges.length;
+        if (badgesEl) badgesEl.textContent = badgeCount;
     },
     
     // ═══════════════════════════════════════════════════════════════

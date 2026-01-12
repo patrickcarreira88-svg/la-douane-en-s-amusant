@@ -11,7 +11,7 @@ const { execSync } = require('child_process');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const HOST = '::1';
+const HOST = '0.0.0.0';
 const DATA_DIR = path.join(__dirname, 'data');
 
 // Middleware
@@ -131,10 +131,12 @@ app.get('/api/niveaux', (req, res) => {
                     const data = JSON.parse(content);
                     const chapitres = data.chapitres || [];
                     
+                    // 🔧 FIX: Retourner le tableau complet des chapitres (pas juste le count)
                     niveaux.push({
                         id: niveauId,
                         nom: `Niveau ${niveauId}`,
-                        chapitres: chapitres.length,
+                        chapitres: chapitres,  // Tableau complet pour window.allNiveaux
+                        chapitresCount: chapitres.length,  // Count pour affichage
                         status: 'chargé'
                     });
                 } catch (e) {
@@ -142,7 +144,8 @@ app.get('/api/niveaux', (req, res) => {
                     niveaux.push({
                         id: niveauId,
                         nom: `Niveau ${niveauId}`,
-                        chapitres: 0,
+                        chapitres: [],
+                        chapitresCount: 0,
                         status: 'erreur'
                     });
                 }
@@ -150,7 +153,8 @@ app.get('/api/niveaux', (req, res) => {
                 niveaux.push({
                     id: niveauId,
                     nom: `Niveau ${niveauId}`,
-                    chapitres: 0,
+                    chapitres: [],
+                    chapitresCount: 0,
                     status: 'vide'
                 });
             }
@@ -1120,22 +1124,24 @@ app.use((req, res) => {
 });
 
 // Démarrer le serveur
-const server = app.listen(PORT, HOST, () => {
+const server = app.listen(PORT, () => {
     console.log('🚀 SERVEUR LMS DOUANE LANCÉ!');
-    console.log('📍 Local: http://' + HOST + ':' + PORT);
+    console.log('📍 Local: http://localhost:' + PORT);
     console.log('🌐 Version: 2.1.0');
     console.log('📚 API Health: GET /api/health');
     console.log('📖 Chapitres: GET /api/chapitres');
     console.log('✏️  Exercices: GET /api/exercises/:type');
     console.log('💾 Sauvegarder: POST /api/save-exercise');
     console.log('⏸️  Ctrl+C pour arrêter');
-}).on('error', (err) => {
-    console.error('Server error:', err);
-    process.exit(1);
 });
 
-// Keep process alive - prevent auto-exit
-process.stdin.resume();
+server.on('error', (err) => {
+    console.error('❌ Erreur serveur:', err.message);
+    console.error('Stack:', err.stack);
+});
+
+// Keep process alive
+setInterval(() => {}, 1000);
 
 process.on('SIGINT', () => {
     console.log('\n✅ SERVEUR ARRÊTÉ');

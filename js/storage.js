@@ -541,26 +541,45 @@ const StorageManager = {
     /**
      * 2. Calcule le % de complétion d'un niveau
      * Retour: nombre entre 0 et 100 (moyenne des chapitres du niveau)
+     * 🔧 DYNAMIQUE: Lit les chapitres depuis window.allNiveaux (chargé depuis l'API)
+     *              Fallback sur mapping statique si données pas encore chargées
      */
     calculateNiveauCompletion(niveauId) {
-        const user = this.getUser();
+        // 🔧 DYNAMIQUE: Récupérer les chapitres depuis les données chargées par l'API
+        let chapterIds = [];
         
-        if (!user.niveaux || !user.niveaux[niveauId]) {
-            return 0;
+        if (window.allNiveaux && window.allNiveaux[niveauId]) {
+            // Données API disponibles - extraire les IDs des chapitres
+            chapterIds = window.allNiveaux[niveauId].map(ch => ch.id);
+        } else {
+            // Fallback: mapping statique (utilisé si API pas encore appelée)
+            const FALLBACK_MAP = {
+                'N1': ['ch1', 'ch2', 'ch3', 'ch4', 'ch5', 'ch6', 'ch7', 'ch8'],
+                'N2': ['101BT'],
+                'N3': [],
+                'N4': []
+            };
+            chapterIds = FALLBACK_MAP[niveauId] || [];
         }
-        
-        const chapters = user.niveaux[niveauId].chapters;
-        const chapterIds = Object.keys(chapters);
         
         if (chapterIds.length === 0) {
+            console.warn(`⚠️ Aucun chapitre mappé pour ${niveauId}`);
             return 0;
         }
         
-        const totalCompletion = chapterIds.reduce((sum, chId) => {
-            return sum + (chapters[chId].completion || 0);
-        }, 0);
+        // Lire depuis chaptersProgress
+        const chaptersProgress = this.getChaptersProgress();
+        
+        let totalCompletion = 0;
+        
+        chapterIds.forEach(chId => {
+            if (chaptersProgress[chId]) {
+                totalCompletion += chaptersProgress[chId].completion || 0;
+            }
+        });
         
         const average = Math.round(totalCompletion / chapterIds.length);
+        console.log(`📊 calculateNiveauCompletion(${niveauId}): ${totalCompletion}/${chapterIds.length} = ${average}%`);
         return average;
     },
 
