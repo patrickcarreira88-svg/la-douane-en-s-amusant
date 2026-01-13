@@ -742,7 +742,11 @@ const StorageManager = {
         }
         
         this.set(data);
-        console.log(`✅ [saveEtapeState] ${chapitreId}:${etapeIndex} saved`);
+        
+        // 🔷 SYNCHRONISER AVEC localStorage POUR PERSISTENCE IMMÉDIATE
+        const stepKey = `step_${chapitreId}_${etapeIndex}`;
+        localStorage.setItem(stepKey, JSON.stringify(stateData));
+        console.log(`✅ [saveEtapeState] ${chapitreId}:${etapeIndex} saved to both StorageManager & localStorage`);
         return true;
     },
 
@@ -778,70 +782,80 @@ const StorageManager = {
     /**
      * 9. Sauvegarde le statut du portfolio pour un chapitre
      * Portfolio n'est pas une étape régulière, donc on le track séparément
+    /**
+     * 9. Sauvegarde le statut du portfolio pour un chapitre
+     * ✅ FIX: Utilise localStorage directement pour simplicité et fiabilité
      */
     savePortfolioStatus(chapterId, isCompleted) {
-        const user = this.getUser();
-        
-        if (!user || !user.niveaux) {
-            console.error('❌ Utilisateur ou niveaux non trouvés');
-            return null;
-        }
-        
-        // Trouver le chapitre
-        let foundNiveauId = null;
-        for (const niveauId in user.niveaux) {
-            if (user.niveaux[niveauId].chapters[chapterId]) {
-                foundNiveauId = niveauId;
-                break;
-            }
-        }
-        
-        if (!foundNiveauId) {
-            console.error(`❌ Chapitre ${chapterId} non trouvé`);
-            return null;
-        }
-        
-        const chapter = user.niveaux[foundNiveauId].chapters[chapterId];
-        
-        // Initialiser la structure si nécessaire
-        if (!chapter.portfolioStatus) {
-            chapter.portfolioStatus = {};
-        }
-        
-        // Sauvegarder le statut du portfolio
-        chapter.portfolioStatus = {
+        const portfolioKey = `portfolio_${chapterId}`;
+        const data = {
             completed: isCompleted,
             completedAt: isCompleted ? new Date().toISOString() : null
         };
-        
-        // Sauvegarder l'utilisateur mis à jour
-        this.updateUser(user);
-        
-        console.log(`📍 Portfolio ${chapterId} marqué comme: ${isCompleted ? 'complété' : 'non-complété'}`);
-        return chapter.portfolioStatus;
+        localStorage.setItem(portfolioKey, JSON.stringify(data));
+        console.log(`📍 Portfolio ${chapterId} marqué comme: ${isCompleted ? 'complété ✅' : 'non-complété'}`);
+        return data;
     },
 
     /**
      * 10. Récupère le statut du portfolio pour un chapitre
+     * ✅ FIX: Lit depuis localStorage directement
      */
     getPortfolioStatus(chapterId) {
-        const user = this.getUser();
-        
-        if (!user || !user.niveaux) {
-            return null;
-        }
-        
-        // Trouver le chapitre
-        for (const niveauId in user.niveaux) {
-            const chapter = user.niveaux[niveauId].chapters[chapterId];
-            if (chapter && chapter.portfolioStatus) {
-                return chapter.portfolioStatus;
+        const portfolioKey = `portfolio_${chapterId}`;
+        const data = localStorage.getItem(portfolioKey);
+        if (data) {
+            try {
+                return JSON.parse(data);
+            } catch (e) {
+                console.error(`❌ Erreur parsing portfolio ${chapterId}:`, e);
+                return null;
             }
         }
-        
+        return null;
+    },
+
+    /**
+     * 11. Sauvegarde le statut des objectifs visuels pour un chapitre
+     * ✅ FIX OPTION B: Les objectifs sont un jalon VISUEL, pas une étape dans chapitre.etapes[]
+     * Trackés séparément comme le portfolio
+     */
+    /**
+     * 11. Sauvegarde le statut des objectifs visuels pour un chapitre
+     * ✅ FIX: Utilise localStorage directement pour simplicité et fiabilité
+     */
+    saveObjectifsStatus(chapterId, isCompleted) {
+        const objectifsKey = `objectives_${chapterId}`;
+        const data = {
+            completed: isCompleted,
+            completedAt: isCompleted ? new Date().toISOString() : null
+        };
+        localStorage.setItem(objectifsKey, JSON.stringify(data));
+        console.log(`📋 Objectifs ${chapterId} marqués comme: ${isCompleted ? 'complétés ✅' : 'non-complétés'}`);
+        return data;
+    },
+
+    /**
+     * 12. Récupère le statut des objectifs visuels pour un chapitre
+     * ✅ FIX: Lit depuis localStorage directement
+     */
+    getObjectifsStatus(chapterId) {
+        const objectifsKey = `objectives_${chapterId}`;
+        const data = localStorage.getItem(objectifsKey);
+        if (data) {
+            try {
+                return JSON.parse(data);
+            } catch (e) {
+                console.error(`❌ Erreur parsing objectifs ${chapterId}:`, e);
+                return null;
+            }
+        }
         return null;
     }
 };
+
+// ✅ Exposer StorageManager globalement
+window.StorageManager = StorageManager;
 
 // Initialiser au chargement
 document.addEventListener('DOMContentLoaded', () => {

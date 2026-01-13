@@ -42,20 +42,37 @@
 
 <!-- Modal Objectifs du Chapitre -->
 <div id="objectives-modal" class="modal-overlay hidden">
-    <div class="modal-content modal-objectives">
-        <div class="modal-header">
-            <h2>📋 Objectifs de ce chapitre</h2>
-            <button class="btn-close" onclick="App.fermerModalObjectives()">✕</button>
+    <div class="modal-content" style="background: white; border-radius: 0; display: flex; flex-direction: column; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; margin: 0; padding: 0;">
+        
+        <!-- HEADER FIXE -->
+        <div class="exercise-modal-header" style="position: fixed; top: 0; left: 0; right: 0; z-index: 1001; background: linear-gradient(135deg, #4A3F87, #6B5B95); color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h2 style="margin: 0; font-size: 1.3em;">📋 Objectifs de ce chapitre</h2>
+                <p style="margin: 5px 0 0 0; opacity: 0.9; font-size: 0.9em;">Découvrez les objectifs pédagogiques</p>
+            </div>
+            <button class="btn-close" onclick="App.fermerModalObjectives()" style="background: rgba(255,255,255,0.2); border: none; color: white; font-size: 1.5em; cursor: pointer; padding: 5px 10px; border-radius: 4px;">✕</button>
         </div>
-        <div class="modal-body">
+        
+        <!-- CONTENU SCROLLABLE -->
+        <div class="modal-body" style="padding: 30px; padding-top: 100px; overflow-y: auto; flex: 1; margin-bottom: 80px;">
             <div id="objectives-list" class="objectives-container">
                 <!-- Générés dynamiquement par JS -->
             </div>
         </div>
-        <div class="modal-footer">
-            <button class="btn btn--secondary" onclick="App.fermerModalObjectives()">
-                Fermer
+        
+        <!-- FOOTER FIXE -->
+        <div class="modal-footer" style="background: white; padding: 15px 20px; display: flex; gap: 12px; justify-content: space-between; align-items: center; border-top: 1px solid #ddd; flex-shrink: 0; position: fixed; bottom: 0; left: 0; right: 0; z-index: 1001;">
+            <button class="btn btn--secondary" onclick="App.fermerModalObjectivesSansValider()" style="padding: 12px 20px; border: 1px solid #ddd; border-radius: 6px; background: white; cursor: pointer;">
+                ← Fermer
             </button>
+            <div style="display: flex; gap: 12px;">
+                <button class="btn btn--primary" onclick="App.fermerModalObjectives()" style="padding: 12px 20px; background: #4A3F87; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                    ✅ Marquer comme terminé
+                </button>
+                <button class="btn btn--primary" onclick="if (typeof openTutoringModal !== 'undefined') { openTutoringModal(); } else if (typeof TutoringModule !== 'undefined' && TutoringModule.showModal) { TutoringModule.showModal(); } else { alert('Module tutoring non chargé'); }" style="padding: 12px 20px; background: linear-gradient(135deg, #7c3aed, #6d28d9); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                    ❓ Demander aide
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -91,27 +108,44 @@
 
 <!-- Modal Portfolio Swipe - Fin de Chapitre -->
 <div id="portfolio-modal" class="modal-overlay hidden">
-    <div class="modal-content modal-portfolio">
-        <div class="modal-header">
-            <h2>🎯 Plan de révision</h2>
-            <p class="modal-subtitle">Swipez pour noter votre maîtrise</p>
-            <button class="btn-close" onclick="App.fermerPortfolioModal()">✕</button>
+    <div class="modal-content" style="background: white; border-radius: 0; display: flex; flex-direction: column; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; margin: 0; padding: 0;">
+        
+        <!-- HEADER FIXE -->
+        <div class="exercise-modal-header" style="position: fixed; top: 0; left: 0; right: 0; z-index: 1001; background: linear-gradient(135deg, #FF6B9D, #C44569); color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h2 style="margin: 0; font-size: 1.3em;">🎯 Plan de révision</h2>
+                <p style="margin: 5px 0 0 0; opacity: 0.9; font-size: 0.9em;">Swipez pour noter votre maîtrise</p>
+            </div>
+            <button class="btn-close" onclick="App.fermerPortfolioModal()" style="background: rgba(255,255,255,0.2); border: none; color: white; font-size: 1.5em; cursor: pointer; padding: 5px 10px; border-radius: 4px;">✕</button>
         </div>
         
-        <div id="portfolio-swipe-container" class="portfolio-swipe">
-            <!-- Rempli dynamiquement par JS -->
+        <!-- CONTENU SCROLLABLE -->
+        <div class="modal-body" style="padding: 20px; padding-top: 100px; overflow-y: auto; flex: 1; margin-bottom: 160px;">
+            <div id="portfolio-swipe-container" class="portfolio-swipe">
+                <!-- Rempli dynamiquement par JS -->
+            </div>
         </div>
 
-        <div class="portfolio-controls" id="portfolio-controls">
-            <button class="btn-swipe-action" id="btn-portfolio-left" title="Pas maîtrisé">❌ Pas maîtrisé</button>
-            <button class="btn-swipe-action" id="btn-portfolio-up" title="À approfondir">⚠️ À approfondir</button>
-            <button class="btn-swipe-action" id="btn-portfolio-right" title="Maîtrisé">✅ Maîtrisé</button>
+        <!-- CONTRÔLES SWIPE -->
+        <div class="portfolio-controls" id="portfolio-controls" style="position: fixed; bottom: 80px; left: 0; right: 0; display: flex; justify-content: center; gap: 15px; padding: 15px; background: #f5f5f5; border-top: 1px solid #ddd; z-index: 1001;">
+            <button class="btn-swipe-action" id="btn-portfolio-left" title="Pas maîtrisé" style="padding: 12px 18px; border-radius: 8px; border: 2px solid #dc3545; background: white; color: #dc3545; font-weight: 600; cursor: pointer;">❌ Pas maîtrisé</button>
+            <button class="btn-swipe-action" id="btn-portfolio-up" title="À approfondir" style="padding: 12px 18px; border-radius: 8px; border: 2px solid #ffc107; background: white; color: #856404; font-weight: 600; cursor: pointer;">⚠️ À approfondir</button>
+            <button class="btn-swipe-action" id="btn-portfolio-right" title="Maîtrisé" style="padding: 12px 18px; border-radius: 8px; border: 2px solid #28a745; background: white; color: #28a745; font-weight: 600; cursor: pointer;">✅ Maîtrisé</button>
         </div>
 
-        <div class="modal-footer">
-            <button class="btn btn--secondary" onclick="App.fermerPortfolioModal()">
-                Fermer
+        <!-- FOOTER FIXE -->
+        <div class="modal-footer" style="background: white; padding: 15px 20px; display: flex; gap: 12px; justify-content: space-between; align-items: center; border-top: 1px solid #ddd; flex-shrink: 0; position: fixed; bottom: 0; left: 0; right: 0; z-index: 1001;">
+            <button class="btn btn--secondary" onclick="App.fermerPortfolioModalSansValider()" style="padding: 12px 20px; border: 1px solid #ddd; border-radius: 6px; background: white; cursor: pointer;">
+                ← Fermer
             </button>
+            <div style="display: flex; gap: 12px;">
+                <button class="btn btn--primary" onclick="App.validerPortfolioEtFermer()" style="padding: 12px 20px; background: #FF6B9D; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                    ✅ Marquer comme terminé
+                </button>
+                <button class="btn btn--primary" onclick="if (typeof openTutoringModal !== 'undefined') { openTutoringModal(); } else if (typeof TutoringModule !== 'undefined' && TutoringModule.showModal) { TutoringModule.showModal(); } else { alert('Module tutoring non chargé'); }" style="padding: 12px 20px; background: linear-gradient(135deg, #7c3aed, #6d28d9); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                    ❓ Demander aide
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -121,8 +155,8 @@
     <header class="app-header">
         <div class="header-content">
             <div class="header-title">
-                <h1>🎓 Douane LMS</h1>
-                <span class="version">v2.0</span>
+                <h1>🎓 Douane LMS <span class="version">v2.0</span></h1>
+                <span class="header-subtitle">Apprendre en s'amusant</span>
             </div>
             <div class="header-stats">
                 <div class="stat">
@@ -145,7 +179,7 @@
     </header>
 
     <!-- Main Content Area (changera selon onglet actif) -->
-    <main id="app-content" class="app-content">
+    <main id="app-content" class="app-content" style="padding-bottom: 100px;">
         <!-- Les pages seront injectées ici dynamiquement -->
     </main>
 

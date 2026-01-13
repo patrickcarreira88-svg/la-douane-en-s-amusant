@@ -459,31 +459,37 @@ function validateAndCleanStorage(chapitre) {
  */
 function getStepLockState(chapitre, etapeIndex, chapitreId = '') {
     if (!chapitre || !chapitre.etapes || etapeIndex < 0 || etapeIndex >= chapitre.etapes.length) {
-        console.warn(`⚠️ getStepLockState: Paramètres invalides`);
+        console.warn(`⚠️ getStepLockState: Paramètres invalides (index=${etapeIndex}, total=${chapitre?.etapes?.length})`);
         return 'locked';
     }
     
     const etapeActuelle = chapitre.etapes[etapeIndex];
     
-    // Rule: Si l'étape est déjà complétée
-    if (etapeActuelle.completed === true) {
+    // Rule: Si l'étape est déjà complétée (vérifier aussi localStorage)
+    const etapeState = StorageManager?.loadEtapeState?.(chapitreId, etapeIndex);
+    if (etapeActuelle.completed === true || etapeState?.completed === true) {
         return 'completed';
     }
     
-    // Rule: 🔓 NOUVEAU - La première VRAIE étape (index 1, car 0 = objectifs) nécessite les objectifs complétés
-    if (etapeIndex === 1) {
-        // Vérifier si les objectifs (étape 0) sont complétés
-        const objectifs = chapitre.etapes[0];
-        if (objectifs && objectifs.completed === true) {
+    // Rule: 🔓 FIX OPTION B - La première étape (index 0) nécessite les OBJECTIFS VISUELS complétés
+    // Les objectifs visuels sont un jalon SVG séparé, pas dans chapitre.etapes[]
+    // On vérifie via StorageManager.getObjectifsStatus() ou chapitre.objectifsCompleted
+    if (etapeIndex === 0) {
+        // Première vraie étape: Vérifier si les objectifs (jalon visuel) sont complétés
+        const objectifsStatus = StorageManager?.getObjectifsStatus?.(chapitreId);
+        if (objectifsStatus?.completed === true || chapitre.objectifsCompleted === true) {
             return 'active';
         } else {
-            return 'locked';
+            // Par défaut, la première étape est active si pas d'objectifs ou objectifs pas tracké
+            // Ceci permet le fonctionnement même si getObjectifsStatus n'existe pas
+            return 'active';  // La première étape doit être accessible
         }
     }
     
-    // Rule: Pour les autres étapes (index >= 2), vérifier si l'étape précédente est complétée
+    // Rule: Pour les autres étapes (index >= 1), vérifier si l'étape précédente est complétée
     const etapePrecedente = chapitre.etapes[etapeIndex - 1];
-    if (etapePrecedente && etapePrecedente.completed === true) {
+    const etapePrecState = StorageManager?.loadEtapeState?.(chapitreId, etapeIndex - 1);
+    if (etapePrecedente?.completed === true || etapePrecState?.completed === true) {
         return 'active';
     }
     
@@ -542,7 +548,7 @@ function updateStepIcons(chapitreId, chapitre = null) {
             return;
         }
         
-        // Compteur d'étapes réelles (exclure objectifs/portfolio)
+        // ✅ FIX OPTION B: Compteur d'étapes réelles - index 0 dans JSON = première vraie étape
         let etapeIndex = 0;
         
         stepGroups.forEach((el, groupIndex) => {
@@ -553,25 +559,26 @@ function updateStepIcons(chapitreId, chapitre = null) {
             let state = 'locked';
             let emoji = '🔒';
             
-            // Les jalons spéciaux (objectifs/portfolio) ne sont pas numérotés
+            // Les jalons spéciaux (objectifs/portfolio) sont des jalons VISUELS, pas dans chapitre.etapes[]
             if (isObjectives) {
-                // ✅ CHARGER STATE DEPUIS localStorage (pas JSON!)
-                const objectifState = StorageManager.loadEtapeState(chapitreId, 0);
+                // ✅ FIX: Les objectifs visuels utilisent un storage séparé (pas loadEtapeState(0)!)
+                const objectifState = StorageManager?.getObjectifsStatus?.(chapitreId);
                 
-                if (objectifState?.completed === true || chapitre.etapes[0]?.completed === true) {
+                if (objectifState?.completed === true || chapitre.objectifsCompleted === true) {
                     state = 'completed';
                     emoji = '✅';
                 } else {
+                    // Les objectifs sont toujours actifs au départ (premier jalon cliquable)
                     state = 'active';
-                    emoji = '⚡';
+                    emoji = '📋';  // Emoji spécial pour objectifs non complétés
                 }
-                console.log(`  Objectifs: state=${objectifState?.completed ? 'COMPLETED' : 'IN_PROGRESS'}`);
+                console.log(`  Objectifs (jalon visuel): state=${state}`);
             } else if (isPortfolio) {
                 // ✅ CHARGER STATE DEPUIS localStorage
-                const portfolioState = StorageManager.getPortfolioStatus(chapitreId);
-                const allStepsCompleted = chapitre.etapes.every(e => {
-                    const state = StorageManager.loadEtapeState(chapitreId, chapitre.etapes.indexOf(e));
-                    return state?.completed === true || e.completed === true;
+                const portfolioState = StorageManager?.getPortfolioStatus?.(chapitreId);
+                const allStepsCompleted = chapitre.etapes.every((e, idx) => {
+                    const stepState = StorageManager?.loadEtapeState?.(chapitreId, idx);
+                    return stepState?.completed === true || e.completed === true;
                 });
                 const portfolioCompleted = portfolioState?.completed === true || chapitre.portfolioCompleted === true;
                 
@@ -580,23 +587,22 @@ function updateStepIcons(chapitreId, chapitre = null) {
                     emoji = '🔒';
                 } else if (!portfolioCompleted) {
                     state = 'active';
-                    emoji = '⚡';
+                    emoji = '🎯';  // Emoji spécial pour portfolio actif
                 } else {
                     state = 'completed';
                     emoji = '✅';
                 }
                 console.log(`  Portfolio: allCompleted=${allStepsCompleted}, portfolioCompleted=${portfolioCompleted}`);
             } 
-            // Étapes normales
+            // Étapes normales (correspondent directement à chapitre.etapes[])
             else {
-                // ✅ CHARGER STATE DEPUIS localStorage ET en mémoire
-                const realEtapeIndex = etapeIndex + 1;
-                if (realEtapeIndex < chapitre.etapes.length) {
+                // ✅ FIX OPTION B: etapeIndex correspond DIRECTEMENT à chapitre.etapes[etapeIndex]
+                if (etapeIndex < chapitre.etapes.length) {
                     // Charger depuis localStorage D'ABORD
-                    const etapeState = StorageManager.loadEtapeState(chapitreId, realEtapeIndex);
-                    const isCompleted = etapeState?.completed === true || chapitre.etapes[realEtapeIndex]?.completed === true;
+                    const etapeState = StorageManager?.loadEtapeState?.(chapitreId, etapeIndex);
+                    const isCompleted = etapeState?.completed === true || chapitre.etapes[etapeIndex]?.completed === true;
                     
-                    state = getStepLockState(chapitre, realEtapeIndex, chapitreId);
+                    state = getStepLockState(chapitre, etapeIndex, chapitreId);
                     
                     // Si localStorage dit completed, forcer completed
                     if (isCompleted) {
@@ -612,7 +618,7 @@ function updateStepIcons(chapitreId, chapitre = null) {
                         emoji = '🔒';
                     }
                     
-                    console.log(`  Étape ${realEtapeIndex}: state=${state} (localStorage=${etapeState?.completed ? 'completed' : etapeState ? 'exists' : 'empty'}, memory=${chapitre.etapes[realEtapeIndex]?.completed ? 'completed' : 'empty'})`);
+                    console.log(`  Étape ${etapeIndex} (${chapitre.etapes[etapeIndex]?.titre}): state=${state}`);
                     etapeIndex++;
                 }
             }
@@ -1362,7 +1368,14 @@ function generatePathSVG(etapes, chapitre = null) {
     allItems.push(...etapes);
     
     // 3. Jalon Portfolio à la fin (et au milieu si > 10 étapes)
-    if (chapitre && chapitre.objectifs) {
+    // ✅ FIX OPTION B: Vérifier si le chapitre a DÉJÀ un portfolio dans ses étapes (ex: 101BT_08_portfolio)
+    const hasPortfolioInEtapes = etapes.some(e => 
+        e.type === 'portfolio_swipe' || 
+        e.id?.includes('portfolio') || 
+        e.titre?.toLowerCase().includes('portfolio')
+    );
+    
+    if (chapitre && chapitre.objectifs && !hasPortfolioInEtapes) {
         const totalItems = allItems.length;
         
         // Si plus de 10 étapes, ajouter portfolio au milieu aussi
@@ -1386,6 +1399,8 @@ function generatePathSVG(etapes, chapitre = null) {
             isPortfolio: true,
             chapitre: chapitre
         });
+    } else if (hasPortfolioInEtapes) {
+        console.log(`ℹ️ generatePathSVG: Portfolio déjà présent dans les étapes de ${chapitre?.id}, pas de doublon ajouté`);
     }
     
     // Calculer les positions
@@ -2664,7 +2679,8 @@ const App = {
     },
 
     /**
-     * Affiche un chapitre spécifique
+     * Affiche un chapitre spécifique avec vue liste
+     * ✅ FIX: Injecte dynamiquement les étapes "Objectifs" (première) et "Portfolio" (dernière)
      */
     afficherChapitre(chapitreId) {
         const chapter = CHAPITRES.find(c => c.id === chapitreId);
@@ -2674,15 +2690,16 @@ const App = {
             return;
         }
         
+        // Stocker le chapitre actuel
+        this.chapitreActuel = chapitreId;
+        
         // ✅ INITIALISER localStorage pour les étapes si nécessaire
         for (let i = 0; i < chapter.etapes.length; i++) {
             const stepKey = `step_${chapitreId}_${i}`;
             if (!localStorage.getItem(stepKey)) {
-                // Vérifier dans StorageManager
                 const state = StorageManager.getEtapeState(chapitreId, i);
                 
                 if (state?.completed) {
-                    // Déjà complétée
                     localStorage.setItem(stepKey, JSON.stringify({
                         status: 'completed',
                         score: state.score || 100,
@@ -2690,7 +2707,6 @@ const App = {
                         pointsAwarded: true
                     }));
                 } else if (state?.unlocked || state?.status === "in_progress") {
-                    // Étape déverrouillée mais pas complétée
                     localStorage.setItem(stepKey, JSON.stringify({
                         status: 'in_progress',
                         score: null,
@@ -2698,7 +2714,6 @@ const App = {
                         pointsAwarded: false
                     }));
                 } else if (i === 0) {
-                    // Première étape toujours accessible
                     localStorage.setItem(stepKey, JSON.stringify({
                         status: 'in_progress',
                         score: null,
@@ -2706,7 +2721,6 @@ const App = {
                         pointsAwarded: false
                     }));
                 } else {
-                    // Les autres sont verrouillées par défaut
                     localStorage.setItem(stepKey, JSON.stringify({
                         status: 'locked',
                         score: null,
@@ -2717,71 +2731,229 @@ const App = {
             }
         }
         
-        const progress = this.getChapterProgress(chapitreId);
-        const container = document.getElementById('app-content');
+        // ✅ Charger les états depuis StorageManager
+        this.loadChapitreEtapesStates(chapitreId);
         
+        // ✅ Calculer la progression (incluant Objectifs et Portfolio)
+        const objectifsStatus = StorageManager?.getObjectifsStatus?.(chapitreId);
+        const portfolioStatus = StorageManager?.getPortfolioStatus?.(chapitreId);
+        const objectifsCompleted = objectifsStatus?.completed === true || chapter.objectifsCompleted === true;
+        const portfolioCompleted = portfolioStatus?.completed === true || chapter.portfolioCompleted === true;
+        
+        const realStepsCompleted = chapter.etapes.filter(e => e.completed === true).length;
+        const totalRealSteps = chapter.etapes.length;
+        const allRealStepsCompleted = realStepsCompleted === totalRealSteps;
+        
+        // Total = Objectifs + vraies étapes + Portfolio
+        const totalSteps = totalRealSteps + 2;
+        const completedSteps = (objectifsCompleted ? 1 : 0) + realStepsCompleted + (portfolioCompleted ? 1 : 0);
+        const progressPercentage = Math.round((completedSteps / totalSteps) * 100);
+        
+        console.log(`📊 Progression ${chapitreId}: Objectifs=${objectifsCompleted}, Étapes=${realStepsCompleted}/${totalRealSteps}, Portfolio=${portfolioCompleted} → ${completedSteps}/${totalSteps} (${progressPercentage}%)`);
+        
+        const container = document.getElementById('app-content');
         if (!container) {
             console.error('❌ Container #app-content manquant');
             return;
         }
         
-        // Barre de progression
-        const progressHTML = `
+        // ══════════════════════════════════════════════════════════════
+        // GÉNÉRATION HTML
+        // ══════════════════════════════════════════════════════════════
+        
+        // Header du chapitre
+        let html = `
             <div class="chapter-view">
-                <button class="btn btn--secondary" onclick="App.navigateTo('accueil')" style="margin-bottom: 20px;">
+                <button class="btn btn--secondary" onclick="App.loadPage('chapitres')" style="margin-bottom: 20px;">
                     ← Retour
                 </button>
                 
                 <div class="chapter-progress">
                     <h2>${chapter.emoji || '📖'} ${chapter.titre || chapter.id}</h2>
                     <div class="progress-bar" style="margin: 20px 0;">
-                        <div class="progress-fill" style="width: ${progress.percentage}%; background-color: #4caf50;"></div>
+                        <div class="progress-fill" style="width: ${progressPercentage}%; background-color: ${chapter.couleur || '#4caf50'};"></div>
                     </div>
                     <p style="text-align: center; color: #666;">
-                        ${progress.completed}/${progress.total} étapes complétées (${progress.percentage}%)
+                        ${completedSteps}/${totalSteps} étapes complétées (${progressPercentage}%)
                     </p>
                 </div>
                 
                 <div class="steps-list" style="margin-top: 30px;">
         `;
         
-        // Liste d'étapes
-        const stepsHTML = chapter.etapes.map((step, idx) => {
-            const accessible = this.canAccessStep(chapitreId, idx);
-            const stepState = this.getStepState(chapitreId, idx);
+        // ══════════════════════════════════════════════════════════════
+        // 1. ÉTAPE OBJECTIFS (toujours en premier, toujours accessible)
+        // ══════════════════════════════════════════════════════════════
+        const objectifsIcon = objectifsCompleted ? '✅' : '📋';
+        const objectifsBgColor = objectifsCompleted ? '#d4edda' : '#fff3cd';
+        const objectifsBorderColor = objectifsCompleted ? '#28a745' : '#ffc107';
+        
+        html += `
+            <div class="step-item step-objectives" style="padding: 15px; border: 2px solid ${objectifsBorderColor}; border-radius: 8px; margin-bottom: 12px; background: ${objectifsBgColor};">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div class="step-icon" style="font-size: 1.8em;">${objectifsIcon}</div>
+                    <div style="flex: 1;">
+                        <h3 style="margin: 0 0 5px 0; color: #333;">📋 Objectifs du chapitre</h3>
+                        <p style="margin: 0; color: #666; font-size: 0.9em;">Découvrez les objectifs pédagogiques de ce chapitre</p>
+                    </div>
+                    <button 
+                        class="btn btn--primary"
+                        onclick="App.afficherModalObjectives('${chapitreId}')"
+                        style="padding: 10px 20px; background: #6B5B95; color: white; border: none; border-radius: 6px; cursor: pointer;"
+                    >
+                        ${objectifsCompleted ? '✓ Revoir' : '▶ Consulter'}
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        // ══════════════════════════════════════════════════════════════
+        // 2. VRAIES ÉTAPES (depuis chapter.etapes[])
+        // ══════════════════════════════════════════════════════════════
+        chapter.etapes.forEach((step, idx) => {
+            const stepState = StorageManager.getEtapeState(chapitreId, idx);
+            const isCompleted = stepState?.completed === true || step.completed === true;
             
-            return `
-                <div class="step-item" data-step="${chapitreId}_${idx}" style="padding: 15px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 12px;">
+            // Logique de verrouillage : 
+            // - Étape 0 accessible si Objectifs complétés
+            // - Autres étapes accessibles si précédente complétée
+            let accessible = false;
+            if (idx === 0) {
+                accessible = objectifsCompleted;
+            } else {
+                const prevStepState = StorageManager.getEtapeState(chapitreId, idx - 1);
+                accessible = prevStepState?.completed === true || chapter.etapes[idx - 1]?.completed === true;
+            }
+            
+            // Si déjà complétée, toujours accessible
+            if (isCompleted) accessible = true;
+            
+            const stepIcon = isCompleted ? '✅' : (accessible ? '⚡' : '🔒');
+            const bgColor = isCompleted ? '#d4edda' : (accessible ? '#fff' : '#f5f5f5');
+            const borderColor = isCompleted ? '#28a745' : (accessible ? '#ddd' : '#ccc');
+            const opacity = accessible ? '1' : '0.6';
+            
+            html += `
+                <div class="step-item" data-step="${chapitreId}_${idx}" style="padding: 15px; border: 1px solid ${borderColor}; border-radius: 6px; margin-bottom: 12px; background: ${bgColor}; opacity: ${opacity};">
                     <div style="display: flex; align-items: center; gap: 12px;">
-                        <div class="step-icon" style="font-size: 1.5em;"></div>
+                        <div class="step-icon" style="font-size: 1.5em;">${stepIcon}</div>
                         <div style="flex: 1;">
-                            <h3 style="margin: 0 0 5px 0;">${step.title || `Étape ${idx + 1}`}</h3>
-                            <p style="margin: 0; color: #666; font-size: 0.9em;">${step.description || ''}</p>
+                            <h3 style="margin: 0 0 5px 0;">Étape ${idx + 1}: ${step.titre || ''}</h3>
+                            <p style="margin: 0; color: #666; font-size: 0.9em;">${step.contenu || step.description || ''}</p>
                         </div>
                         <button 
                             class="btn btn--primary"
                             onclick="App.afficherEtape('${chapitreId}', ${idx})"
                             ${!accessible ? 'disabled' : ''}
-                            style="${!accessible ? 'opacity: 0.6; cursor: not-allowed;' : ''}"
+                            style="padding: 10px 20px; background: ${accessible ? '#4A3F87' : '#ccc'}; color: white; border: none; border-radius: 6px; cursor: ${accessible ? 'pointer' : 'not-allowed'};"
                         >
-                            ${accessible ? '▶ Accéder' : '🔒 Verrouillée'}
+                            ${isCompleted ? '✓ Revoir' : (accessible ? '▶ Accéder' : '🔒 Verrouillée')}
                         </button>
                     </div>
                 </div>
             `;
-        }).join('');
+        });
         
-        const closingHTML = `
+        // ══════════════════════════════════════════════════════════════
+        // 3. ÉTAPE PORTFOLIO (toujours en dernier, verrouillée si étapes incomplètes)
+        // ══════════════════════════════════════════════════════════════
+        const portfolioAccessible = allRealStepsCompleted;
+        const portfolioIcon = portfolioCompleted ? '✅' : (portfolioAccessible ? '🎯' : '🔒');
+        const portfolioBgColor = portfolioCompleted ? '#d4edda' : (portfolioAccessible ? '#e8f4fd' : '#f5f5f5');
+        const portfolioBorderColor = portfolioCompleted ? '#28a745' : (portfolioAccessible ? '#FF6B9D' : '#ccc');
+        const portfolioOpacity = portfolioAccessible ? '1' : '0.6';
+        
+        html += `
+            <div class="step-item step-portfolio" style="padding: 15px; border: 2px solid ${portfolioBorderColor}; border-radius: 8px; margin-bottom: 12px; background: ${portfolioBgColor}; opacity: ${portfolioOpacity};">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div class="step-icon" style="font-size: 1.8em;">${portfolioIcon}</div>
+                    <div style="flex: 1;">
+                        <h3 style="margin: 0 0 5px 0; color: #333;">🎯 Portfolio - Plan de révision</h3>
+                        <p style="margin: 0; color: #666; font-size: 0.9em;">Évaluez votre maîtrise des objectifs et créez votre plan de révision</p>
+                    </div>
+                    <button 
+                        class="btn btn--primary"
+                        onclick="App.afficherPortfolioModal('${chapitreId}')"
+                        ${!portfolioAccessible ? 'disabled' : ''}
+                        style="padding: 10px 20px; background: ${portfolioAccessible ? '#FF6B9D' : '#ccc'}; color: white; border: none; border-radius: 6px; cursor: ${portfolioAccessible ? 'pointer' : 'not-allowed'};"
+                    >
+                        ${portfolioCompleted ? '✓ Revoir' : (portfolioAccessible ? '▶ Accéder' : '🔒 Verrouillée')}
+                    </button>
                 </div>
             </div>
         `;
         
-        container.innerHTML = progressHTML + stepsHTML + closingHTML;
+        // Fermer les divs
+        html += `
+                </div>
+            </div>
+        `;
         
-        // Mettre à jour les icônes
-        for (let i = 0; i < chapter.etapes.length; i++) {
-            this.updateStepIcon(chapitreId, i);
-        }
+        container.innerHTML = html;
+        console.log(`✅ Chapitre ${chapitreId} affiché avec ${totalSteps} étapes (Objectifs + ${totalRealSteps} étapes + Portfolio)`);
+        
+        // 🔷 METTRE À JOUR LES ICÔNES VISUELLEMENT APRÈS RENDU
+        // Ceci assure que les couleurs/icônes reflètent l'état réel du localStorage
+        setTimeout(() => {
+            chapter.etapes.forEach((step, idx) => {
+                const stepState = StorageManager.getEtapeState(chapitreId, idx);
+                const stepElement = document.querySelector(`[data-step="${chapitreId}_${idx}"]`);
+                
+                if (stepElement && stepState) {
+                    const isCompleted = stepState.completed === true;
+                    const stepIcon = stepElement.querySelector('.step-icon');
+                    const bgColor = isCompleted ? '#d4edda' : '#fff';
+                    const borderColor = isCompleted ? '#28a745' : '#ddd';
+                    
+                    if (stepIcon) {
+                        stepIcon.textContent = isCompleted ? '✅' : '⚡';
+                    }
+                    
+                    stepElement.style.background = bgColor;
+                    stepElement.style.borderColor = borderColor;
+                    
+                    console.log(`🎨 Mise à jour icône étape ${idx}: ${isCompleted ? 'complétée ✅' : 'accessible ⚡'}`);
+                }
+            });
+            
+            // Mettre à jour aussi les icônes des étapes Objectifs et Portfolio
+            const objectifsElement = document.querySelector('.step-objectives');
+            if (objectifsElement) {
+                const objectifsStatus = StorageManager?.getObjectifsStatus?.(chapitreId);
+                const isCompleted = objectifsStatus?.completed === true || chapter.objectifsCompleted === true;
+                const icon = objectifsElement.querySelector('.step-icon');
+                
+                if (icon) {
+                    icon.textContent = isCompleted ? '✅' : '📋';
+                }
+                
+                objectifsElement.style.background = isCompleted ? '#d4edda' : '#fff3cd';
+                objectifsElement.style.borderColor = isCompleted ? '#28a745' : '#ffc107';
+                console.log(`🎨 Mise à jour Objectifs: ${isCompleted ? 'complétés ✅' : 'en attente 📋'}`);
+            }
+            
+            const portfolioElement = document.querySelector('.step-portfolio');
+            if (portfolioElement) {
+                const portfolioStatus = StorageManager?.getPortfolioStatus?.(chapitreId);
+                const allRealStepsCompleted = chapter.etapes.every(e => {
+                    const state = StorageManager.getEtapeState(chapitreId, chapter.etapes.indexOf(e));
+                    return state?.completed === true || e.completed === true;
+                });
+                
+                const isCompleted = portfolioStatus?.completed === true || chapter.portfolioCompleted === true;
+                const isAccessible = allRealStepsCompleted;
+                const icon = portfolioElement.querySelector('.step-icon');
+                
+                if (icon) {
+                    icon.textContent = isCompleted ? '✅' : (isAccessible ? '🎯' : '🔒');
+                }
+                
+                portfolioElement.style.background = isCompleted ? '#d4edda' : (isAccessible ? '#e8f4fd' : '#f5f5f5');
+                portfolioElement.style.borderColor = isCompleted ? '#28a745' : (isAccessible ? '#FF6B9D' : '#ccc');
+                portfolioElement.style.opacity = isAccessible ? '1' : '0.6';
+                console.log(`🎨 Mise à jour Portfolio: ${isCompleted ? 'complété ✅' : (isAccessible ? 'accessible 🎯' : 'verrouillé 🔒')}`);
+            }
+        }, 50);
     },
     
     /**
@@ -2821,7 +2993,7 @@ const App = {
                         ← Retour aux niveaux
                     </button>
                     <h1>📚 ${niveauId} - Chapitres</h1>
-                    <div class="chapitres-list">
+                    <div class="chapitres-list" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; padding: 10px;" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; padding: 10px;">
             `;
             
             // 5. Boucler chapitres
@@ -2844,13 +3016,14 @@ const App = {
                 const total = chapitre.etapes?.length || 0;
                 
                 html += `
-                    <div class="chapitre-card" onclick="App.afficherChapitre('${chapId}')" data-chapitre-id="${chapId}" style="cursor: pointer;">
-                        <div class="chapitre-card-header" style="background-color: ${chapitre.couleur || '#667eea'}; color: white; padding: 16px; border-radius: 12px 12px 0 0;">
-                            <h3 style="margin: 0; font-size: 18px;">${chapitre.emoji || '📖'} ${titre}</h3>
+                    <div class="chapitre-card" onclick="App.afficherChapitre('${chapId}')" data-chapitre-id="${chapId}" style="cursor: pointer; background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow: hidden; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 6px 20px rgba(0,0,0,0.15)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)';">
+                        <div class="chapitre-card-header" style="background-color: ${chapitre.couleur || '#667eea'}; color: white; padding: 16px; text-align: center;">
+                            <span style="font-size: 2em; display: block; margin-bottom: 8px;">${chapitre.emoji || '📖'}</span>
+                            <h3 style="margin: 0; font-size: 16px; line-height: 1.3;">${titre}</h3>
                         </div>
                         <div class="chapitre-card-body" style="padding: 16px;">
-                            <p style="margin: 0 0 12px 0; color: #666; font-size: 14px; line-height: 1.4;">${description}</p>
-                            <div style="margin-bottom: 8px; font-weight: 600; color: #333;">${completion}% (${completedSteps}/${total} étapes)</div>
+                            <p style="margin: 0 0 12px 0; color: #666; font-size: 13px; line-height: 1.4; min-height: 40px;">${description}</p>
+                            <div style="margin-bottom: 8px; font-weight: 600; color: #333; text-align: center;">${completion}% (${completedSteps}/${total} étapes)</div>
                             <div class="chapitre-progress">
                                 <div class="progress-bar" style="height: 8px; background: #e0e0e0; border-radius: 4px; overflow: hidden;">
                                     <div class="progress-fill" style="width: ${completion}%; height: 100%; background: linear-gradient(90deg, ${chapitre.couleur || '#667eea'}, ${chapitre.couleur || '#667eea'}cc); border-radius: 4px;"></div>
@@ -4462,8 +4635,13 @@ const App = {
         if (nextIndex < totalExercices) {
             // Il y a un exercice suivant
             window.currentExerciceIndex = nextIndex;
-            // Réafficher l'étape avec le nouvel exercice
-            this.afficherEtape(chapitreId, stepId);
+            // ✅ FIX OPTION B: Convertir stepId en index numérique
+            const etapeIndex = chapitre.etapes.findIndex(e => e.id === stepId);
+            if (etapeIndex >= 0) {
+                this.afficherEtape(chapitreId, etapeIndex);
+            } else {
+                console.error(`❌ Étape ${stepId} non trouvée dans chapitre.etapes[]`);
+            }
         } else {
             // C'est le dernier exercice - Tous les exercices complétés
             console.log(`✅ Dernier exercice complété`);
@@ -6080,6 +6258,7 @@ ${content.summary}
     /**
      * ✅ CHARGE les états de TOUTES les étapes d'un chapitre depuis StorageManager
      * FIX #1: Synchronise chapitre.etapes[].completed avec les données persistées
+     * ✅ FIX OPTION B: Charge aussi l'état des objectifs visuels (jalon séparé)
      * CRITIQUE: À appeler quand on affiche un chapitre, sinon les étapes réapparaissent incomplètes après reload
      */
     loadChapitreEtapesStates(chapitreId) {
@@ -6091,6 +6270,17 @@ ${content.summary}
         
         console.log(`🔄 FIX #1: Chargement des états des étapes pour ${chapitreId}...`);
         
+        // ✅ FIX OPTION B: Charger l'état des objectifs visuels (jalon séparé)
+        const objectifsStatus = StorageManager?.getObjectifsStatus?.(chapitreId);
+        if (objectifsStatus?.completed === true) {
+            chapitre.objectifsCompleted = true;
+            console.log(`  ✅ Objectifs visuels: loaded as COMPLETED`);
+        } else {
+            chapitre.objectifsCompleted = false;
+            console.log(`  ⏳ Objectifs visuels: loaded as NOT_COMPLETED`);
+        }
+        
+        // Charger les vraies étapes
         chapitre.etapes.forEach((etape, index) => {
             const etapeState = StorageManager.getEtapeState(chapitreId, index);
             if (etapeState && etapeState.completed === true) {
@@ -6101,6 +6291,13 @@ ${content.summary}
                 console.log(`  ⏳ Étape ${index} (${etape.id}): loaded as IN_PROGRESS`);
             }
         });
+        
+        // ✅ FIX OPTION B: Charger l'état du portfolio (si pas dans les étapes)
+        const portfolioStatus = StorageManager?.getPortfolioStatus?.(chapitreId);
+        if (portfolioStatus?.completed === true) {
+            chapitre.portfolioCompleted = true;
+            console.log(`  ✅ Portfolio: loaded as COMPLETED`);
+        }
         
         console.log(`✅ Tous les états chargés pour ${chapitreId}`);
     },
@@ -6402,20 +6599,34 @@ ${content.summary}
                 pathContainer.innerHTML = newSVG;
                 
                 // ✅ Re-attacher les événements click sur les nouvelles étapes SVG
-                pathContainer.querySelectorAll('.step-group').forEach(step => {
+                pathContainer.querySelectorAll('.step-group').forEach((step, svgIndex) => {
                     step.style.cursor = 'pointer';
                     step.addEventListener('click', (e) => {
                         e.stopPropagation();
                         const stepId = step.getAttribute('data-step-id');
+                        const isObjectives = step.dataset.isObjectives === 'true';
+                        const isPortfolio = step.dataset.isPortfolio === 'true';
+                        
                         if (stepId) {
                             // Si c'est les objectifs ou portfolio, les traiter spécialement
-                            if (stepId.includes('objectives')) {
+                            if (isObjectives || stepId.includes('objectives')) {
                                 App.afficherModalObjectives(chapitreId);
-                            } else if (stepId.includes('portfolio')) {
+                            } else if (isPortfolio || stepId.includes('portfolio')) {
                                 App.afficherPortfolioModal(chapitreId);
                             } else {
-                                // Pour les étapes normales, afficher l'étape
-                                App.afficherEtape(chapitreId, stepId);
+                                // ✅ FIX OPTION B: Calculer l'index réel dans chapitre.etapes[]
+                                // L'index SVG n'est pas l'index JSON à cause du jalon Objectifs ajouté en premier
+                                const allStepGroups = Array.from(pathContainer.querySelectorAll('.step-group'));
+                                let etapeIndex = 0;
+                                for (let i = 0; i < svgIndex; i++) {
+                                    const prevEl = allStepGroups[i];
+                                    const prevIsObj = prevEl.dataset.isObjectives === 'true';
+                                    const prevIsPort = prevEl.dataset.isPortfolio === 'true';
+                                    if (!prevIsObj && !prevIsPort) {
+                                        etapeIndex++;
+                                    }
+                                }
+                                App.afficherEtape(chapitreId, etapeIndex);
                             }
                         }
                     });
@@ -7353,16 +7564,107 @@ ${content.summary}
         }
 
         this.chapitreEnCours = chapitreId;
-        document.getElementById('portfolio-modal').classList.remove('hidden');
+        this.chapitreActuel = chapitreId;
+        
+        // 🙈 Cacher la barre de navigation
+        this.hideBottomNav();
+        
+        const modal = document.getElementById('portfolio-modal');
+        modal.classList.remove('hidden');
+        
+        // Styliser l'overlay (fond semi-transparent)
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: block;
+            z-index: 1000;
+            margin: 0;
+            padding: 0;
+        `;
         
         console.log('🎯 Portfolio modal affiché pour', chapitreId);
     },
 
     /**
-     * Ferme le modal portfolio
+     * Ferme le modal portfolio SANS valider (bouton Fermer)
+     */
+    fermerPortfolioModalSansValider() {
+        document.getElementById('portfolio-modal').classList.add('hidden');
+        
+        // 👁️ Réafficher la barre de navigation
+        this.showBottomNav();
+        
+        console.log('✕ Portfolio modal fermé (sans validation)');
+        
+        // Rafraîchir l'affichage du chapitre
+        const chapitreId = this.chapitreActuel || this.chapitreEnCours;
+        if (chapitreId) {
+            setTimeout(() => {
+                this.afficherChapitre(chapitreId);
+            }, 50);
+        }
+    },
+
+    /**
+     * Ferme le modal portfolio (utilisé par le bouton ✕)
      */
     fermerPortfolioModal() {
         document.getElementById('portfolio-modal').classList.add('hidden');
+        
+        // 👁️ Réafficher la barre de navigation
+        this.showBottomNav();
+        
+        // ✅ Rafraîchir l'affichage du chapitre pour montrer le portfolio comme complété
+        const chapitreId = this.chapitreActuel || this.chapitreEnCours;
+        if (chapitreId) {
+            setTimeout(() => {
+                this.afficherChapitre(chapitreId);
+                console.log(`✅ Affichage du chapitre ${chapitreId} rafraîchi après fermeture portfolio`);
+            }, 100);
+        }
+    },
+    
+    /**
+     * Valide le portfolio et ferme le modal (bouton "Marquer comme terminé")
+     * ✅ Sauvegarde le portfolio comme complété dans localStorage
+     */
+    validerPortfolioEtFermer() {
+        const chapitreId = this.chapitreActuel || this.chapitreEnCours;
+        const chapitre = CHAPITRES.find(ch => ch.id === chapitreId);
+        
+        if (chapitre) {
+            // ✅ Sauvegarder le portfolio comme complété
+            const portfolioKey = `portfolio_${chapitreId}`;
+            const data = {
+                completed: true,
+                completedAt: new Date().toISOString()
+            };
+            localStorage.setItem(portfolioKey, JSON.stringify(data));
+            
+            // Marquer en mémoire
+            chapitre.portfolioCompleted = true;
+            
+            console.log(`✅ Portfolio ${chapitreId} marqué comme complété`);
+        }
+        
+        document.getElementById('portfolio-modal').classList.add('hidden');
+        
+        // 👁️ Réafficher la barre de navigation
+        this.showBottomNav();
+        
+        console.log('✕ Portfolio modal fermé (avec validation)');
+        
+        // ✅ Rafraîchir l'affichage du chapitre
+        if (chapitreId) {
+            setTimeout(() => {
+                this.afficherChapitre(chapitreId);
+                console.log(`✅ Affichage du chapitre ${chapitreId} rafraîchi après validation portfolio`);
+            }, 50);
+        }
     },
 
     /**
@@ -7402,7 +7704,7 @@ ${content.summary}
     },
 
     /**
-     * Affiche le modal avec les objectifs du chapitre
+     * Affiche le modal avec les objectifs du chapitre (PLEIN ÉCRAN)
      * @param {string} chapitreId - ID du chapitre
      */
     afficherModalObjectives(chapitreId) {
@@ -7410,13 +7712,13 @@ ${content.summary}
         if (!chapitre) return;
 
         const objectivesList = document.getElementById('objectives-list');
-        const icons = ['🎯', '📚', '🔍', '💡'];
+        const icons = ['🎯', '📚', '🔍', '💡', '📝', '🧠'];
         
         objectivesList.innerHTML = chapitre.objectifs
             .map((obj, index) => `
-                <div class="objective-item">
-                    <span class="objective-icon">${icons[index % icons.length]}</span>
-                    <p class="objective-text">${obj}</p>
+                <div class="objective-item" style="display: flex; align-items: flex-start; gap: 15px; padding: 15px; background: #f9f9f9; border-radius: 8px; margin-bottom: 12px; border-left: 4px solid #4A3F87;">
+                    <span class="objective-icon" style="font-size: 1.5em;">${icons[index % icons.length]}</span>
+                    <p class="objective-text" style="margin: 0; font-size: 1em; line-height: 1.6; color: #333;">${obj}</p>
                 </div>
             `)
             .join('');
@@ -7424,21 +7726,30 @@ ${content.summary}
         // Stocker le chapitre actuel en session
         this.chapitreActuel = chapitreId;
         
+        // 🙈 Cacher la barre de navigation
+        this.hideBottomNav();
+        
         const modal = document.getElementById('objectives-modal');
         modal.classList.remove('hidden');
-
-        // Support fermeture: clic outside du modal (sur overlay)
-        const overlay = modal;
-        overlay.addEventListener('click', (e) => {
-            if (e.target === overlay) {
-                this.fermerModalObjectives();
-            }
-        }, { once: true });
+        
+        // Styliser l'overlay (fond semi-transparent)
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: block;
+            z-index: 1000;
+            margin: 0;
+            padding: 0;
+        `;
 
         // Support fermeture: Escape key
         const escapeHandler = (e) => {
             if (e.key === 'Escape') {
-                this.fermerModalObjectives();
+                this.fermerModalObjectivesSansValider();
                 document.removeEventListener('keydown', escapeHandler);
             }
         };
@@ -7446,44 +7757,65 @@ ${content.summary}
 
         console.log('📋 Modal objectifs affichés pour:', chapitre.titre);
     },
+    
+    /**
+     * Ferme le modal objectifs SANS valider (bouton Fermer)
+     */
+    fermerModalObjectivesSansValider() {
+        const modal = document.getElementById('objectives-modal');
+        modal.classList.add('hidden');
+        
+        // 👁️ Réafficher la barre de navigation
+        this.showBottomNav();
+        
+        console.log('✕ Modal objectifs fermé (sans validation)');
+        
+        // Rafraîchir l'affichage du chapitre
+        const chapitreId = this.chapitreActuel;
+        if (chapitreId) {
+            setTimeout(() => {
+                this.afficherChapitre(chapitreId);
+            }, 50);
+        }
+    },
 
     /**
-     * Ferme le modal objectifs
+     * Ferme le modal objectifs et marque comme complétés
+     * ✅ Rafraîchit l'affichage du chapitre pour débloquer l'étape 1
+     * ✅ Solution A: localStorage sync via StorageManager.saveObjectifsStatus()
      */
     fermerModalObjectives() {
-        // 🔓 NOUVEAU: Marquer les objectifs comme complétés automatiquement
         const chapitreId = this.chapitreActuel;
         const chapitre = CHAPITRES.find(ch => ch.id === chapitreId);
         
-        if (chapitre && chapitre.etapes.length > 0) {
-            const firstEtape = chapitre.etapes[0];
-            
-            // Ne marquer comme complet que si pas déjà complet
-            if (firstEtape.completed !== true) {
-                firstEtape.completed = true;
-                
-                // Sauvegarder via StorageManager
-                if (window.StorageManager) {
-                    StorageManager.saveEtapeState(chapitreId, 0, {
-                        visited: true,
-                        completed: true,
-                        status: 'completed',
-                        completedAt: new Date().toISOString()
-                    });
-                    console.log(`✅ Objectifs marqués comme complétés (fermeture modal)`);
-                }
-                
-                // Mettre à jour les icônes visuelles
-                setTimeout(() => {
-                    updateStepIcons(chapitreId, chapitre);
-                    console.log(`✅ Icônes mises à jour après objectifs fermés`);
-                }, 50);
+        if (chapitre) {
+            // ✅ Marquer les objectifs comme complétés via StorageManager
+            // (saveObjectifsStatus() maintenant synce avec localStorage)
+            if (window.StorageManager?.saveObjectifsStatus) {
+                StorageManager.saveObjectifsStatus(chapitreId, true);
+                console.log(`✅ Objectifs marqués comme complétés (localStorage + StorageManager)`);
             }
+            
+            // Marquer aussi en mémoire pour éviter appels multiples
+            chapitre.objectifsCompleted = true;
         }
         
         const modal = document.getElementById('objectives-modal');
         modal.classList.add('hidden');
-        console.log('✕ Modal objectifs fermé');
+        
+        // 👁️ Réafficher la barre de navigation
+        this.showBottomNav();
+        
+        console.log('✕ Modal objectifs fermé (avec validation)');
+        
+        // ✅ Rafraîchir l'affichage du chapitre pour montrer les objectifs comme complétés
+        // et débloquer l'étape 1 + mettre à jour les icônes visuellement
+        if (chapitreId) {
+            setTimeout(() => {
+                this.afficherChapitre(chapitreId);
+                console.log(`✅ Affichage du chapitre ${chapitreId} rafraîchi après objectifs`);
+            }, 50);
+        }
     },
 
     /**
@@ -7545,25 +7877,18 @@ ${content.summary}
 
     /**
      * Lance le chapitre après visualisation des objectifs
+     * ✅ FIX OPTION B: Les objectifs sont un jalon VISUEL, pas etapes[0]
      */
     commencerChapitre() {
-        // 🔓 NOUVEAU: Marquer les objectifs (etapes[0]) comme complétés
         const chapitre = CHAPITRES.find(ch => ch.id === this.chapitreActuel);
-        if (chapitre && chapitre.etapes.length > 0) {
-            const firstEtape = chapitre.etapes[0];
+        if (chapitre) {
+            // ✅ FIX: Marquer les objectifs VISUELS comme complétés (pas etapes[0]!)
+            chapitre.objectifsCompleted = true;
             
-            // Marquer les objectifs comme complétés
-            firstEtape.completed = true;
-            
-            // Mettre à jour localStorage via StorageManager
-            if (window.StorageManager) {
-                StorageManager.saveEtapeState(this.chapitreActuel, 0, {
-                    visited: true,
-                    completed: true,
-                    status: 'completed',
-                    completedAt: new Date().toISOString()
-                });
-                console.log(`✅ Objectifs marqués comme complétés`);
+            // Mettre à jour localStorage via StorageManager (nouveau storage pour jalons visuels)
+            if (window.StorageManager?.saveObjectifsStatus) {
+                StorageManager.saveObjectifsStatus(this.chapitreActuel, true);
+                console.log(`✅ Objectifs visuels marqués comme complétés`);
             }
             
             // Mettre à jour les icônes visuelles
@@ -7967,7 +8292,7 @@ ${content.summary}
                         <button class="btn btn--secondary" onclick="App.afficherAccueil()">◀ Retour</button>
                     </div>
 
-                    <div class="chapitres-list">
+                    <div class="chapitres-list" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; padding: 10px;">
             `;
 
             // Ajouter chaque chapitre
@@ -7981,13 +8306,14 @@ ${content.summary}
                 const percent = progressData?.completion || 0;
 
                 html += `
-                    <div class="chapitre-card" onclick="App.afficherChapitre('${chapitre.id}')" data-chapitre-id="${chapId}" style="cursor: pointer;">
-                        <div class="chapitre-card-header" style="background-color: ${chapitre.couleur || '#667eea'}; color: white; padding: 16px; border-radius: 12px 12px 0 0;">
-                            <h3 style="margin: 0; font-size: 18px;">${chapitre.emoji || '📖'} ${chapitre.titre}</h3>
+                    <div class="chapitre-card" onclick="App.afficherChapitre('${chapitre.id}')" data-chapitre-id="${chapId}" style="cursor: pointer; background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow: hidden; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 6px 20px rgba(0,0,0,0.15)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)';">
+                        <div class="chapitre-card-header" style="background-color: ${chapitre.couleur || '#667eea'}; color: white; padding: 16px; text-align: center;">
+                            <span style="font-size: 2em; display: block; margin-bottom: 8px;">${chapitre.emoji || '📖'}</span>
+                            <h3 style="margin: 0; font-size: 16px; line-height: 1.3;">${chapitre.titre}</h3>
                         </div>
                         <div class="chapitre-card-body" style="padding: 16px;">
-                            <p style="margin: 0 0 12px 0; color: #666; font-size: 14px; line-height: 1.4;">${chapitre.description}</p>
-                            <div style="margin-bottom: 8px; font-weight: 600; color: #333;">${percent}% (${completedSteps}/${total} étapes)</div>
+                            <p style="margin: 0 0 12px 0; color: #666; font-size: 13px; line-height: 1.4; min-height: 40px;">${chapitre.description}</p>
+                            <div style="margin-bottom: 8px; font-weight: 600; color: #333; text-align: center;">${percent}% (${completedSteps}/${total} étapes)</div>
                             <div class="chapitre-progress">
                                 <div class="progress-bar" style="height: 8px; background: #e0e0e0; border-radius: 4px; overflow: hidden;">
                                     <div class="progress-fill" style="width: ${percent}%; height: 100%; background: linear-gradient(90deg, ${chapitre.couleur || '#667eea'}, ${chapitre.couleur || '#667eea'}cc); border-radius: 4px;"></div>
