@@ -8206,18 +8206,18 @@ ${content.summary}
                     <div class="accueil-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 40px;">
                         <div class="stat-card" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); text-align: center;">
                             <div class="stat-icon" style="font-size: 32px; margin-bottom: 10px;">⭐</div>
-                            <div class="stat-value" style="font-size: 24px; font-weight: bold; color: #667eea;">${StorageManager.getUser().totalPoints}</div>
-                            <div class="stat-label" style="font-size: 13px; color: #999; margin-top: 5px;">Points gagnés</div>
+                            <div class="stat-value" style="font-size: 24px; font-weight: bold; color: #000000;">${StorageManager.getUser().totalPoints}</div>
+                            <div class="stat-label" style="font-size: 13px; color: #000000; margin-top: 5px;">Points gagnés</div>
                         </div>
                         <div class="stat-card" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); text-align: center;">
                             <div class="stat-icon" style="font-size: 32px; margin-bottom: 10px;">🏆</div>
-                            <div class="stat-value" style="font-size: 24px; font-weight: bold; color: #667eea;">${niveaux.filter(n => App.isNiveauUnlocked(n.id)).length}</div>
-                            <div class="stat-label" style="font-size: 13px; color: #999; margin-top: 5px;">Niveaux déverrouillés</div>
+                            <div class="stat-value" style="font-size: 24px; font-weight: bold; color: #000000;">${niveaux.filter(n => App.isNiveauUnlocked(n.id)).length}</div>
+                            <div class="stat-label" style="font-size: 13px; color: #000000; margin-top: 5px;">Niveaux déverrouillés</div>
                         </div>
                         <div class="stat-card" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); text-align: center;">
                             <div class="stat-icon" style="font-size: 32px; margin-bottom: 10px;">📚</div>
-                            <div class="stat-value" style="font-size: 24px; font-weight: bold; color: #667eea;">${niveaux.length}</div>
-                            <div class="stat-label" style="font-size: 13px; color: #999; margin-top: 5px;">Niveaux total</div>
+                            <div class="stat-value" style="font-size: 24px; font-weight: bold; color: #000000;">${niveaux.length}</div>
+                            <div class="stat-label" style="font-size: 13px; color: #000000; margin-top: 5px;">Niveaux total</div>
                         </div>
                     </div>
                 </div>

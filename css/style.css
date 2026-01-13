@@ -1304,12 +1304,12 @@ body {
 .stat-card .stat-value {
     font-size: 24px;
     font-weight: 700;
-    color: var(--color-primary);
+    color: #000000 !important;
 }
 
 .stat-card .stat-label {
     font-size: 12px;
-    color: var(--color-text-light);
+    color: #000000 !important;
     margin-top: 2px;
 }
 
